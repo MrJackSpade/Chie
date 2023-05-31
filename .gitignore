@@ -1,0 +1,10 @@
+
+.vs
+bin
+obj
+Prompt.txt
+Start.txt
+ChieApi/tempStart.txt
+ChieApi/TempFile.png
+BlipApi/TempFile.png
+ChieApi/Ai/*/

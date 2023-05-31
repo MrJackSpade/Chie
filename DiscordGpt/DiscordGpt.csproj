@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>e1a3d8fc-5e08-4810-8536-23069accaae3</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Loxifi.JsonClient" Version="0.8.1" />
+    <PackageReference Include="Loxifi.StringConvert" Version="0.8.0" />
+    <PackageReference Include="Loxifi.StringParsing" Version="0.2.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
+    <PackageReference Include="MimeMapping" Version="2.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ai.Utils\Ai.Utils.csproj" />
+    <ProjectReference Include="..\ChieApi.Client\ChieApi.Client.csproj" />
+    <ProjectReference Include="..\DiscordClient\DiscordClient.csproj" />
+  </ItemGroup>
+
+</Project>

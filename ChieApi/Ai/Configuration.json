@@ -1,0 +1,32 @@
+{
+  "ReturnOnNewLine": false,
+  "VerbosePrompt": true,
+  "InteractiveMode": "InteractiveFirst",
+  "KeepPromptTokens": -1,
+  "ContextLength": 2048,
+  "CharacterName": "Chie",
+  "Temp": 0.7,
+  "TokensToPredict": -1,
+  "Top_P": 0.9,
+  "NoMemoryMap": true,
+  "MemoryMode": "Float32",
+  "UseSessionData": true,
+  "PrimaryReversePrompt": "|",
+  "AdditionalReversePrompts": [ "\n", "\r", "\r\n", " |" ],
+  "NoPenalizeNewLine": true,
+  "RepeatPenaltyWindow": -1,
+  "RepeatPenalty":  1.2,
+  "LogitBias": {
+    "320": "-inf",
+    "396": "-inf",
+    "518": "-inf",
+    "1068": "-inf",
+    "4248": "-inf",
+    "16824": "-inf",
+    "30140": "-inf",
+    "2045": "-inf",
+    "597": "-inf",
+    "584": "-inf",
+    "891": "-inf"
+  }
+}

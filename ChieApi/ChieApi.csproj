@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>4470dfd5-75e6-4fe6-a7b6-393309493866</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Ai\**\*.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Ai\**\*.txt" />
+  </ItemGroup>
+	
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.0.123" />
+    <PackageReference Include="DapperExtensions" Version="1.7.0" />
+    <PackageReference Include="Loxifi.JsonClient" Version="0.8.1" />
+    <PackageReference Include="Loxifi.StringParsing" Version="0.2.1" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.8.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Penguin\Repositories\Loxifi\Loxifi.TypeFactory\Loxifi.TypeFactory.csproj" />
+    <ProjectReference Include="..\Ai.Utils\Ai.Utils.csproj" />
+    <ProjectReference Include="..\Blip.Client\Blip.Client.csproj" />
+    <ProjectReference Include="..\Chie.Shared\Llama.Shared.csproj" />
+    <ProjectReference Include="..\ChieApi.Shared\ChieApi.Shared.csproj" />
+    <ProjectReference Include="..\ImageRecognition\BlipClient.csproj" />
+    <ProjectReference Include="..\LlamaClient\LlamaClient.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="Ai\**\*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,106 @@
+using Blip.Client;
+using ChieApi.Factories;
+using ChieApi.Interfaces;
+using ChieApi.Pipelines;
+using ChieApi.Services;
+using ChieApi.Tasks.Boredom;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using System.Text.Json.Serialization;
+
+namespace ChieApi
+{
+	public class Program
+	{
+		public static async Task Main(string[] args)
+		{
+			Console.OutputEncoding = System.Text.Encoding.UTF8;
+			Console.InputEncoding = System.Text.Encoding.UTF8;
+
+			ConfigurationBuilder configurationBuilder = new();
+			configurationBuilder.AddUserSecrets<Program>();
+			IConfigurationRoot configuration = configurationBuilder.Build();
+
+			AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+
+			WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+			// Add services to the container.
+
+			_ = builder.Services.AddControllers();
+
+			if (args.Length > 0)
+			{
+				_ = builder.Services.AddSingleton<ICharacterNameFactory>(new CommandLineCharacterNameFactory(args[0]));
+			}
+			else
+			{
+				_ = builder.Services.AddSingleton<ICharacterNameFactory, SecretCharacterNameFactory>();
+			}
+
+			_ = builder.Services.AddSingleton<ChatService>();
+			_ = builder.Services.AddSingleton<LogService>();
+			_ = builder.Services.AddSingleton<BlipApiClient>();
+			_ = builder.Services.AddSingleton<LlamaService>();
+			_ = builder.Services.AddSingleton<ICharacterFactory, CharacterService>();
+			_ = builder.Services.AddTransient<IRequestPipeline, ImageRecognitionPipeline>();
+			_ = builder.Services.AddTransient<IRequestPipeline, MessageCleaningPipeline>();
+			_ = builder.Services.AddTransient<IRequestPipeline, NameCleaningPipeline>();
+			_ = builder.Services.AddTransient<IRequestPipeline, ContentSplittingPipeline>();
+			_ = builder.Services.AddTransient<IRequestPipeline, TimePassagePipeline>();
+			_ = builder.Services.AddTransient<IRequestPipeline, BoredomTask>();
+			_ = builder.Services.AddTransient<IBackgroundTask, BoredomTask>();
+			_ = builder.Services.AddSingleton<BoredomTaskData>();
+			_ = builder.Services.AddSingleton<IHostLifetime>(new NullLifetime());
+			_ = builder.Services.Configure<ChieApiSettings>(configuration.GetSection(nameof(ChieApiSettings)));
+			_ = builder.Services.Configure<BlipApiClientSettings>(configuration.GetSection(nameof(BlipApiClientSettings)));
+			_ = builder.Services.Configure<BoredomTaskSettings>(configuration.GetSection(nameof(BoredomTaskSettings)));
+			_ = builder.Services.AddSingleton(s => s.GetService<IOptions<BoredomTaskSettings>>().Value);
+			_ = builder.Services.AddSingleton(s => s.GetService<IOptions<BlipApiClientSettings>>().Value);
+			_ = builder.Services.AddSingleton(s => s.GetService<IOptions<ChieApiSettings>>().Value);
+			_ = builder.Services.AddSingleton<IHasConnectionString>(s => s.GetService<IOptions<ChieApiSettings>>().Value);
+
+			_ = builder.Services.Configure<JsonOptions>(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
+			WebApplication app = builder.Build();
+
+			_ = app.UseAuthorization();
+
+			_ = app.MapControllers();
+
+			CancellationTokenSource cts = new();
+
+			Task t = app.RunAsync(cts.Token);
+
+			//Needs to be executed so client starts before
+			//first request
+			await Task.Run(async () =>
+			{
+				await Task.Delay(3000);
+				app.Services.GetService<LlamaService>();
+			});
+
+			List<IBackgroundTask> tasks = app.Services.GetServices<IBackgroundTask>().ToList();
+
+			foreach (IBackgroundTask task in tasks)
+			{
+				await task.Initialize();
+			}
+
+			do
+			{
+				await Task.Delay(1000 * 60);
+				foreach (IBackgroundTask task in tasks)
+				{
+					await task.TickMinute();
+				}
+			} while (!cts.IsCancellationRequested);
+
+			await t;
+		}
+
+		private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+		{
+		}
+	}
+}
