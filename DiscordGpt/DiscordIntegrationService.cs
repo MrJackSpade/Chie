@@ -64,7 +64,7 @@ namespace DiscordGpt
 				return;
 			}
 
-			if (activeChannel.Channel is SocketTextChannel stcb)
+			if (_settings.UseServerEmotes && activeChannel.Channel is SocketTextChannel stcb)
 			{
 				cleanedMessage = this.EmojiFill(stcb, cleanedMessage);
 			}

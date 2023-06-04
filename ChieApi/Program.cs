@@ -1,10 +1,13 @@
+using Ai.Utils.Extensions;
 using Blip.Client;
 using ChieApi.Factories;
 using ChieApi.Interfaces;
 using ChieApi.Pipelines;
+using ChieApi.Pipelines.MoodPipeline;
 using ChieApi.Services;
 using ChieApi.Tasks.Boredom;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.Text.Json.Serialization;
 
@@ -38,6 +41,11 @@ namespace ChieApi
 				_ = builder.Services.AddSingleton<ICharacterNameFactory, SecretCharacterNameFactory>();
 			}
 
+			builder.Services.RegisterSecret<MoodPipelineSettings>(configuration);
+			builder.Services.RegisterSecret<ChieApiSettings>(configuration);
+			builder.Services.RegisterSecret<BlipApiClientSettings>(configuration);
+			builder.Services.RegisterSecret<BoredomTaskSettings>(configuration);
+
 			_ = builder.Services.AddSingleton<ChatService>();
 			_ = builder.Services.AddSingleton<LogService>();
 			_ = builder.Services.AddSingleton<BlipApiClient>();
@@ -49,15 +57,10 @@ namespace ChieApi
 			_ = builder.Services.AddTransient<IRequestPipeline, ContentSplittingPipeline>();
 			_ = builder.Services.AddTransient<IRequestPipeline, TimePassagePipeline>();
 			_ = builder.Services.AddTransient<IRequestPipeline, BoredomTask>();
+			_ = builder.Services.AddSingleton<IRequestPipeline, MoodPipeline>();
 			_ = builder.Services.AddTransient<IBackgroundTask, BoredomTask>();
 			_ = builder.Services.AddSingleton<BoredomTaskData>();
 			_ = builder.Services.AddSingleton<IHostLifetime>(new NullLifetime());
-			_ = builder.Services.Configure<ChieApiSettings>(configuration.GetSection(nameof(ChieApiSettings)));
-			_ = builder.Services.Configure<BlipApiClientSettings>(configuration.GetSection(nameof(BlipApiClientSettings)));
-			_ = builder.Services.Configure<BoredomTaskSettings>(configuration.GetSection(nameof(BoredomTaskSettings)));
-			_ = builder.Services.AddSingleton(s => s.GetService<IOptions<BoredomTaskSettings>>().Value);
-			_ = builder.Services.AddSingleton(s => s.GetService<IOptions<BlipApiClientSettings>>().Value);
-			_ = builder.Services.AddSingleton(s => s.GetService<IOptions<ChieApiSettings>>().Value);
 			_ = builder.Services.AddSingleton<IHasConnectionString>(s => s.GetService<IOptions<ChieApiSettings>>().Value);
 
 			_ = builder.Services.Configure<JsonOptions>(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));

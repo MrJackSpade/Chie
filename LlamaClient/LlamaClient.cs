@@ -411,7 +411,7 @@ namespace Llama
 
 			if (settings.GpuLayers.HasValue)
 			{
-				AddArgument("--gpu-layers", settings.GpuLayers.ToString());
+				AddArgument("--n-gpu-layers", settings.GpuLayers.ToString());
 			}
 
 			foreach (KeyValuePair<int, string> bias in settings.LogitBias)
