@@ -96,10 +96,10 @@ namespace LLama.Types
 			}
 		}
 
-		public void Warn(string message)
+		public void Warn(string message, bool hideConsole = false)
 		{
 			message = this.MessageFormat("warn", message);
-			if (this._toConsole)
+			if (this._toConsole && !hideConsole)
 			{
 				Console.ForegroundColor = ConsoleColor.Yellow;
 				Console.WriteLine(message);

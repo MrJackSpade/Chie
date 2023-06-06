@@ -41,8 +41,7 @@ namespace LLama
 
 			if (!string.IsNullOrEmpty(@params.LoraAdapter))
 			{
-				int err = NativeApi.llama_apply_lora_from_file(ctx, @params.LoraAdapter,
-					string.IsNullOrEmpty(@params.LoraBase) ? null : @params.LoraBase, @params.ThreadCount);
+				int err = NativeApi.llama_apply_lora_from_file(ctx, @params.LoraAdapter, string.IsNullOrEmpty(@params.LoraBase) ? null : @params.LoraBase, @params.ThreadCount);
 				if (err != 0)
 				{
 					throw new RuntimeError("Failed to apply lora adapter.");
@@ -52,16 +51,14 @@ namespace LLama
 			return ctx;
 		}
 
-		public static List<llama_token> llama_tokenize(SafeLLamaContextHandle ctx, string text, bool add_bos, string encodingName)
+		public static List<llama_token> llama_tokenize(SafeLLamaContextHandle ctx, string text, bool add_bos, Encoding encoding)
 		{
-			Encoding encoding = Encoding.GetEncoding(encodingName);
 			int cnt = encoding.GetByteCount(text);
 			llama_token[] res = new llama_token[cnt + (add_bos ? 1 : 0)];
 			int n = NativeApi.llama_tokenize(ctx, text, encoding, res, res.Length, add_bos);
 			if (n < 0)
 			{
-				throw new RuntimeError("Error happened during tokenization. It's possibly caused by wrong encoding. Please try to " +
-					"specify the encoding.");
+				throw new RuntimeError("Error happened during tokenization. It's possibly caused by wrong encoding. Please try to specify the encoding.");
 			}
 
 			return res.Take(n).ToList();

@@ -9,6 +9,8 @@ namespace Llama
 	{
 		private static Thread? _inferenceThread;
 
+		private readonly Encoding _encoding = System.Text.Encoding.UTF8;
+
 		private readonly LLamaModel _model;
 
 		private readonly StringBuilder _outBuilder;
@@ -25,7 +27,7 @@ namespace Llama
 		{
 			this._settings = settings;
 			this._outBuilder = new StringBuilder();
-			this._model = new LLamaModel(this.Params = GenerateParameters(this._settings), verbose: true);
+			this._model = new LLamaModel(this.Params = GenerateParameters(this._settings), _encoding, verbose: true);
 		}
 
 		public event EventHandler<DisconnectEventArgs> OnDisconnect;
@@ -90,8 +92,6 @@ namespace Llama
 				toSend = $"{this._settings.PrimaryReversePrompt}{toSend}";
 			}
 
-			toSend = NewlineReplacer.Replace(toSend);
-
 			if (flush)
 			{
 				_ = this._queued.Append(toSend);
@@ -106,7 +106,7 @@ namespace Llama
 			}
 			else
 			{
-				_ = this._queued.AppendLine(toSend);
+				_ = this._queued.Append(toSend + '\n');
 			}
 
 			this._killSent = false;
@@ -272,7 +272,7 @@ namespace Llama
 
 				int lastChunkCount = 0;
 
-				foreach (string chunk in this._model.Call(data))
+				foreach (string chunk in this._model.Call(data, _encoding))
 				{
 					if (chunk.Length > 0)
 					{

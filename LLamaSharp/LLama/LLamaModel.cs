@@ -59,7 +59,7 @@ namespace LLama
 		/// <param name="verbose">Whether to output the detailed info.</param>
 		/// <param name="encoding"></param>
 		/// <exception cref="RuntimeError"></exception>
-		public unsafe LLamaModel(LLamaParams llamaParams, string name = "", bool verbose = false, string encoding = "UTF-8")
+		public unsafe LLamaModel(LLamaParams llamaParams, Encoding encoding, string name = "", bool verbose = false)
 		{
 			this.Name = name;
 			this._params = llamaParams;
@@ -98,7 +98,7 @@ namespace LLama
 
 			this._n_ctx = NativeApi.llama_n_ctx(this.NativeHandle);
 
-			this.WithPrompt(this._params.Prompt);
+			this.WithPrompt(this._params.Prompt, encoding);
 
 			// prefix & suffix for instruct mode
 			this._inp_pfx = Utils.llama_tokenize(this.NativeHandle, "\n\n### Instruction:\n\n", true, encoding);
@@ -144,6 +144,12 @@ namespace LLama
 				}
 
 				LLamaLogger.Default.Info("\n");
+			}
+
+			foreach (KeyValuePair<int, float> kvp in this._params.LogitBias)
+			{
+				string toLog = $"Logit Bias: {Utils.PtrToStringUTF8(NativeApi.llama_token_to_str(this.NativeHandle, kvp.Key))} -> {kvp.Value}";
+				LLamaLogger.Default.Info(toLog);
 			}
 
 			if (this._params.Interactive && verbose)
@@ -197,9 +203,10 @@ namespace LLama
 		/// <param name="encoding"></param>
 		/// <returns></returns>
 		/// <exception cref="RuntimeError"></exception>
-		public IEnumerable<string> Call(string text, string encoding = "UTF-8")
+		public IEnumerable<string> Call(string text, Encoding encoding)
 		{
 			this._is_antiprompt = false;
+
 			if (this._n_past > 0)
 			{
 				this._is_interacting = false;
@@ -209,7 +216,7 @@ namespace LLama
 			{
 				if (this.Verbose)
 				{
-					LLamaLogger.Default.Warn("In interacting when calling the model, automatically changed it.");
+					LLamaLogger.Default.Warn("In interacting when calling the model, automatically changed it.", true);
 				}
 
 				this._is_interacting = false;
@@ -503,7 +510,7 @@ namespace LLama
 		/// <param name="encoding"></param>
 		/// <returns></returns>
 		/// <exception cref="ArgumentException"></exception>
-		public IEnumerable<string> Chat(string text, string? prompt = null, string encoding = "UTF-8")
+		public IEnumerable<string> Chat(string text, Encoding encoding, string? prompt = null)
 		{
 			if (!this._params.Interactive)
 			{
@@ -513,7 +520,7 @@ namespace LLama
 			this._input_echo = false;
 			if (!string.IsNullOrEmpty(prompt))
 			{
-				this.WithPrompt(prompt);
+				_ = this.WithPrompt(prompt, encoding);
 			}
 
 			return this.Call(text, encoding);
@@ -540,7 +547,7 @@ namespace LLama
 
 		public void InitChatAntiprompt(string[] antiprompt) => this._params.Antiprompt = antiprompt.ToList();
 
-		public void InitChatPrompt(string prompt, string encoding = "UTF-8") => _ = this.WithPrompt(prompt);
+		public void InitChatPrompt(string prompt, Encoding encoding) => _ = this.WithPrompt(prompt, encoding);
 
 		/// <summary>
 		/// Load the state from specified path.
@@ -548,7 +555,7 @@ namespace LLama
 		/// <param name="filename"></param>
 		/// <param name="clearPreviousEmbed">Whether to clear previous footprints of this model.</param>
 		/// <exception cref="RuntimeError"></exception>
-		public void LoadState(string filename, bool clearPreviousEmbed = true)
+		public void LoadState(string filename, Encoding encoding, bool clearPreviousEmbed = true)
 		{
 			byte[] stateMemory = File.ReadAllBytes(filename);
 			int stateSize = (int)NativeApi.llama_get_state_size(this.NativeHandle);
@@ -561,7 +568,7 @@ namespace LLama
 
 			if (clearPreviousEmbed)
 			{
-				this.WithPrompt(this._params.Prompt);
+				this.WithPrompt(this._params.Prompt, encoding);
 			}
 		}
 
@@ -583,12 +590,12 @@ namespace LLama
 		/// <param name="text">The utf-8 encoded string to tokenize.</param>
 		/// <returns>A list of tokens.</returns>
 		/// <exception cref="RuntimeError">If the tokenization failed.</exception>
-		public List<llama_token> Tokenize(string text, string encoding = "UTF-8")
+		public List<llama_token> Tokenize(string text, Encoding encoding)
 		{
 			Debug.Assert(this.NativeHandle.DangerousGetHandle() != IntPtr.Zero);
 			int n_ctx = NativeApi.llama_n_ctx(this.NativeHandle);
 			int[] tokens = new llama_token[n_ctx];
-			int n_tokens = NativeApi.llama_tokenize(this.NativeHandle, text, Encoding.GetEncoding(encoding), tokens, n_ctx, true);
+			int n_tokens = NativeApi.llama_tokenize(this.NativeHandle, text, encoding, tokens, n_ctx, true);
 			if (n_tokens < 0)
 			{
 				throw new RuntimeError($"Failed to tokenize: text=\"{text}\" n_tokens={n_tokens}");
@@ -604,7 +611,7 @@ namespace LLama
 		/// <param name="encoding"></param>
 		/// <returns></returns>
 		/// <exception cref="ArgumentException"></exception>
-		public LLamaModel WithPrompt(string prompt, string encoding = "UTF-8")
+		public LLamaModel WithPrompt(string prompt, Encoding encoding)
 		{
 			this._params.Prompt = prompt.Insert(0, " ");
 			this._embed_inp = Utils.llama_tokenize(this.NativeHandle, this._params.Prompt, true, encoding);
@@ -663,9 +670,9 @@ namespace LLama
 		/// </summary>
 		/// <param name="promptFileName"></param>
 		/// <returns></returns>
-		public LLamaModel WithPromptFile(string promptFileName) => this.WithPrompt(File.ReadAllText(promptFileName));
+		public LLamaModel WithPromptFile(string promptFileName, Encoding encoding) => this.WithPrompt(File.ReadAllText(promptFileName), encoding);
 
-		private void ProcessTextBeforeInfer(string text, string encoding)
+		private void ProcessTextBeforeInfer(string text, Encoding encoding)
 		{
 			if (!string.IsNullOrEmpty(this._params.InputPrefix))
 			{

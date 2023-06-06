@@ -2,6 +2,7 @@
 using LLama.Native;
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace LLama
 {
@@ -26,7 +27,7 @@ namespace LLama
 
 		public void Dispose() => this._ctx.Dispose();
 
-		public unsafe float[] GetEmbeddings(string text, int n_thread = -1, bool add_bos = true, string encoding = "UTF-8")
+		public unsafe float[] GetEmbeddings(string text, Encoding encoding, int n_thread = -1, bool add_bos = true)
 		{
 			if (n_thread == -1)
 			{

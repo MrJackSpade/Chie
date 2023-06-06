@@ -64,7 +64,7 @@ namespace LLama
 
 		public int RepeatTokenPenaltyWindow { get; set; } = 64;
 
-		public int Seed { get; set; } = 0;
+		public int Seed { get; set; } = new Random().Next();
 
 		public string SessionPath { get; set; } = string.Empty;
 

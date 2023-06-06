@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Text;
 
 namespace LLama
 {
@@ -6,7 +7,7 @@ namespace LLama
 	{
 		string Name { get; }
 
-		IEnumerable<string> Chat(string text, string? prompt = null, string encoding = "UTF-8");
+		IEnumerable<string> Chat(string text, Encoding encoding, string? prompt = null);
 
 		void InitChatAntiprompt(string[] antiprompt);
 
@@ -14,6 +15,6 @@ namespace LLama
 		/// Init a prompt for chat and automatically produce the next prompt during the chat.
 		/// </summary>
 		/// <param name="prompt"></param>
-		void InitChatPrompt(string prompt, string encoding = "UTF-8");
+		void InitChatPrompt(string prompt, Encoding encoding);
 	}
 }

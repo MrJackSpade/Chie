@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 
 namespace LLama
 {
@@ -16,11 +17,11 @@ namespace LLama
 
 		private List<ChatMessageRecord> History { get; } = new List<ChatMessageRecord>();
 
-		public IEnumerable<string> Chat(string text, string? prompt = null, string encoding = "UTF-8")
+		public IEnumerable<string> Chat(string text, Encoding encoding, string? prompt = null)
 		{
 			this.History.Add(new ChatMessageRecord(new ChatCompletionMessage(ChatRole.Human, text), DateTime.Now));
 			string totalResponse = string.Empty;
-			foreach (string response in this._model.Chat(text, prompt, encoding))
+			foreach (string response in this._model.Chat(text, encoding, prompt))
 			{
 				totalResponse += response;
 				yield return response;
@@ -40,12 +41,12 @@ namespace LLama
 			return this;
 		}
 
-		public ChatSession<T> WithPrompt(string prompt, string encoding = "UTF-8")
+		public ChatSession<T> WithPrompt(string prompt, Encoding encoding)
 		{
 			this._model.InitChatPrompt(prompt, encoding);
 			return this;
 		}
 
-		public ChatSession<T> WithPromptFile(string promptFilename, string encoding = "UTF-8") => this.WithPrompt(File.ReadAllText(promptFilename), encoding);
+		public ChatSession<T> WithPromptFile(string promptFilename, Encoding encoding) => this.WithPrompt(File.ReadAllText(promptFilename), encoding);
 	}
 }
