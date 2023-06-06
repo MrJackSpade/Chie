@@ -11,15 +11,16 @@ namespace ChieApi.Models
 		[SuppressMessage("Style", "IDE0060:Remove unused parameter")]
 		public bool IsSafeChar(char c)
 		{
+			return true;
 			//Remove non-ascii
 #pragma warning disable CS0162 // Unreachable code detected
 			if (Regex.IsMatch($"{c}", @"[^\u0000-\u007F]"))
 			{
 				return false;
 			}
-#pragma warning restore CS0162 // Unreachable code detected
 
 			return true;
+#pragma warning restore CS0162 // Unreachable code detected
 		}
 
 		public LlamaSafeString(string message)

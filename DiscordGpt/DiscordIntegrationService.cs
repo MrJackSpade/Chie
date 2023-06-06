@@ -75,7 +75,10 @@ namespace DiscordGpt
 
 			await this._logger.Write($"Message: {cleanedMessage}", LogLevel.Private);
 
-			_ = await activeChannel.Channel.SendMessageAsync(cleanedMessage);
+			foreach (string part in cleanedMessage.SplitLength(1800))
+			{
+				_ = await activeChannel.Channel.SendMessageAsync(part);
+			}
 		}
 
 		public async Task Start()

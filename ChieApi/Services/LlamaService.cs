@@ -7,6 +7,7 @@ using Llama;
 using Llama.Shared;
 using Loxifi;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace ChieApi.Services
 {
@@ -138,78 +139,6 @@ namespace ChieApi.Services
 
 		public bool TryGetReply(long originalMessageId, out ChatEntry? chatEntry) => this._chatService.TryGetOriginal(originalMessageId, out chatEntry);
 
-		private async Task OnDisconnect(DisconnectEventArgs args)
-		{
-
-			StringBuilder newPromptBuilder = new();
-
-			if (!string.IsNullOrWhiteSpace(args.RollOverPrompt))
-			{
-				string rollover = File.ReadAllText(args.RollOverPrompt).Trim();
-
-				bool lastNewline = false;
-
-				int rpl = this._characterConfiguration.PrimaryReversePrompt.Length;
-				string rp = this._characterConfiguration.PrimaryReversePrompt;
-
-				for (int i = 0; i < rollover.Length; i++)
-				{
-					char c = rollover[i];
-
-					if (c == '\n')
-					{
-						lastNewline = true;
-						newPromptBuilder.Append(c);
-						continue;
-					}
-
-					if (!lastNewline && rollover.TryGetSubstring(i, rpl, out string s) && s == rp)
-					{
-						newPromptBuilder.Append(System.Environment.NewLine);
-					}
-
-					newPromptBuilder.Append(c);
-
-					lastNewline = false;
-				}
-			}
-
-			string newStart = newPromptBuilder.ToString();
-
-			this._characterConfiguration.Start = newStart;
-
-			await this.Init();
-
-			string[] promptParts = newStart.CleanSplit().ToArray();
-
-			for (int i = 0; i < promptParts.Length; i++) 
-			{
-				bool isLast = i == promptParts.Length - 1;
-
-				string thisLine  = promptParts[i];
-
-                if (thisLine.IndexOf(">") == thisLine.Length - 1 && !isLast)
-                {
-					continue;
-                }
-
-				if (!isLast)
-				{
-					this._client.Send(thisLine, false);
-				} else
-				{
-					if(thisLine.StartsWith($"|{this.CharacterName}>"))
-					{
-						this._client.Send(thisLine + "/", true);
-					} else
-					{
-						this._client.Send(thisLine, false);
-						this.ReturnControl(true);
-					}
-				}
-			}
-		}
-
 		private async Task Init()
 		{
 			_ = this._logService.Log("Constructing Llama Client");
@@ -218,11 +147,14 @@ namespace ChieApi.Services
 			this._characterTimeoutMs = this._characterConfiguration.Timeout;
 
 			this._client = new LlamaClient(this._characterConfiguration);
-			_ = this._logService.Log(this._client.Args);
+			_ = this._logService.Log(System.Text.Json.JsonSerializer.Serialize(this._client.Params, new System.Text.Json.JsonSerializerOptions()
+			{
+				WriteIndented = true,
+				NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
+			}));
 
 			this._client.ResponseReceived += new EventHandler<string>(async (s, e) => await this.LlamaClient_ResponseReceived(s, e));
 			this._client.TypingResponse += new EventHandler(async (s, e) => await this.LlamaClient_IsTyping(s, e));
-			this._client.OnDisconnect += new EventHandler<DisconnectEventArgs>(async (s, e) => await this.OnDisconnect(e));
 
 			await this._logService.Log("Connecting to client...");
 			await this._client.Connect();
@@ -246,8 +178,8 @@ namespace ChieApi.Services
 
 		private async Task LlamaClient_ResponseReceived(object? sender, string? e)
 		{
-			string? userName = e.From("|").To(">");
-			string? content = e.From(">").To("|").Trim();
+			string? userName = this.CharacterName;
+			string? content = e.Trim();
 
 			if (string.IsNullOrWhiteSpace(userName) && string.IsNullOrWhiteSpace(content))
 			{
@@ -326,11 +258,11 @@ namespace ChieApi.Services
 
 					if (!this._client.HasQueuedMessages && this._client.EndsWithReverse)
 					{
-						toSend = $"{this.CharacterName}>/";
+						toSend = $"{this.CharacterName}> ";
 					}
 					else
 					{
-						toSend = $"|{this.CharacterName}>/";
+						toSend = $"|{this.CharacterName}> ";
 					}
 
 					this._client.Send(toSend, true);

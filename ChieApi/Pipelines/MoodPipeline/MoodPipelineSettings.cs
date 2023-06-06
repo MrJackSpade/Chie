@@ -8,7 +8,7 @@ namespace ChieApi.Pipelines.MoodPipeline
 		public MoodPipelineEvent[] Events { get; set; } = Array.Empty<MoodPipelineEvent>();	
 
 		[JsonPropertyName("firstMessage")]
-		public bool FirstMessage { get; set; } = true;
+		public bool FirstMessage { get; set; }
 
 		[JsonPropertyName("minDelayMinutes")]
 		public int MinDelayMinutes { get; set; }

@@ -1,49 +1,46 @@
 ﻿using Ai.Utils;
-using Ai.Utils.Services;
 using Llama.Shared;
-using Loxifi;
-using System.Diagnostics;
+using LLama;
 using System.Text;
 
 namespace Llama
 {
 	public class LlamaClient
 	{
+		private static Thread? _inferenceThread;
+
+		private readonly LLamaModel _model;
+
 		private readonly StringBuilder _outBuilder;
 
 		private readonly StringBuilder _queued = new();
 
 		private readonly LlamaSettings _settings;
+
 		private bool _killSent;
 
 		private char _lastChar;
-		private RunningProcess _process;
-
-		static LlamaClient()
-		{
-			ConsoleControl.DisableSelfKill();
-		}
 
 		public LlamaClient(LlamaSettings settings)
 		{
 			this._settings = settings;
 			this._outBuilder = new StringBuilder();
-			this.Args = GenerateParameters(this._settings);
+			this._model = new LLamaModel(this.Params = GenerateParameters(this._settings), verbose: true);
 		}
-
-		public event EventHandler<string>? ResponseReceived;
 
 		public event EventHandler<DisconnectEventArgs> OnDisconnect;
 
-		public event EventHandler? TypingResponse;
+		public event EventHandler<string>? ResponseReceived;
 
-		public string Args { get; private set; }
+		public event EventHandler? TypingResponse;
 
 		public bool Connected { get; private set; }
 
 		public bool EndsWithReverse => this._lastChar == this._settings.PrimaryReversePrompt?.Last();
 
 		public bool HasQueuedMessages => this._queued.Length > 0;
+
+		public LLamaParams Params { get; private set; }
 
 		public static string CreateMD5(string input)
 		{
@@ -55,116 +52,8 @@ namespace Llama
 			return Convert.ToHexString(hashBytes); // .NET 5 +
 		}
 
-		private bool ShouldKill(string message, string check)
-		{
-			if (message.Contains('\r') && this.Connected && this._settings.ReturnOnNewLine)
-			{
-				return true;
-			}
-
-			if (check.Length > 10 && check[^10..].Distinct().Count() == 1)
-			{
-				return true;
-			}
-
-			return false;
-		}
-
-		Thread _processMonitor;
-
 		public async Task Connect()
 		{
-			TaskCompletionSource taskCompletionSource = new();
-
-			Console.WriteLine($"{this._settings.MainPath} {this.Args}");
-
-			ProcessSettings processSettings = new(this._settings.MainPath)
-			{
-				Arguments = Args,
-				UnicodeEnvironment = true,
-				WorkingDirectory = new FileInfo(this._settings.MainPath).DirectoryName,
-				StdOutWrite = (s, o) =>
-				{
-					this._lastChar = o.Last();
-
-					o = o.Replace("\b", "");
-
-					string check = this._outBuilder.ToString();
-
-					if (string.IsNullOrWhiteSpace(o))
-					{
-						if (string.IsNullOrWhiteSpace(check))
-						{
-							return;
-						}
-					}
-
-					bool shouldKill = this.ShouldKill(o, check);
-					//If the message contains a newline and we're set to kill in that event
-					if (shouldKill)
-					{
-						//Kill the child process
-						if (!this._killSent)
-						{
-							//Mark as killed. Sending more than once will exit it
-							this._killSent = true;
-							Debug.WriteLine("Sending kill signal...");
-							ConsoleControl.GenerateKillSignal();
-						}
-					}
-
-					//If we've detected the reverse or we manually killed, we flush
-					if (this.CaptureText(o) || this._killSent)
-					{
-						if (!this.Connected)
-						{
-							taskCompletionSource.SetResult();
-							this.Connected = true;
-						}
-						else
-						{
-							string lastMessage = this._outBuilder.ToString();
-
-							lastMessage = lastMessage.Trim();
-
-							//We may have killed before the turnaround. If so we want
-							//the message we pass back to look "normal", as though
-							//it was a standard reversal, so we have to append the reverse
-							//manually
-							if (!lastMessage.EndsWith(this._settings.PrimaryReversePrompt))
-							{
-								if (!lastMessage.EndsWith(System.Environment.NewLine))
-								{
-									lastMessage += System.Environment.NewLine;
-								}
-
-								lastMessage += this._settings.PrimaryReversePrompt;
-							}
-
-							if (!string.IsNullOrEmpty(lastMessage))
-							{
-								this.ResponseReceived?.Invoke(this, lastMessage);
-							}
-						}
-
-						_ = this._outBuilder.Clear();
-					}
-				},
-				StdErrWrite = (s, o) =>
-				{
-					Debug.Write(o);
-
-					ConsoleColor backupColor = Console.ForegroundColor;
-					Console.ForegroundColor = ConsoleColor.Red;
-					Console.Write(o);
-					Console.ForegroundColor = backupColor;
-				}
-			};
-
-			this._process = ProcessRunner.StartAsync(processSettings);
-
-			await taskCompletionSource.Task;
-
 			if (!string.IsNullOrWhiteSpace(this._settings.Start))
 			{
 				string toSend = this._settings.Start;
@@ -176,33 +65,6 @@ namespace Llama
 
 				this.Send(toSend, false);
 			}
-
-			_processMonitor = new Thread(async () =>
-			{
-				await _process;
-
-				DisconnectEventArgs disconnectEventArgs = new()
-				{
-					ResultCode = await _process.ExitCode
-				};
-
-				this.Connected = false;
-
-				string llamaPath = new FileInfo(this._settings.MainPath).DirectoryName;
-
-				string contextDumpPath = Path.Combine(llamaPath, "contexts");
-
-				string potentialDumpPath = Path.Combine(contextDumpPath, $"{disconnectEventArgs.ResultCode}.prompt");
-			
-				if(File.Exists(potentialDumpPath))
-				{
-					disconnectEventArgs.RollOverPrompt = potentialDumpPath;
-				}
-
-				this.OnDisconnect?.Invoke(this, disconnectEventArgs);
-			});
-
-			_processMonitor.Start();
 		}
 
 		/// <summary>
@@ -211,7 +73,7 @@ namespace Llama
 		/// <returns></returns>
 		public void Kill()
 		{
-			ConsoleControl.GenerateKillSignal();
+			throw new NotImplementedException();
 			this._killSent = true;
 			string response = this._outBuilder.ToString();
 			_ = this._outBuilder.Clear();
@@ -238,53 +100,21 @@ namespace Llama
 
 				_ = this._queued.Clear();
 
-				this.ConsoleWrite(concatSend);
+				Console.Write(concatSend);
 
-				this._process.WriteLine(concatSend);
+				this.StartInference(concatSend);
 			}
 			else
 			{
-				_ = this._queued.AppendLine(toSend + "\\");
+				_ = this._queued.AppendLine(toSend);
 			}
 
 			this._killSent = false;
 		}
 
-		private void ConsoleWrite(string toWrite)
+		private static LLamaParams GenerateParameters(LlamaSettings settings)
 		{
-			toWrite = toWrite.Replace("\\\r\n", "\r\n").Replace("\\\n", "\n");
-
-			if (toWrite.EndsWith('/'))
-			{
-				Console.Write(toWrite[..^1]);
-			}
-			else
-			{
-				Console.WriteLine(toWrite);
-			}
-		}
-		private static string GenerateParameters(LlamaSettings settings)
-		{
-			StringBuilder sb = new();
-
-			void AddArgument(string key, string? value = null, bool quoted = false)
-			{
-				if (value is null)
-				{
-					_ = sb.Append($" {key}");
-				}
-				else
-				{
-					if (!quoted)
-					{
-						_ = sb.Append($" {key} {value}");
-					}
-					else
-					{
-						_ = sb.Append($" {key} \"{value}\"");
-					}
-				}
-			}
+			LLamaParams p = new();
 
 			switch (settings.InteractiveMode)
 			{
@@ -292,12 +122,12 @@ namespace Llama
 					break;
 
 				case InteractiveMode.Interactive:
-					AddArgument("-i");
+					p.Interactive = true;
 					break;
 
 				case InteractiveMode.InteractiveFirst:
-					AddArgument("-i");
-					AddArgument("--interactive-first");
+					p.Interactive = true;
+					p.InteractiveFirst = true;
 					break;
 
 				default: throw new NotImplementedException();
@@ -306,141 +136,177 @@ namespace Llama
 			if (settings.UseSessionData)
 			{
 				string modelPathHash = CreateMD5(settings.ModelPath);
-				AddArgument("--prompt-cache", modelPathHash + ".session");
+				p.SessionPath = modelPathHash + ".session";
 			}
 
 			if (settings.Threads.HasValue)
 			{
-				AddArgument("-t", $"{settings.Threads.Value}");
+				p.ThreadCount = settings.Threads.Value;
 			}
 
 			if (settings.NoMemoryMap)
 			{
-				AddArgument("--no-mmap --mlock");
+				p.UseMemoryMap = false;
+				p.UseMemoryLock = true;
 			}
 
 			if (settings.NoPenalizeNewLine)
 			{
-				AddArgument("--no-penalize-nl");
+				p.PenalizeNewlines = false;
 			}
 
 			switch (settings.MemoryMode)
 			{
 				case MemoryMode.Float16:
-					AddArgument("--memory_f16");
 					break;
 
 				case MemoryMode.Float32:
-					AddArgument("--memory_f32");
+					p.MemoryFloat16 = false;
 					break;
 
 				default: throw new NotImplementedException();
 			}
 
-			foreach (string r in settings.AllReversePrompts)
-			{
-				AddArgument("-r", r, true);
-			}
+			p.Antiprompt = settings.AllReversePrompts.ToList();
 
 			if (!string.IsNullOrEmpty(settings.InSuffix))
 			{
-				AddArgument("--in-suffix", settings.InSuffix, true);
+				p.InputSuffix = settings.InSuffix;
 			}
 
 			if (settings.Temp.HasValue)
 			{
-				AddArgument("--temp", $"{settings.Temp}");
+				p.Temp = settings.Temp.Value;
 			}
 
 			if (settings.ContextLength.HasValue)
 			{
-				AddArgument("-c", $"{settings.ContextLength}");
+				p.ContextSize = settings.ContextLength.Value;
 			}
 
 			if (settings.TokensToPredict.HasValue)
 			{
-				AddArgument("-n", $"{settings.TokensToPredict}");
+				p.PredictCount = settings.TokensToPredict.Value;
 			}
 
 			if (settings.RepeatPenalty.HasValue)
 			{
-				AddArgument("--repeat_penalty", $"{settings.RepeatPenalty}");
+				p.RepeatPenalty = settings.RepeatPenalty.Value;
 			}
 
 			if (settings.Top_P.HasValue)
 			{
-				AddArgument("--top_p", $"{settings.Top_P}");
+				p.TopP = settings.Top_P.Value;
 			}
 
 			if (settings.RepeatPenaltyWindow.HasValue)
 			{
-				AddArgument("--repeat_last_n", $"{settings.RepeatPenaltyWindow}");
+				p.RepeatTokenPenaltyWindow = settings.RepeatPenaltyWindow.Value;
 			}
 
 			if (settings.KeepPromptTokens.HasValue)
 			{
-				AddArgument("--keep", $"{settings.KeepPromptTokens}");
+				p.KeepContextTokenCount = settings.KeepPromptTokens.Value;
 			}
 
 			if (!string.IsNullOrWhiteSpace(settings.Prompt))
 			{
 				if (File.Exists(settings.Prompt))
 				{
-					AddArgument("-f", settings.Prompt, true);
+					p.Prompt = File.ReadAllText(settings.Prompt);
 				}
 				else
 				{
-					AddArgument("-p", settings.Prompt);
+					p.Prompt = settings.Prompt;
 				}
 			}
 
 			if (settings.MiroStat != MiroStatMode.Disabled)
 			{
-				AddArgument("--mirostat", $"{(int)settings.MiroStat}");
-				
-				if(settings.MiroStatEntropy.HasValue)
+				p.Mirostat = (int)settings.MiroStat;
+
+				if (settings.MiroStatEntropy.HasValue)
 				{
-					AddArgument("--mirostat-ent", $"{settings.MiroStatEntropy.Value}");
+					p.MirostatEta = settings.MiroStatEntropy.Value;
 				}
 			}
 
 			if (settings.VerbosePrompt)
 			{
-				AddArgument("--verbose-prompt");
+				p.VerbosePrompt = settings.VerbosePrompt;
 			}
 
 			if (settings.GpuLayers.HasValue)
 			{
-				AddArgument("--n-gpu-layers", settings.GpuLayers.ToString());
+				p.GpuLayerCount = settings.GpuLayers.Value;
 			}
 
 			foreach (KeyValuePair<int, string> bias in settings.LogitBias)
 			{
-				AddArgument("-l", $"{bias.Key}{bias.Value}");
+				if (string.Equals(bias.Value, "-inf"))
+				{
+					p.LogitBias!.Add(bias.Key, float.NegativeInfinity);
+				}
+				else if (string.Equals(bias.Value, "+inf"))
+				{
+					p.LogitBias!.Add(bias.Key, float.PositiveInfinity);
+				}
+				else
+				{
+					p.LogitBias!.Add(bias.Key, float.Parse(bias.Value));
+				}
 			}
 
-			AddArgument("-m", settings.ModelPath, true);
+			p.Model = settings.ModelPath;
 
-			return sb.ToString();
+			return p;
 		}
 
-		private bool CaptureText(string text)
+		private void StartInference(string data)
 		{
-			TypingResponse?.Invoke(this, null);
-
-			_ = this._outBuilder.Append(text);
-
-			Console.Write(text);
-
-			if (!this.Connected)
+			_inferenceThread = new Thread(() =>
 			{
-				return true;
-			}
-			else
-			{
-				string o = this._outBuilder.ToString();
-				return this._settings.AllReversePrompts.Any(o.EndsWith);
-			}
+				StringBuilder result = new();
+
+				string lastChunk = string.Empty;
+
+				int lastChunkCount = 0;
+
+				foreach (string chunk in this._model.Call(data))
+				{
+					if (chunk.Length > 0)
+					{
+						Console.Write(chunk);
+						result.Append(chunk);
+						this._lastChar = chunk[^1];
+					}
+
+					if (lastChunk != chunk)
+					{
+						lastChunkCount = 0;
+						lastChunk = chunk;
+					}
+					else
+					{
+						lastChunkCount++;
+					}
+
+					if (lastChunkCount >= 10)
+					{
+						break;
+					}
+				}
+
+				string resultStr = result.ToString();
+				if (!resultStr.Contains('\n'))
+				{
+					Console.Write('\n');
+				}
+
+				this.ResponseReceived?.Invoke(this, resultStr);
+			});
+
+			_inferenceThread.Start();
 		}
 	}
 }
