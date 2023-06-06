@@ -12,7 +12,7 @@ namespace LLama
 {
 	internal static class Utils
 	{
-		public static SafeLLamaContextHandle llama_init_from_gpt_params(ref LLamaParams @params)
+		public static SafeLLamaContextHandle llama_init_from_gpt_params(ref LlamaModelSettings @params)
 		{
 			LLamaContextParams lparams = NativeApi.llama_context_default_params();
 

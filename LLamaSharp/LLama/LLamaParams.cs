@@ -4,7 +4,7 @@ using llama_token = System.Int32;
 
 namespace LLama
 {
-	public class LLamaParams
+	public class LlamaModelSettings
 	{
 		public List<string> Antiprompt { get; set; } = new();
 

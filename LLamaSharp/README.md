@@ -76,7 +76,7 @@ Besides, `ChatSession` makes it easier to wrap your own chat bot. The code below
 
 ```cs
 
-var model = new LLamaModel(new LLamaParams(model: "<Your path>", n_ctx: 512, repeat_penalty: 1.0f));
+var model = new LLamaModel(new LlamaModelSettings(model: "<Your path>", n_ctx: 512, repeat_penalty: 1.0f));
 var session = new ChatSession<LLamaModel>(model).WithPromptFile("<Your prompt file path>")
                 .WithAntiprompt(new string[] { "User:" });
 Console.Write("\nUser:");

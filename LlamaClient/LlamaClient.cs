@@ -42,7 +42,7 @@ namespace Llama
 
 		public bool HasQueuedMessages => this._queued.Length > 0;
 
-		public LLamaParams Params { get; private set; }
+		public LlamaModelSettings Params { get; private set; }
 
 		public static string CreateMD5(string input)
 		{
@@ -106,15 +106,15 @@ namespace Llama
 			}
 			else
 			{
-				_ = this._queued.Append(toSend + '\n');
+				_ = this._queued.AppendLine(toSend);
 			}
 
 			this._killSent = false;
 		}
 
-		private static LLamaParams GenerateParameters(LlamaSettings settings)
+		private static LlamaModelSettings GenerateParameters(LlamaSettings settings)
 		{
-			LLamaParams p = new();
+			LlamaModelSettings p = new();
 
 			switch (settings.InteractiveMode)
 			{

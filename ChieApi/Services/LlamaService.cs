@@ -176,10 +176,10 @@ namespace ChieApi.Services
 			}
 		}
 
-		private async Task LlamaClient_ResponseReceived(object? sender, string? e)
+		private async Task LlamaClient_ResponseReceived(object? sender, string e)
 		{
 			string? userName = this.CharacterName;
-			string? content = e.Trim();
+			string? content = e.To("|").Trim();
 
 			if (string.IsNullOrWhiteSpace(userName) && string.IsNullOrWhiteSpace(content))
 			{
@@ -258,11 +258,11 @@ namespace ChieApi.Services
 
 					if (!this._client.HasQueuedMessages && this._client.EndsWithReverse)
 					{
-						toSend = $"{this.CharacterName}> ";
+						toSend = $"{this.CharacterName}>";
 					}
 					else
 					{
-						toSend = $"|{this.CharacterName}> ";
+						toSend = $"|{this.CharacterName}>";
 					}
 
 					this._client.Send(toSend, true);

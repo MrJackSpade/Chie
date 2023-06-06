@@ -1,5 +1,6 @@
 ﻿using LLama.Exceptions;
 using LLama.Extensions;
+using LLama.Interfaces;
 using LLama.Native;
 using LLama.Types;
 using System;
@@ -8,37 +9,39 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using llama_token = System.Int32;
+using LlamaToken = System.Int32;
 
 namespace LLama
 {
-	public class LLamaModel : IChatModel, IDisposable
+    public class LLamaModel : IChatModel, IDisposable
 	{
-		private readonly List<llama_token> _embed;
+		private readonly List<LlamaToken> _embed;
 
-		private readonly List<llama_token> _inp_pfx;
+		private readonly List<LlamaToken> _inputPrefix;
 
-		private readonly List<llama_token> _inp_sfx;
+		private readonly List<LlamaToken> _inputSuffix;
 
-		private readonly List<llama_token> _last_n_tokens;
+		private readonly List<LlamaToken> _last_n_tokens;
 
-		private readonly List<llama_token> _llama_token_newline;
+		private readonly List<LlamaToken> _llama_token_newline;
 
 		private readonly int _n_ctx;
 
-		private readonly LLamaParams _params;
+		private readonly LlamaModelSettings _params;
 
-		private List<llama_token> _embed_inp;
+		private readonly List<LlamaToken> _session_tokens;
+
+		private int _contextIndex;
 
 		private bool _input_echo;
+
+		private List<LlamaToken> _inputBuffer;
 
 		private bool _is_antiprompt;
 
 		private bool _is_interacting;
 
 		private int _n_consumed;
-
-		private int _n_past;
 
 		private int _n_remain;
 
@@ -48,28 +51,33 @@ namespace LLama
 
 		private string _path_session;
 
-		private List<llama_token> _session_tokens;
+		private IEnumerable<LlamaToken> NoPenalize()
+		{
+			yield return 13; //NL
+			yield return 334; // *
+			yield return 29930; //*
+		}
 
 		/// <summary>
-		/// Please refer `LLamaParams` to find the meanings of each arg. Be sure to have set the `n_gpu_layers`, otherwise it will
+		/// Please refer `LlamaModelSettings` to find the meanings of each arg. Be sure to have set the `n_gpu_layers`, otherwise it will
 		/// load 20 layers to gpu by default.
 		/// </summary>
-		/// <param name="llamaParams">The LLamaModel params</param>
+		/// <param name="LlamaModelSettings">The LLamaModel params</param>
 		/// <param name="name">Model name</param>
 		/// <param name="verbose">Whether to output the detailed info.</param>
 		/// <param name="encoding"></param>
 		/// <exception cref="RuntimeError"></exception>
-		public unsafe LLamaModel(LLamaParams llamaParams, Encoding encoding, string name = "", bool verbose = false)
+		public unsafe LLamaModel(LlamaModelSettings LlamaModelSettings, Encoding encoding, string name = "", bool verbose = false)
 		{
 			this.Name = name;
-			this._params = llamaParams;
+			this._params = LlamaModelSettings;
 			this.Verbose = verbose;
 			this.NativeHandle = Utils.llama_init_from_gpt_params(ref this._params);
 
 			// Add a space in front of the first character to match OG llama tokenizer behavior
-			this._session_tokens = new List<llama_token>();
+			this._session_tokens = new List<LlamaToken>();
 
-			this._path_session = llamaParams.SessionPath;
+			this._path_session = LlamaModelSettings.SessionPath;
 			if (!string.IsNullOrEmpty(this._path_session))
 			{
 				if (verbose)
@@ -82,9 +90,9 @@ namespace LLama
 					LLamaLogger.Default.Warn("Session file does not exist, will create.");
 				}
 
-				llama_token[] session_tokens = new llama_token[llamaParams.ContextSize];
+				LlamaToken[] session_tokens = new LlamaToken[LlamaModelSettings.ContextSize];
 				ulong n_token_count_out = 0;
-				if (!NativeApi.llama_load_session_file(this.NativeHandle, this._path_session, session_tokens, (ulong)llamaParams.ContextSize, &n_token_count_out))
+				if (!NativeApi.llama_load_session_file(this.NativeHandle, this._path_session, session_tokens, (ulong)LlamaModelSettings.ContextSize, &n_token_count_out))
 				{
 					throw new RuntimeError($"Failed to load session file {this._path_session}");
 				}
@@ -101,8 +109,8 @@ namespace LLama
 			this.WithPrompt(this._params.Prompt, encoding);
 
 			// prefix & suffix for instruct mode
-			this._inp_pfx = Utils.llama_tokenize(this.NativeHandle, "\n\n### Instruction:\n\n", true, encoding);
-			this._inp_sfx = Utils.llama_tokenize(this.NativeHandle, "\n\n### Response:\n\n", false, encoding);
+			this._inputPrefix = Utils.llama_tokenize(this.NativeHandle, "\n\n### Instruction:\n\n", true, encoding);
+			this._inputSuffix = Utils.llama_tokenize(this.NativeHandle, "\n\n### Response:\n\n", false, encoding);
 
 			// in instruct mode, we inject a prefix and a suffix to each input by the user
 			if (this._params.Instruct)
@@ -124,10 +132,10 @@ namespace LLama
 			{
 				LLamaLogger.Default.Info("\n");
 				LLamaLogger.Default.Info($"prompt: '{this._params.Prompt}'");
-				LLamaLogger.Default.Info($"number of tokens in prompt = {this._embed_inp.Count}");
-				for (int i = 0; i < this._embed_inp.Count; i++)
+				LLamaLogger.Default.Info($"number of tokens in prompt = {this._inputBuffer.Count}");
+				for (int i = 0; i < this._inputBuffer.Count; i++)
 				{
-					LLamaLogger.Default.Info($"{this._embed_inp[i]} -> '{Utils.PtrToStringUTF8(NativeApi.llama_token_to_str(this.NativeHandle, this._embed_inp[i]))}'");
+					LLamaLogger.Default.Info($"{this._inputBuffer[i]} -> '{Utils.PtrToStringUTF8(NativeApi.llama_token_to_str(this.NativeHandle, this._inputBuffer[i]))}'");
 				}
 
 				if (this._params.KeepContextTokenCount > 0)
@@ -135,7 +143,7 @@ namespace LLama
 					LLamaLogger.Default.Info($"static prompt based on n_keep: '");
 					for (int i = 0; i < this._params.KeepContextTokenCount; i++)
 					{
-						string part = Utils.PtrToStringUTF8(NativeApi.llama_token_to_str(this.NativeHandle, this._embed_inp[i]));
+						string part = Utils.PtrToStringUTF8(NativeApi.llama_token_to_str(this.NativeHandle, this._inputBuffer[i]));
 						LLamaLogger.Default.Info($"{part}", true);
 						Console.Write(part);
 					}
@@ -183,11 +191,11 @@ namespace LLama
 
 			this._is_antiprompt = false;
 			this._input_echo = false;
-			this._n_past = 0;
+			this._contextIndex = 0;
 			this._n_remain = this._params.PredictCount;
 			this._n_consumed = 0;
 			this._n_session_consumed = 0;
-			this._embed = new List<llama_token>();
+			this._embed = new List<LlamaToken>();
 		}
 
 		public string Name { get; set; }
@@ -207,7 +215,7 @@ namespace LLama
 		{
 			this._is_antiprompt = false;
 
-			if (this._n_past > 0)
+			if (this._contextIndex > 0)
 			{
 				this._is_interacting = false;
 			}
@@ -232,46 +240,34 @@ namespace LLama
 					// if we run out of context:
 					// - take the n_keep first tokens from the original prompt (via n_past)
 					// - take half of the last (n_ctx - n_keep) tokens and recompute the logits in batches
-					if (this._n_past + this._embed.Count > this._n_ctx)
+					if (this._contextIndex + this._embed.Count > this._n_ctx)
 					{
-						int n_left = this._n_past - this._params.KeepContextTokenCount;
+						int n_take = (this._n_ctx - this._params.KeepContextTokenCount) / 2;
 
-						this._n_past = Math.Max(1, this._params.KeepContextTokenCount);
+						int n_take_from_embd = Math.Min(n_take, this._embed.Count);
 
-						// insert n_left/2 tokens at the start of embed from last_n_tokens
-						this._embed.InsertRange(0, this._last_n_tokens.Take(this._last_n_tokens.Count - this._embed.Count).Skip(this._n_ctx - n_left / 2 - this._embed.Count));
+						List<LlamaToken> new_embed = this.CopyFromToken(this._embed, n_take_from_embd, this._llama_token_newline[0]);
+
+						int n_take_from_last = n_take - new_embed.Count;
+						List<LlamaToken> history = this.CopyFromToken(this._last_n_tokens, n_take_from_last, this._llama_token_newline[0]);
+
+						this._embed.Clear();
+
+						this._embed.Add(NativeApi.llama_token_bos());
+						this._embed.AddRange(history);
+						this._embed.AddRange(new_embed);
 
 						// stop saving session if we run out of context
 						this._path_session = string.Empty;
-					}
 
-					// try to reuse a matching prefix from the loaded session instead of re-eval (via n_past)
-					// REVIEW
-					if (this._n_session_consumed < this._session_tokens.Count)
-					{
-						int i = 0;
-						for (; i < this._embed.Count; i++)
-						{
-							if (this._embed[i] != this._session_tokens[this._n_session_consumed])
-							{
-								this._session_tokens = this._session_tokens.Take(this._n_session_consumed).ToList();
-								break;
-							}
+						this._contextIndex = 0;
 
-							this._n_past++;
-							this._n_session_consumed++;
+						int n_left = this._contextIndex - this._params.KeepContextTokenCount;
 
-							if (this._n_session_consumed >= this._session_tokens.Count)
-							{
-								i++;
-								break;
-							}
-						}
+						this._contextIndex = Math.Max(1, this._params.KeepContextTokenCount);
 
-						if (i > 0)
-						{
-							this._embed.RemoveRange(0, i);
-						}
+						// insert n_left/2 tokens at the start of embed from last_n_tokens
+						this._embed.InsertRange(0, this._last_n_tokens.Take(this._last_n_tokens.Count - this._embed.Count).Skip(this._n_ctx - n_left / 2 - this._embed.Count));
 					}
 
 					// evaluate tokens in batches
@@ -286,13 +282,13 @@ namespace LLama
 						}
 
 						int[] array = this._embed.Skip(i).ToArray();
-						if (NativeApi.llama_eval(this.NativeHandle, array, n_eval, this._n_past, this._params.ThreadCount) != 0)
+						if (NativeApi.llama_eval(this.NativeHandle, array, n_eval, this._contextIndex, this._params.ThreadCount) != 0)
 						{
 							LLamaLogger.Default.Error($"Failed to eval.");
 							throw new RuntimeError("Failed to eval.");
 						}
 
-						this._n_past += n_eval;
+						this._contextIndex += n_eval;
 					}
 
 					if (this._embed.Count > 0 && !string.IsNullOrEmpty(this._path_session))
@@ -304,7 +300,7 @@ namespace LLama
 
 				this._embed.Clear();
 
-				if (this._embed_inp.Count <= this._n_consumed && !this._is_interacting)
+				if (this._inputBuffer.Count <= this._n_consumed && !this._is_interacting)
 				{
 					float temp = this._params.Temp;
 					int top_k = this._params.TopK <= 0 ? NativeApi.llama_n_vocab(this.NativeHandle) : this._params.TopK;
@@ -340,7 +336,7 @@ namespace LLama
 
 					List<LLamaTokenData> candidates = new(n_vocab);
 
-					for (llama_token token_id = 0; token_id < n_vocab; token_id++)
+					for (LlamaToken token_id = 0; token_id < n_vocab; token_id++)
 					{
 						candidates.Add(new LLamaTokenData(token_id, logits[token_id], 0.0f));
 					}
@@ -348,7 +344,15 @@ namespace LLama
 					LLamaTokenDataArray candidates_p = new(candidates.ToArray(), (ulong)candidates.Count, false);
 
 					// Apply penalties
-					float nl_logit = logits[NativeApi.llama_token_nl()];
+					List<float> pre_penal_values = new();
+					if (!penalize_nl)
+					{
+						foreach (LlamaToken v in this.NoPenalize())
+						{
+							pre_penal_values.Add(logits[v]);
+						}
+					}
+					
 					int last_n_repeat = Math.Min(Math.Min(this._last_n_tokens.Count, repeat_last_n), this._n_ctx);
 					SamplingApi.llama_sample_repetition_penalty(this.NativeHandle, candidates_p,
 						this._last_n_tokens.Skip(this._last_n_tokens.Count - last_n_repeat).ToArray(),
@@ -356,9 +360,14 @@ namespace LLama
 					SamplingApi.llama_sample_frequency_and_presence_penalties(this.NativeHandle, candidates_p,
 						this._last_n_tokens.Skip(this._last_n_tokens.Count - last_n_repeat).ToArray(),
 						(ulong)last_n_repeat, alpha_frequency, alpha_presence);
+
 					if (!penalize_nl)
 					{
-						logits[NativeApi.llama_token_nl()] = nl_logit;
+						for (int i = 0; i < pre_penal_values.Count; i++)
+						{
+							float oldv = pre_penal_values[i];
+							logits[this.NoPenalize().ElementAt(i)] = oldv;
+						}
 					}
 
 					if (temp <= 0)
@@ -404,7 +413,7 @@ namespace LLama
 						{
 							// tokenize and inject first reverse prompt
 							List<int> first_antiprompt = Utils.llama_tokenize(this.NativeHandle, this._params.Antiprompt[0], false, encoding);
-							this._embed_inp.AddRange(first_antiprompt);
+							this._inputBuffer.AddRange(first_antiprompt);
 						}
 					}
 
@@ -419,11 +428,11 @@ namespace LLama
 				}
 				else
 				{
-					while (this._embed_inp.Count > this._n_consumed)
+					while (this._inputBuffer.Count > this._n_consumed)
 					{
-						this._embed.Add(this._embed_inp[this._n_consumed]);
+						this._embed.Add(this._inputBuffer[this._n_consumed]);
 						this._last_n_tokens.RemoveAt(0);
-						this._last_n_tokens.Add(this._embed_inp[this._n_consumed]);
+						this._last_n_tokens.Add(this._inputBuffer[this._n_consumed]);
 						this._n_consumed++;
 						if (this._embed.Count >= this._params.BatchSize)
 						{
@@ -441,7 +450,7 @@ namespace LLama
 					}
 				}
 
-				if (this._params.Interactive && this._embed_inp.Count <= this._n_consumed)
+				if (this._params.Interactive && this._inputBuffer.Count <= this._n_consumed)
 				{
 					if (this._params.Antiprompt.Count > 0)
 					{
@@ -463,7 +472,7 @@ namespace LLama
 						}
 					}
 
-					if (this._n_past > 0 && this._is_interacting)
+					if (this._contextIndex > 0 && this._is_interacting)
 					{
 						if (this._params.Instruct)
 						{
@@ -526,12 +535,42 @@ namespace LLama
 			return this.Call(text, encoding);
 		}
 
+		public List<LlamaToken> CopyFromToken(List<LlamaToken> sourceList, int startIndex, LlamaToken startToken)
+		{
+			// Calculate the index to start from
+			int start = sourceList.Count - startIndex;
+
+			// Ensure the index is within valid bounds
+			if (start < 0)
+			{
+				start = 0;
+			}
+			else if (start > sourceList.Count)
+			{
+				start = sourceList.Count;
+			}
+
+			// Find the first instance of startToken
+			int index = sourceList.FindIndex(start, token => token.Equals(startToken));
+
+			// If startToken was not found, use the original start position
+			if (index == -1)
+			{
+				index = start;
+			}
+
+			// Copy from the found position (or the original start position if startToken was not found)
+			List<LlamaToken> result = sourceList.Skip(index).ToList();
+
+			return result;
+		}
+
 		/// <summary>
 		/// Detokenize a list of tokens.
 		/// </summary>
 		/// <param name="tokens">The list of tokens to detokenize.</param>
 		/// <returns>The detokenized string.</returns>
-		public string DeTokenize(IEnumerable<llama_token> tokens)
+		public string DeTokenize(IEnumerable<LlamaToken> tokens)
 		{
 			Debug.Assert(this.NativeHandle.DangerousGetHandle() != IntPtr.Zero);
 			string output = string.Empty;
@@ -590,11 +629,11 @@ namespace LLama
 		/// <param name="text">The utf-8 encoded string to tokenize.</param>
 		/// <returns>A list of tokens.</returns>
 		/// <exception cref="RuntimeError">If the tokenization failed.</exception>
-		public List<llama_token> Tokenize(string text, Encoding encoding)
+		public List<LlamaToken> Tokenize(string text, Encoding encoding)
 		{
 			Debug.Assert(this.NativeHandle.DangerousGetHandle() != IntPtr.Zero);
 			int n_ctx = NativeApi.llama_n_ctx(this.NativeHandle);
-			int[] tokens = new llama_token[n_ctx];
+			int[] tokens = new LlamaToken[n_ctx];
 			int n_tokens = NativeApi.llama_tokenize(this.NativeHandle, text, encoding, tokens, n_ctx, true);
 			if (n_tokens < 0)
 			{
@@ -614,11 +653,11 @@ namespace LLama
 		public LLamaModel WithPrompt(string prompt, Encoding encoding)
 		{
 			this._params.Prompt = prompt.Insert(0, " ");
-			this._embed_inp = Utils.llama_tokenize(this.NativeHandle, this._params.Prompt, true, encoding);
+			this._inputBuffer = Utils.llama_tokenize(this.NativeHandle, this._params.Prompt, true, encoding);
 
-			if (this._embed_inp.Count > this._n_ctx - 4)
+			if (this._inputBuffer.Count > this._n_ctx - 4)
 			{
-				throw new ArgumentException($"prompt is too long ({this._embed_inp.Count} tokens, max {this._n_ctx - 4})");
+				throw new ArgumentException($"prompt is too long ({this._inputBuffer.Count} tokens, max {this._n_ctx - 4})");
 			}
 
 			ulong n_matching_session_tokens = 0;
@@ -626,7 +665,7 @@ namespace LLama
 			{
 				foreach (int id in this._session_tokens)
 				{
-					if (n_matching_session_tokens >= (ulong)this._embed_inp.Count || id != this._embed_inp[(int)n_matching_session_tokens])
+					if (n_matching_session_tokens >= (ulong)this._inputBuffer.Count || id != this._inputBuffer[(int)n_matching_session_tokens])
 					{
 						break;
 					}
@@ -634,33 +673,33 @@ namespace LLama
 					n_matching_session_tokens++;
 				}
 
-				if (n_matching_session_tokens >= (ulong)this._embed_inp.Count)
+				if (n_matching_session_tokens >= (ulong)this._inputBuffer.Count)
 				{
 					LLamaLogger.Default.Info("Session file has exact match for prompt!");
 				}
-				else if (n_matching_session_tokens < (ulong)(this._embed_inp.Count / 2))
+				else if (n_matching_session_tokens < (ulong)(this._inputBuffer.Count / 2))
 				{
 					LLamaLogger.Default.Warn($"session file has low similarity to prompt ({n_matching_session_tokens} " +
-						$"/ {this._embed_inp.Count} tokens); will mostly be reevaluated.");
+						$"/ {this._inputBuffer.Count} tokens); will mostly be reevaluated.");
 				}
 				else
 				{
-					LLamaLogger.Default.Info($"Session file matches {n_matching_session_tokens} / {this._embed_inp.Count} " +
+					LLamaLogger.Default.Info($"Session file matches {n_matching_session_tokens} / {this._inputBuffer.Count} " +
 						$"tokens of prompt.");
 				}
 			}
 			// number of tokens to keep when resetting context
-			if (this._params.KeepContextTokenCount < 0 || this._params.KeepContextTokenCount > this._embed_inp.Count || this._params.Instruct)
+			if (this._params.KeepContextTokenCount < 0 || this._params.KeepContextTokenCount > this._inputBuffer.Count || this._params.Instruct)
 			{
-				this._params.KeepContextTokenCount = this._embed_inp.Count;
+				this._params.KeepContextTokenCount = this._inputBuffer.Count;
 			}
 
-			if (this._embed_inp.Count > this._n_ctx - 4)
+			if (this._inputBuffer.Count > this._n_ctx - 4)
 			{
-				throw new ArgumentException($"prompt is too long ({this._embed_inp.Count} tokens, max {this._n_ctx - 4})");
+				throw new ArgumentException($"prompt is too long ({this._inputBuffer.Count} tokens, max {this._n_ctx - 4})");
 			}
 
-			this._need_to_save_session = !string.IsNullOrEmpty(this._path_session) && n_matching_session_tokens < (ulong)(this._embed_inp.Count * 3 / 4);
+			this._need_to_save_session = !string.IsNullOrEmpty(this._path_session) && n_matching_session_tokens < (ulong)(this._inputBuffer.Count * 3 / 4);
 
 			return this;
 		}
@@ -690,17 +729,17 @@ namespace LLama
 				// instruct mode: insert instruction prefix
 				if (this._params.Instruct && !this._is_antiprompt)
 				{
-					this._n_consumed = this._embed_inp.Count;
-					this._embed_inp.AddRange(this._inp_pfx);
+					this._n_consumed = this._inputBuffer.Count;
+					this._inputBuffer.AddRange(this._inputPrefix);
 				}
 
 				List<int> line_inp = Utils.llama_tokenize(this.NativeHandle, text, false, encoding);
-				this._embed_inp.AddRange(line_inp);
+				this._inputBuffer.AddRange(line_inp);
 
 				// instruct mode: insert response suffix
 				if (this._params.Instruct)
 				{
-					this._embed_inp.AddRange(this._inp_sfx);
+					this._inputBuffer.AddRange(this._inputSuffix);
 				}
 
 				this._n_remain -= line_inp.Count;

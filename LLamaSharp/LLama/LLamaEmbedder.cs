@@ -10,7 +10,7 @@ namespace LLama
 	{
 		private readonly SafeLLamaContextHandle _ctx;
 
-		public LLamaEmbedder(LLamaParams @params)
+		public LLamaEmbedder(LlamaModelSettings @params)
 		{
 			@params.GenerateEmbedding = true;
 			this._ctx = Utils.llama_init_from_gpt_params(ref @params);

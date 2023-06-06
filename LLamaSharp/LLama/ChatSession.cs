@@ -1,4 +1,5 @@
-﻿using LLama.Types;
+﻿using LLama.Interfaces;
+using LLama.Types;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,7 +7,7 @@ using System.Text;
 
 namespace LLama
 {
-	public class ChatSession<T> where T : IChatModel
+    public class ChatSession<T> where T : IChatModel
 	{
 		private readonly IChatModel _model;
 
