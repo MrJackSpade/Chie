@@ -10,7 +10,7 @@
   "Top_P": 0.85,
   "NoMemoryMap": true,
   "MemoryMode": "Float32",
-  "UseSessionData": true,
+  "UseSessionData": false,
   "PrimaryReversePrompt": "|",
   "AdditionalReversePrompts": [ "\n", "\r", "\r\n", " |" ],
   "NoPenalizeNewLine": true,
