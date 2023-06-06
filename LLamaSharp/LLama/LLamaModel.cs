@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using static System.Net.Mime.MediaTypeNames;
 using LlamaToken = System.Int32;
 
 namespace LLama
@@ -213,6 +214,8 @@ namespace LLama
 		/// <exception cref="RuntimeError"></exception>
 		public IEnumerable<string> Call(string text, Encoding encoding)
 		{
+			text = text.Replace("\r\n", "\n");
+
 			this._is_antiprompt = false;
 
 			if (this._contextIndex > 0)
@@ -652,7 +655,15 @@ namespace LLama
 		/// <exception cref="ArgumentException"></exception>
 		public LLamaModel WithPrompt(string prompt, Encoding encoding)
 		{
-			this._params.Prompt = prompt.Insert(0, " ");
+			prompt = prompt.Replace("\r\n", "\n");
+
+			this._params.Prompt = prompt;
+
+			if(!prompt.StartsWith(" ") && char.IsLetter(prompt[0]))
+			{
+				LLamaLogger.Default.Warn("Input prompt does not start with space and may have issues as a result");
+			}
+
 			this._inputBuffer = Utils.llama_tokenize(this.NativeHandle, this._params.Prompt, true, encoding);
 
 			if (this._inputBuffer.Count > this._n_ctx - 4)

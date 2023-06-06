@@ -9,7 +9,7 @@ namespace Llama
 	{
 		private static Thread? _inferenceThread;
 
-		private readonly Encoding _encoding = System.Text.Encoding.UTF8;
+		private readonly Encoding _encoding = System.Text.Encoding.ASCII;
 
 		private readonly LLamaModel _model;
 

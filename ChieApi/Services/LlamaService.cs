@@ -4,9 +4,7 @@ using ChieApi.Interfaces;
 using ChieApi.Models;
 using ChieApi.Shared.Entities;
 using Llama;
-using Llama.Shared;
 using Loxifi;
-using System.Text;
 using System.Text.Json.Serialization;
 
 namespace ChieApi.Services
@@ -14,11 +12,16 @@ namespace ChieApi.Services
 	public class LlamaService
 	{
 		private readonly ICharacterFactory _characterFactory;
+
 		private readonly SemaphoreSlim _chatLock = new(1);
+
 		private readonly ChatService _chatService;
+
 		private readonly Thread _killThread;
 
 		private readonly LogService _logService;
+
+		private CharacterConfiguration _characterConfiguration;
 
 		private int _characterTimeoutMs = int.MaxValue;
 
@@ -84,23 +87,46 @@ namespace ChieApi.Services
 			} while (true);
 		}
 
-		public async Task<long> Send(ChatEntry chatEntry) => await this.Send(new ChatEntry[] { chatEntry });
-
-		private bool TryLock()
+		public bool ReturnControl(bool force, string channelId = null)
 		{
-			this._chatLock.Wait();
-
-			if (this.AiState != AiState.Idle)
+			try
 			{
-				return false;
-			}
+				if (force || this.TryLock())
+				{
+					if (channelId != null && this.LastChannel != channelId)
+					{
+						return false;
+					}
 
-			return true;
+					string toSend;
+
+					if (!this._client.HasQueuedMessages && this._client.EndsWithReverse)
+					{
+						toSend = $"{this.CharacterName}>";
+					}
+					else
+					{
+						toSend = $"|{this.CharacterName}>";
+					}
+
+					this._client.Send(toSend, true);
+					return true;
+				}
+				else
+				{
+					return false;
+				}
+			}
+			finally
+			{
+				if (force)
+				{
+					this.Unlock();
+				}
+			}
 		}
 
-		private void Unlock() => _ = this._chatLock.Release();
-
-		private CharacterConfiguration _characterConfiguration;
+		public async Task<long> Send(ChatEntry chatEntry) => await this.Send(new ChatEntry[] { chatEntry });
 
 		public async Task<long> Send(ChatEntry[] chatEntries)
 		{
@@ -243,45 +269,6 @@ namespace ChieApi.Services
 			}
 		}
 
-		public bool ReturnControl(bool force, string channelId = null)
-		{
-			try
-			{
-				if (force || this.TryLock())
-				{
-					if (channelId != null && this.LastChannel != channelId)
-					{
-						return false;
-					}
-
-					string toSend;
-
-					if (!this._client.HasQueuedMessages && this._client.EndsWithReverse)
-					{
-						toSend = $"{this.CharacterName}>";
-					}
-					else
-					{
-						toSend = $"|{this.CharacterName}>";
-					}
-
-					this._client.Send(toSend, true);
-					return true;
-				}
-				else
-				{
-					return false;
-				}
-			}
-			finally
-			{
-				if (force)
-				{
-					this.Unlock();
-				}
-			}
-		}
-
 		private async Task<bool> SetState(AiState state)
 		{
 			if (this.AiState != state)
@@ -293,5 +280,19 @@ namespace ChieApi.Services
 
 			return false;
 		}
+
+		private bool TryLock()
+		{
+			this._chatLock.Wait();
+
+			if (this.AiState != AiState.Idle)
+			{
+				return false;
+			}
+
+			return true;
+		}
+
+		private void Unlock() => _ = this._chatLock.Release();
 	}
 }
