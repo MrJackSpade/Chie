@@ -4,7 +4,6 @@ using ChieApi.Client;
 using DiscordGpt.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 namespace DiscordGpt
 {

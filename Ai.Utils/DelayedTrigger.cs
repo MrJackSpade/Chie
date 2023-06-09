@@ -2,17 +2,19 @@
 {
 	public class DelayedTrigger
 	{
-		private Thread? _thread;
+		public Func<Task<bool>> _action;
+
+		private readonly int _delayMs;
 
 		private readonly AutoResetEvent _gate = new(true);
 
-		private DateTime _lastAttempt = DateTime.MinValue;
-		private DateTime _firstAttempt = DateTime.MinValue;
-
-		private readonly int _delayMs;
 		private readonly int _maxDelayMs;
 
-		public Func<Task<bool>> _action;
+		private DateTime _firstAttempt = DateTime.MinValue;
+
+		private DateTime _lastAttempt = DateTime.MinValue;
+
+		private Thread? _thread;
 
 		public DelayedTrigger(Func<Task<bool>> action, int delayMs, int maxDelayMs)
 		{
@@ -22,8 +24,16 @@
 			this._maxDelayMs = maxDelayMs;
 		}
 
+		public void ResetWait(DateTime newTarget)
+		{
+			if (this._thread != null)
+			{
+				this._lastAttempt = newTarget.AddMilliseconds(0 - this._delayMs);
+			}
+		}
+
 		/// <summary>
-		/// Attempts to lock the thread and then executes the queued action, and 
+		/// Attempts to lock the thread and then executes the queued action, and
 		/// sets the timer to fire the fire event
 		/// </summary>
 		/// <param name="prep">A preparatory action guaranteed to not invoke during the firing process</param>
@@ -37,46 +47,8 @@
 			});
 		}
 
-		private double Since(DateTime dateTime) => (DateTime.Now - dateTime).TotalMilliseconds;
-
-		public void ResetWait(DateTime newTarget)
-		{
-			if (this._thread != null)
-			{
-				this._lastAttempt = newTarget.AddMilliseconds(0 - this._delayMs);
-			}
-		}
-
-		private async Task TryFireLoop()
-		{
-			do
-			{
-				this._gate.WaitOne();
-
-				try
-				{
-					if (this.Since(this._lastAttempt) > this._delayMs || this.Since(this._firstAttempt) > this._maxDelayMs)
-					{
-						if (await this._action.Invoke())
-						{
-
-							this._thread = null;
-
-							return;
-						}
-					}
-				}
-				finally
-				{
-					this._gate.Set();
-				}
-
-				await Task.Delay(this._delayMs);
-			} while (true);
-		}
-
 		/// <summary>
-		/// Attempts to lock the thread and then executes the queued action, and 
+		/// Attempts to lock the thread and then executes the queued action, and
 		/// sets the timer to fire the fire event
 		/// </summary>
 		/// <param name="prep">A preparatory action guaranteed to not invoke during the firing process</param>
@@ -90,7 +62,7 @@
 
 			DateTime now = DateTime.Now;
 
-			if (_lastAttempt < now)
+			if (this._lastAttempt < now)
 			{
 				this._lastAttempt = DateTime.Now;
 			}
@@ -118,6 +90,35 @@
 			}
 
 			return true;
+		}
+
+		private double Since(DateTime dateTime) => (DateTime.Now - dateTime).TotalMilliseconds;
+
+		private async Task TryFireLoop()
+		{
+			do
+			{
+				this._gate.WaitOne();
+
+				try
+				{
+					if (this.Since(this._lastAttempt) > this._delayMs || this.Since(this._firstAttempt) > this._maxDelayMs)
+					{
+						if (await this._action.Invoke())
+						{
+							this._thread = null;
+
+							return;
+						}
+					}
+				}
+				finally
+				{
+					this._gate.Set();
+				}
+
+				await Task.Delay(this._delayMs);
+			} while (true);
 		}
 	}
 }

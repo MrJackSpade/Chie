@@ -10,15 +10,20 @@ namespace DiscordGpt
 	public class Logger
 	{
 		public const ulong DEBUG_CHANNEL_ID = 1105296789348823120;
+
 		private const string LAST_LOG_ENTRY_PATH = "LastLogEntry.dat";
+
 		private readonly ChieClient _chieClient;
+
 		private readonly DiscordClient _discordClient;
+
 		private readonly SavedId _lastMessageId = new(LAST_LOG_ENTRY_PATH);
 
 		[SuppressMessage("CodeQuality", "IDE0052:Remove unread private members")]
 		private readonly Task? _logTask;
 
 		private readonly StartInfo _startInfo;
+
 		private SocketTextChannel _debugChannel;
 
 		public Logger(ChieClient client, DiscordClient discordClient, StartInfo startInfo)

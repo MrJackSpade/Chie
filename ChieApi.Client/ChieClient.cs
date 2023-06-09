@@ -8,6 +8,7 @@ namespace ChieApi.Client
 	public class ChieClient : IChieClient
 	{
 		private const int PORT = 5000;
+
 		private readonly HttpClient _client;
 
 		public ChieClient()

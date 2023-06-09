@@ -1,4 +1,5 @@
 ﻿using LLama.Interfaces;
+using LLama.Models;
 using LLama.Types;
 using System;
 using System.Collections.Generic;
@@ -7,7 +8,7 @@ using System.Text;
 
 namespace LLama
 {
-    public class ChatSession<T> where T : IChatModel
+	public class ChatSession<T> where T : IChatModel
 	{
 		private readonly IChatModel _model;
 
@@ -18,11 +19,12 @@ namespace LLama
 
 		private List<ChatMessageRecord> History { get; } = new List<ChatMessageRecord>();
 
-		public IEnumerable<string> Chat(string text, Encoding encoding, string? prompt = null)
+		public IEnumerable<LlamaToken> Chat(string text, Encoding encoding, string? prompt = null)
 		{
 			this.History.Add(new ChatMessageRecord(new ChatCompletionMessage(ChatRole.Human, text), DateTime.Now));
 			string totalResponse = string.Empty;
-			foreach (string response in this._model.Chat(text, encoding, prompt))
+
+			foreach (LlamaToken response in this._model.Chat(text, prompt))
 			{
 				totalResponse += response;
 				yield return response;
@@ -44,7 +46,7 @@ namespace LLama
 
 		public ChatSession<T> WithPrompt(string prompt, Encoding encoding)
 		{
-			this._model.InitChatPrompt(prompt, encoding);
+			this._model.InitChatPrompt(prompt);
 			return this;
 		}
 

@@ -13,6 +13,7 @@ namespace ChieApi.Services
 	public class WeatherService
 	{
 		private const string API_KEY = "4d5d2ef6d37b4052aea214808230605";
+
 		private readonly string _query;
 
 		public WeatherService(string query)

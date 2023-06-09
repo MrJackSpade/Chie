@@ -65,7 +65,7 @@ namespace ChieApi.Services
 				query += $" and sourceUser = '{username}' ";
 			}
 
-			if(!includeHidden)
+			if (!includeHidden)
 			{
 				query += $" and IsVisible = 1 ";
 			}

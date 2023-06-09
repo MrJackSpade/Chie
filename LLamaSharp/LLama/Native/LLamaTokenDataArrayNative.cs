@@ -7,7 +7,9 @@ namespace LLama.Native
 	internal struct LLamaTokenDataArrayNative
 	{
 		public IntPtr data;
+
 		public ulong size;
+
 		public bool sorted;
 	}
 }

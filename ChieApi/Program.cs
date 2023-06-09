@@ -7,8 +7,8 @@ using ChieApi.Pipelines.MoodPipeline;
 using ChieApi.Services;
 using ChieApi.Tasks.Boredom;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using System.Diagnostics;
 using System.Text.Json.Serialization;
 
 namespace ChieApi
@@ -17,6 +17,7 @@ namespace ChieApi
 	{
 		public static async Task Main(string[] args)
 		{
+			AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 			Console.OutputEncoding = System.Text.Encoding.UTF8;
 			Console.InputEncoding = System.Text.Encoding.UTF8;
 
@@ -104,6 +105,12 @@ namespace ChieApi
 
 		private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
 		{
+			Console.WriteLine(e.ExceptionObject?.ToString());
+
+			if (Debugger.IsAttached)
+			{
+				Debugger.Break();
+			}
 		}
 	}
 }

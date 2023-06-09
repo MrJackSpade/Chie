@@ -14,11 +14,18 @@ namespace DiscordGpt.Services
 	public class ChieMessageService
 	{
 		public List<QueuedMessage> _outgoingMessageQueue = new();
+
 		private readonly ActiveChannelCollection _activeChannels;
+
 		private readonly ChieClient _chieClient;
+
 		private readonly Logger _logger;
+
 		private readonly NameService _nameService;
+
 		private readonly DelayedTrigger _outgoingMessageTrigger;
+
+		private string _lastError = string.Empty;
 
 		public ChieMessageService(ChieClient chieClient, Logger logger, ActiveChannelCollection activeChannels, NameService nameService)
 		{
@@ -28,8 +35,6 @@ namespace DiscordGpt.Services
 			this._chieClient = chieClient;
 			this._outgoingMessageTrigger = new DelayedTrigger(this.Flush, 3000, 30_000);
 		}
-
-		public void TryDelaySend(DateTime newTarget) => this._outgoingMessageTrigger.ResetWait(newTarget);
 
 		public string CleanContent(string content)
 		{
@@ -68,22 +73,11 @@ namespace DiscordGpt.Services
 			}
 		}
 
-		string _lastError = string.Empty;
-
-		private async Task LogIfDifferent(Exception ex)
-		{
-			if (this._lastError != ex.Message)
-			{
-				await this._logger.Write(ex.Message);
-				this._lastError = ex.Message;
-			}
-		}
-
 		public async Task<bool> Flush()
 		{
 			await this._logger.Write("Sending messages to client...");
 
-			List<QueuedMessage> queuedMessages = _outgoingMessageQueue.ToList();
+			List<QueuedMessage> queuedMessages = this._outgoingMessageQueue.ToList();
 
 			MessageSendResponse? sendResponse = null;
 
@@ -119,6 +113,8 @@ namespace DiscordGpt.Services
 			await message.AddReactionAsync(ninja);
 		}
 
+		public void TryDelaySend(DateTime newTarget) => this._outgoingMessageTrigger.ResetWait(newTarget);
+
 		private async IAsyncEnumerable<QueuedMessage> GenerateQueuedMessages(SocketMessage arg)
 		{
 			string messageContent = this.CleanContent(arg.Content);
@@ -153,6 +149,15 @@ namespace DiscordGpt.Services
 						SourceChannel = activeChannel.ChieName
 					}
 				};
+			}
+		}
+
+		private async Task LogIfDifferent(Exception ex)
+		{
+			if (this._lastError != ex.Message)
+			{
+				await this._logger.Write(ex.Message);
+				this._lastError = ex.Message;
 			}
 		}
 	}

@@ -11,12 +11,6 @@ namespace DiscordGpt
 
 		public ActiveChannel? this[string name] => this._channels.FirstOrDefault(c => c.ChieName == name);
 
-		public bool TryGetValue(ulong id, out ActiveChannel? value)
-		{
-			value = this[id];
-			return value != null;
-		}
-
 		public ActiveChannel Add(ISocketMessageChannel channel)
 		{
 			ActiveChannel activeChannel = new(channel);
@@ -29,5 +23,11 @@ namespace DiscordGpt
 		IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)this._channels).GetEnumerator();
 
 		public ActiveChannel GetOrAdd(ISocketMessageChannel channel) => this[channel.Id] ?? this.Add(channel);
+
+		public bool TryGetValue(ulong id, out ActiveChannel? value)
+		{
+			value = this[id];
+			return value != null;
+		}
 	}
 }

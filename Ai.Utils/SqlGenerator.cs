@@ -19,7 +19,7 @@
 				return $"'{dt:yyyy-MM-dd HH:mm:ss}'";
 			}
 
-			if(o is bool b)
+			if (o is bool b)
 			{
 				return b ? "1" : "0";
 			}

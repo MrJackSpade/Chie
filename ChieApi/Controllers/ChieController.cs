@@ -13,7 +13,9 @@ namespace ChieApi.Controllers
 	public class ChieController : ControllerBase, IChieClient
 	{
 		private readonly LogService _databaseService;
+
 		private readonly LlamaService _llamaService;
+
 		private readonly List<IRequestPipeline> _pipelines;
 
 		public ChieController(IEnumerable<IRequestPipeline> pipelines, LlamaService llamaService, LogService databaseService)
@@ -23,14 +25,20 @@ namespace ChieApi.Controllers
 			this._pipelines = pipelines.ToList();
 		}
 
+		[HttpGet("ContinueRequest/{channelId}")]
+		public Task<ContinueRequestResponse> ContinueRequest(string channelId)
+		{
+			return Task.FromResult(new ContinueRequestResponse()
+			{
+				Success = this._llamaService.ReturnControl(false)
+			});
+		}
+
 		[HttpGet("GetLogsByDate")]
 		public Task<List<LogEntry>> GetLogsByDate(string after) => Task.FromResult(this._databaseService.GetLogs(DateTime.Parse(after)));
 
 		[HttpGet("GetLogsById")]
 		public Task<List<LogEntry>> GetLogsById(long after) => Task.FromResult(this._databaseService.GetLogs(after));
-
-		[HttpGet("GetResponses")]
-		public Task<ChatEntry[]> GetResponses(string channelId, long after) => Task.FromResult(this._llamaService.GetResponses(channelId, after));
 
 		[HttpGet("GetReply")]
 		public Task<ChatEntry?> GetReply(long id)
@@ -45,22 +53,15 @@ namespace ChieApi.Controllers
 			}
 		}
 
+		[HttpGet("GetResponses")]
+		public Task<ChatEntry[]> GetResponses(string channelId, long after) => Task.FromResult(this._llamaService.GetResponses(channelId, after));
+
 		[HttpGet("IsTyping/{channel}")]
 		public Task<IsTypingResponse> IsTyping(string channel)
 		{
 			return Task.FromResult(new IsTypingResponse()
 			{
 				IsTyping = this._llamaService.CheckIfResponding(channel),
-			});
-		}
-
-		[HttpGet("ContinueRequest/{channelId}")]
-		public Task<ContinueRequestResponse> ContinueRequest(string channelId)
-		{
-
-			return Task.FromResult(new ContinueRequestResponse()
-			{
-				Success = this._llamaService.ReturnControl(false)
 			});
 		}
 

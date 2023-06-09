@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.6.33712.159
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDbClient", "ChromaDbClient.csproj", "{9516E432-D53C-4FC1-A9CC-4B89B2A7959A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDbClient.Tests", "..\ChromaDbClient.Tests\ChromaDbClient.Tests.csproj", "{F5CA9A68-7D60-4C2B-9726-DAE60DB2881A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9516E432-D53C-4FC1-A9CC-4B89B2A7959A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9516E432-D53C-4FC1-A9CC-4B89B2A7959A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9516E432-D53C-4FC1-A9CC-4B89B2A7959A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9516E432-D53C-4FC1-A9CC-4B89B2A7959A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F5CA9A68-7D60-4C2B-9726-DAE60DB2881A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F5CA9A68-7D60-4C2B-9726-DAE60DB2881A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F5CA9A68-7D60-4C2B-9726-DAE60DB2881A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F5CA9A68-7D60-4C2B-9726-DAE60DB2881A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {03FF1192-7855-48C1-BAAF-C8C59DA0E3E4}
+	EndGlobalSection
+EndGlobal

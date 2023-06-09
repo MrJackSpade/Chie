@@ -1,5 +1,4 @@
 ﻿using Loxifi;
-using System.Drawing;
 using System.Text;
 
 namespace ImageRecognition
@@ -7,6 +6,7 @@ namespace ImageRecognition
 	public class BlipClient
 	{
 		private const string TEMP_FILE_NAME = "TempFile.png";
+
 		private readonly BlipClientSettings _settings;
 
 		public BlipClient(BlipClientSettings settings)
@@ -16,7 +16,7 @@ namespace ImageRecognition
 
 		public async Task<string> Describe(byte[] data)
 		{
-			if(File.Exists(TEMP_FILE_NAME))
+			if (File.Exists(TEMP_FILE_NAME))
 			{
 				File.Delete(TEMP_FILE_NAME);
 			}

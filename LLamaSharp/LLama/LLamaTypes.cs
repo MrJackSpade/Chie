@@ -6,6 +6,7 @@ namespace LLama.Types
 	public enum ChatRole
 	{
 		Human,
+
 		Assistant
 	}
 

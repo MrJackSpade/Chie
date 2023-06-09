@@ -17,14 +17,23 @@ namespace DiscordGpt
 		private readonly ActiveChannelCollection _activeChannels;
 
 		private readonly ChieClient _chieClient = new();
+
 		private readonly ChieMessageService _chieMessageService;
+
 		private readonly DiscordClient _discordClient;
+
 		private readonly Dictionary<ulong, Dictionary<string, string>> _guildEmotes = new();
+
 		private readonly Logger _logger;
+
 		private readonly NameService _nameService;
+
 		private readonly DiscordIntegrationSettings _settings;
+
 		private readonly StartInfo _startInfo;
+
 		private Task? _receiveTask;
+
 		private Task? _typingTask;
 
 		public DiscordIntegrationService(ActiveChannelCollection activeChannelCollection, NameService nameService, ChieMessageService messageService, StartInfo startInfo, DiscordClient discordClient, Logger logger, DiscordIntegrationSettings settings)
@@ -38,16 +47,6 @@ namespace DiscordGpt
 			this._discordClient = discordClient;
 			this._discordClient.OnReactionAdded += this.OnReactionAdded;
 			this._discordClient.OnTypingStart += this.OnTypingStart;
-		}
-
-		private async Task OnTypingStart(Cacheable<IUser, ulong> cachedUser, Cacheable<IMessageChannel, ulong> cachedChannel)
-		{
-			if (!this._activeChannels.TryGetValue(cachedChannel.Id, out ActiveChannel? activeChannel))
-			{
-				return;
-			}
-
-			_chieMessageService.TryDelaySend(DateTime.Now.AddSeconds(10));
 		}
 
 		public async Task ProcessIncomingMessage(ChatEntry messageResponse)
@@ -64,7 +63,7 @@ namespace DiscordGpt
 				return;
 			}
 
-			if (_settings.UseServerEmotes && activeChannel.Channel is SocketTextChannel stcb)
+			if (this._settings.UseServerEmotes && activeChannel.Channel is SocketTextChannel stcb)
 			{
 				cleanedMessage = this.EmojiFill(stcb, cleanedMessage);
 			}
@@ -130,7 +129,7 @@ namespace DiscordGpt
 				return;
 			}
 
-			_ = Task.Run(async () => await _chieMessageService.DeferredMessageProcessing(arg));
+			_ = Task.Run(async () => await this._chieMessageService.DeferredMessageProcessing(arg));
 		}
 
 		private string EmojiFill(SocketTextChannel channel, string message)
@@ -156,7 +155,7 @@ namespace DiscordGpt
 
 		private async Task OnReactionAdded(Discord.Cacheable<Discord.IUserMessage, ulong> cachedMessage, Discord.Cacheable<Discord.IMessageChannel, ulong> cachedChannel, SocketReaction reaction)
 		{
-			if(reaction.Emote.Name != Emoji.Parse(Emojis.GO).Name)
+			if (reaction.Emote.Name != Emoji.Parse(Emojis.GO).Name)
 			{
 				return;
 			}
@@ -168,12 +167,22 @@ namespace DiscordGpt
 
 			IUserMessage reactedMessage = await cachedMessage.DownloadAsync();
 
-			if (reactedMessage.Author.Username != _discordClient.CurrentUser.Username)
+			if (reactedMessage.Author.Username != this._discordClient.CurrentUser.Username)
 			{
 				return;
 			}
 
-			await _chieClient.ContinueRequest(activeChannel.ChieName);
+			await this._chieClient.ContinueRequest(activeChannel.ChieName);
+		}
+
+		private async Task OnTypingStart(Cacheable<IUser, ulong> cachedUser, Cacheable<IMessageChannel, ulong> cachedChannel)
+		{
+			if (!this._activeChannels.TryGetValue(cachedChannel.Id, out ActiveChannel? activeChannel))
+			{
+				return;
+			}
+
+			this._chieMessageService.TryDelaySend(DateTime.Now.AddSeconds(10));
 		}
 
 		private async Task ReceiveLoop()

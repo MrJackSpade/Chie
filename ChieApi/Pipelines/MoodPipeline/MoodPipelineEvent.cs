@@ -7,7 +7,7 @@ namespace ChieApi.Pipelines.MoodPipeline
 		[JsonPropertyName("chance")]
 		public float Chance { get; set; }
 
-		[JsonPropertyName("text")] 
+		[JsonPropertyName("text")]
 		public string Text { get; set; }
 	}
 }

@@ -12,36 +12,36 @@ namespace LLama
 {
 	internal static class Utils
 	{
-		public static SafeLLamaContextHandle llama_init_from_gpt_params(ref LlamaModelSettings @params)
+		public static SafeLLamaContext llama_init_from_gpt_params(ref LlamaModelSettings settings, Encoding encoding)
 		{
 			LLamaContextParams lparams = NativeApi.llama_context_default_params();
 
-			lparams.n_ctx = @params.ContextSize;
-			lparams.n_gpu_layers = @params.GpuLayerCount;
-			lparams.seed = @params.Seed;
-			lparams.f16_kv = @params.MemoryFloat16;
-			lparams.use_mmap = @params.UseMemoryMap;
-			lparams.use_mlock = @params.UseMemoryLock;
-			lparams.logits_all = @params.Perplexity;
-			lparams.embedding = @params.GenerateEmbedding;
+			lparams.n_ctx = settings.ContextSize;
+			lparams.n_gpu_layers = settings.GpuLayerCount;
+			lparams.seed = settings.Seed;
+			lparams.f16_kv = settings.MemoryFloat16;
+			lparams.use_mmap = settings.UseMemoryMap;
+			lparams.use_mlock = settings.UseMemoryLock;
+			lparams.logits_all = settings.Perplexity;
+			lparams.embedding = settings.GenerateEmbedding;
 
-			if (!File.Exists(@params.Model))
+			if (!File.Exists(settings.Model))
 			{
-				throw new FileNotFoundException($"The model file does not exist: {@params.Model}");
+				throw new FileNotFoundException($"The model file does not exist: {settings.Model}");
 			}
 
-			IntPtr ctx_ptr = NativeApi.llama_init_from_file(@params.Model, lparams);
+			IntPtr ctx_ptr = NativeApi.llama_init_from_file(settings.Model, lparams);
 
 			if (ctx_ptr == IntPtr.Zero)
 			{
-				throw new RuntimeError($"Failed to load model {@params.Model}.");
+				throw new RuntimeError($"Failed to load model {settings.Model}.");
 			}
 
-			SafeLLamaContextHandle ctx = new(ctx_ptr);
+			SafeLLamaContext ctx = new(ctx_ptr, encoding, settings.ThreadCount, settings.ContextSize);
 
-			if (!string.IsNullOrEmpty(@params.LoraAdapter))
+			if (!string.IsNullOrEmpty(settings.LoraAdapter))
 			{
-				int err = NativeApi.llama_apply_lora_from_file(ctx, @params.LoraAdapter, string.IsNullOrEmpty(@params.LoraBase) ? null : @params.LoraBase, @params.ThreadCount);
+				int err = NativeApi.llama_apply_lora_from_file(ctx, settings.LoraAdapter, string.IsNullOrEmpty(settings.LoraBase) ? null : settings.LoraBase, settings.ThreadCount);
 				if (err != 0)
 				{
 					throw new RuntimeError("Failed to apply lora adapter.");
@@ -51,7 +51,7 @@ namespace LLama
 			return ctx;
 		}
 
-		public static List<llama_token> llama_tokenize(SafeLLamaContextHandle ctx, string text, bool add_bos, Encoding encoding)
+		public static List<llama_token> llama_tokenize(SafeLLamaContext ctx, string text, bool add_bos, Encoding encoding)
 		{
 			int cnt = encoding.GetByteCount(text);
 			llama_token[] res = new llama_token[cnt + (add_bos ? 1 : 0)];
@@ -64,7 +64,7 @@ namespace LLama
 			return res.Take(n).ToList();
 		}
 
-		public static unsafe Span<float> llama_get_logits(SafeLLamaContextHandle ctx, int length)
+		public static unsafe Span<float> llama_get_logits(SafeLLamaContext ctx, int length)
 		{
 			float* logits = NativeApi.llama_get_logits(ctx);
 			return new Span<float>(logits, length);

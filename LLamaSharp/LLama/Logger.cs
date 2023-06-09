@@ -12,8 +12,11 @@ namespace LLama.Types
 		private static readonly Lazy<LLamaLogger> _instance = new(() => new LLamaLogger());
 
 		private FileStream? _fileStream = null;
+
 		private StreamWriter _fileWriter = null;
+
 		private bool _toConsole = true;
+
 		private bool _toFile = false;
 
 		private LLamaLogger()

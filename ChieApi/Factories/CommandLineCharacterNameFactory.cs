@@ -8,9 +8,9 @@ namespace ChieApi.Factories
 
 		public CommandLineCharacterNameFactory(string arg)
 		{
-			_name = arg;
+			this._name = arg;
 		}
 
-		public string GetName() => _name;
+		public string GetName() => this._name;
 	}
 }

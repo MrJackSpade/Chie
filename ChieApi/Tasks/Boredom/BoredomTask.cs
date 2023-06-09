@@ -7,8 +7,11 @@ namespace ChieApi.Tasks.Boredom
 	public class BoredomTask : IBackgroundTask, IRequestPipeline
 	{
 		private readonly BoredomTaskData _data;
+
 		private readonly LlamaService _llamaService;
+
 		private readonly Random _random = new();
+
 		private readonly BoredomTaskSettings _settings;
 
 		public BoredomTask(LlamaService llamaService, BoredomTaskSettings settings, BoredomTaskData data)
@@ -26,16 +29,16 @@ namespace ChieApi.Tasks.Boredom
 		{
 			if (!string.IsNullOrWhiteSpace(chatEntry.SourceChannel))
 			{
-				if (!_data.MessageCounts.TryGetValue(chatEntry.SourceChannel, out int count))
+				if (!this._data.MessageCounts.TryGetValue(chatEntry.SourceChannel, out int count))
 				{
-					_data.MessageCounts.Add(chatEntry.SourceChannel, 1);
+					this._data.MessageCounts.Add(chatEntry.SourceChannel, 1);
 				}
 				else
 				{
-					_data.MessageCounts[chatEntry.SourceChannel]++;
+					this._data.MessageCounts[chatEntry.SourceChannel]++;
 				}
 
-				_data.LastMessage = DateTime.Now;
+				this._data.LastMessage = DateTime.Now;
 			}
 
 			yield return chatEntry;
@@ -48,12 +51,12 @@ namespace ChieApi.Tasks.Boredom
 				return;
 			}
 
-			if (!_data.MessageCounts.Any())
+			if (!this._data.MessageCounts.Any())
 			{
 				return;
 			}
 
-			int elapsedMinutes = (int)(DateTime.Now - _data.LastMessage).TotalMinutes;
+			int elapsedMinutes = (int)(DateTime.Now - this._data.LastMessage).TotalMinutes;
 			BoredomTaskAction[] actionTargets = this._settings.TaskActions.Where(t => t.StartMinutes <= elapsedMinutes && t.EndMinutes > elapsedMinutes).ToArray();
 
 			if (!actionTargets.Any())
@@ -63,7 +66,7 @@ namespace ChieApi.Tasks.Boredom
 
 			BoredomTaskAction selectedAction = actionTargets[this._random.Next(actionTargets.Length)];
 
-			string highestVolumeChannel = _data.MessageCounts.OrderByDescending(k => k.Value).FirstOrDefault().Key;
+			string highestVolumeChannel = this._data.MessageCounts.OrderByDescending(k => k.Value).FirstOrDefault().Key;
 
 			await this._llamaService.Initialization;
 
@@ -72,7 +75,7 @@ namespace ChieApi.Tasks.Boredom
 				SourceChannel = highestVolumeChannel,
 				Content = selectedAction.Text,
 				IsVisible = false,
-				SourceUser = _llamaService.CharacterName
+				SourceUser = this._llamaService.CharacterName
 			});
 		}
 	}

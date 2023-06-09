@@ -9,7 +9,9 @@ namespace ChieApi.Services
 	public class CharacterService : ICharacterFactory
 	{
 		public const string ROOT_PATH = "Ai";
+
 		private readonly object _characterLock = new();
+
 		private readonly ChieApiSettings _settings;
 
 		private CharacterConfiguration _characterConfiguration;
@@ -33,16 +35,16 @@ namespace ChieApi.Services
 
 		public async Task<CharacterConfiguration> Build()
 		{
-			lock (_characterLock)
+			lock (this._characterLock)
 			{
-				_characterConfiguration ??= this.Load(this._settings.DefaultModel);
+				this._characterConfiguration ??= this.Load(this._settings.DefaultModel);
 			}
 
-			_characterConfiguration.MainPath = this._settings.LlamaMainExe;
-			_characterConfiguration.Threads = System.Environment.ProcessorCount / 2;
-			_characterConfiguration.Prompt = await GetTransformedPromptPath(_characterConfiguration.Prompt, "prompt.temp");
-			_characterConfiguration.Start = await GetTransformedPromptPath(_characterConfiguration.Start, "start.temp");
-			return _characterConfiguration;
+			this._characterConfiguration.MainPath = this._settings.LlamaMainExe;
+			this._characterConfiguration.Threads = System.Environment.ProcessorCount / 2;
+			this._characterConfiguration.Prompt = await GetTransformedPromptPath(this._characterConfiguration.Prompt, "prompt.temp");
+			this._characterConfiguration.Start = await GetTransformedPromptPath(this._characterConfiguration.Start, "start.temp");
+			return this._characterConfiguration;
 		}
 
 		public CharacterConfiguration BuildJson(string path)

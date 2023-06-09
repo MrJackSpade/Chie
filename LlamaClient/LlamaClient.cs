@@ -1,6 +1,7 @@
-﻿using Ai.Utils;
-using Llama.Shared;
+﻿using Llama.Shared;
+using Llama.TokenTransformers;
 using LLama;
+using LLama.Models;
 using System.Text;
 
 namespace Llama
@@ -9,7 +10,7 @@ namespace Llama
 	{
 		private static Thread? _inferenceThread;
 
-		private readonly Encoding _encoding = System.Text.Encoding.ASCII;
+		private readonly Encoding _encoding = System.Text.Encoding.UTF8;
 
 		private readonly LLamaModel _model;
 
@@ -27,7 +28,7 @@ namespace Llama
 		{
 			this._settings = settings;
 			this._outBuilder = new StringBuilder();
-			this._model = new LLamaModel(this.Params = GenerateParameters(this._settings), _encoding, verbose: true);
+			this._model = new LLamaModel(this.Params = GenerateParameters(this._settings), this._encoding, verbose: true);
 		}
 
 		public event EventHandler<DisconnectEventArgs> OnDisconnect;
@@ -115,6 +116,8 @@ namespace Llama
 		private static LlamaModelSettings GenerateParameters(LlamaSettings settings)
 		{
 			LlamaModelSettings p = new();
+
+			p.TokenTransformers.Add(new NewlineEnsureTransformer(settings.AllReversePrompts));
 
 			switch (settings.InteractiveMode)
 			{
@@ -268,18 +271,22 @@ namespace Llama
 			{
 				StringBuilder result = new();
 
-				string lastChunk = string.Empty;
+				LlamaToken? lastChunk = null;
 
 				int lastChunkCount = 0;
 
-				foreach (string chunk in this._model.Call(data, _encoding))
+				foreach (LlamaToken chunk in this._model.Call(data))
 				{
-					if (chunk.Length > 0)
+					if(string.IsNullOrWhiteSpace(chunk.Value))
 					{
-						Console.Write(chunk);
-						result.Append(chunk);
-						this._lastChar = chunk[^1];
+						continue;
 					}
+
+					this.TypingResponse?.Invoke(this, null);
+
+					Console.Write(chunk.Value);
+					result.Append(chunk.Value);
+					this._lastChar = chunk.Value[^1];
 
 					if (lastChunk != chunk)
 					{

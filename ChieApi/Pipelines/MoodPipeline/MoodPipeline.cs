@@ -6,42 +6,25 @@ namespace ChieApi.Pipelines.MoodPipeline
 {
 	public class MoodPipeline : IRequestPipeline
 	{
-		private readonly Random _random = new();
-		private readonly LlamaService _llamaService;
-		private readonly MoodPipelineSettings _settings;
-		private DateTime _lastMoodSent = DateTime.MinValue;
 		private readonly Queue<DateTime> _cadenceQueue = new();
+
+		private readonly LlamaService _llamaService;
+
+		private readonly Random _random = new();
+
 		private readonly object _registerLock = new();
+
+		private readonly MoodPipelineSettings _settings;
+
+		private DateTime _lastMoodSent = DateTime.MinValue;
+
 		public MoodPipeline(MoodPipelineSettings settings, LlamaService llamaService)
 		{
 			this._settings = settings;
 			this._llamaService = llamaService;
 		}
 
-		private void TryRegisterMessage()
-		{
-			lock (this._registerLock)
-			{
-				DateTime last = DateTime.MinValue;
-
-				if (this._cadenceQueue.Any())
-				{
-					last = this._cadenceQueue.Last();
-				}
-
-				if ((DateTime.Now - last).TotalMinutes > 1)
-				{
-					this._cadenceQueue.Enqueue(DateTime.Now);
-				}
-
-				while (this._cadenceQueue.Count > this._settings.CadenceQueueSize)
-				{
-					_ = this._cadenceQueue.TryDequeue(out _);
-				}
-
-				last = DateTime.Now;
-			}
-		}
+		public bool IsFirstMessage => this._settings.FirstMessage && this._lastMoodSent == DateTime.MinValue;
 
 		private int CurrentCadence
 		{
@@ -69,8 +52,6 @@ namespace ChieApi.Pipelines.MoodPipeline
 				}
 			}
 		}
-
-		public bool IsFirstMessage => this._settings.FirstMessage && this._lastMoodSent == DateTime.MinValue;
 
 		public async IAsyncEnumerable<ChatEntry> Process(ChatEntry chatEntry)
 		{
@@ -133,6 +114,31 @@ namespace ChieApi.Pipelines.MoodPipeline
 			}
 
 			return false;
+		}
+
+		private void TryRegisterMessage()
+		{
+			lock (this._registerLock)
+			{
+				DateTime last = DateTime.MinValue;
+
+				if (this._cadenceQueue.Any())
+				{
+					last = this._cadenceQueue.Last();
+				}
+
+				if ((DateTime.Now - last).TotalMinutes > 1)
+				{
+					this._cadenceQueue.Enqueue(DateTime.Now);
+				}
+
+				while (this._cadenceQueue.Count > this._settings.CadenceQueueSize)
+				{
+					_ = this._cadenceQueue.TryDequeue(out _);
+				}
+
+				last = DateTime.Now;
+			}
 		}
 	}
 }

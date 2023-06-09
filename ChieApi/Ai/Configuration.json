@@ -5,7 +5,7 @@
   "KeepPromptTokens": -1,
   "ContextLength": 2048,
   "CharacterName": "Chie",
-  "Temp": 0.735,
+  "Temp": 0.755,
   "TokensToPredict": -1,
   "Top_P": 0.85,
   "NoMemoryMap": true,
@@ -15,7 +15,7 @@
   "AdditionalReversePrompts": [ "\n", "\r", "\r\n", " |" ],
   "NoPenalizeNewLine": true,
   "RepeatPenaltyWindow": -1,
-  "RepeatPenalty":  1.175,
+  "RepeatPenalty": 1.185,
   "LogitBias": {
     "320": "-inf",
     "396": "-inf",
@@ -27,6 +27,8 @@
     "2045": "-inf",
     "597": "-inf",
     "584": "-inf",
-    "891": "-inf"
+    "891": "-inf",
+    "29901": "-inf",
+    "29989": "-inf"
   }
 }

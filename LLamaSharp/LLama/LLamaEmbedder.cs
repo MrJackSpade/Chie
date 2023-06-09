@@ -8,32 +8,36 @@ namespace LLama
 {
 	public class LLamaEmbedder : IDisposable
 	{
-		private readonly SafeLLamaContextHandle _ctx;
+		private readonly SafeLLamaContext _ctx;
 
-		public LLamaEmbedder(LlamaModelSettings @params)
+		private readonly int _threads;
+
+		public LLamaEmbedder(LlamaModelSettings @params, Encoding encoding, int threads)
 		{
 			@params.GenerateEmbedding = true;
-			this._ctx = Utils.llama_init_from_gpt_params(ref @params);
+			this._threads = threads;
+
+			if (this._threads == -1)
+			{
+				this._threads = Math.Max(Environment.ProcessorCount / 2, 1);
+			}
+
+			this._ctx = Utils.llama_init_from_gpt_params(ref @params, encoding);
 		}
 
 		/// <summary>
 		/// Warning: must ensure the original model has params.embedding = true;
 		/// </summary>
 		/// <param name="ctx"></param>
-		internal LLamaEmbedder(SafeLLamaContextHandle ctx)
+		internal LLamaEmbedder(SafeLLamaContext ctx)
 		{
 			this._ctx = ctx;
 		}
 
 		public void Dispose() => this._ctx.Dispose();
 
-		public unsafe float[] GetEmbeddings(string text, Encoding encoding, int n_thread = -1, bool add_bos = true)
+		public unsafe float[] GetEmbeddings(string text, Encoding encoding, bool add_bos = true)
 		{
-			if (n_thread == -1)
-			{
-				n_thread = Math.Max(Environment.ProcessorCount / 2, 1);
-			}
-
 			int n_past = 0;
 			if (add_bos)
 			{
@@ -47,7 +51,7 @@ namespace LLama
 			if (embed_inp.Count > 0)
 			{
 				int[] embed_inp_array = embed_inp.ToArray();
-				if (NativeApi.llama_eval(this._ctx, embed_inp_array, embed_inp_array.Length, n_past, n_thread) != 0)
+				if (NativeApi.llama_eval(this._ctx, embed_inp_array, embed_inp_array.Length, n_past, this._threads) != 0)
 				{
 					throw new RuntimeError("Failed to eval.");
 				}

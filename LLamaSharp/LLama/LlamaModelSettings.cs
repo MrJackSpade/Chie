@@ -1,4 +1,7 @@
-﻿using System;
+﻿using ChieApi.TokenTransformers;
+using LLama.ContextRollers;
+using LLama.Interfaces;
+using System;
 using System.Collections.Generic;
 using llama_token = System.Int32;
 
@@ -9,6 +12,8 @@ namespace LLama
 		public List<string> Antiprompt { get; set; } = new();
 
 		public int BatchSize { get; set; } = 512;
+
+		public IContextRoller ContextRoller { get; set; } = new ChatContextRoller();
 
 		public int ContextSize { get; set; } = 512;
 
@@ -73,6 +78,8 @@ namespace LLama
 		public float TfsZ { get; set; } = 1.00f;
 
 		public int ThreadCount { get; set; } = Math.Max(Environment.ProcessorCount / 2, 1);
+
+		public IList<ITokenTransformer> TokenTransformers { get; } = new List<ITokenTransformer>() { new InteractiveEosReplace() };
 
 		public int TopK { get; set; } = 40;
 

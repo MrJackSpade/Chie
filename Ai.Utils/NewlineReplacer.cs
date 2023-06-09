@@ -36,12 +36,14 @@ namespace Ai.Utils
 						lastR = false;
 						lastE = false;
 						break;
+
 					case '/':
 					case '\\':
 						stringBuilder.Append(c);
 						lastE = true;
 						lastR = false;
 						break;
+
 					default:
 						stringBuilder.Append(c);
 						lastR = false;

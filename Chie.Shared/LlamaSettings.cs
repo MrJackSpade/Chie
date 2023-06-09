@@ -3,20 +3,25 @@
 	public enum InteractiveMode
 	{
 		None,
+
 		Interactive,
+
 		InteractiveFirst
 	}
 
 	public enum MemoryMode
 	{
 		Float16,
+
 		Float32
 	}
 
 	public enum MiroStatMode
 	{
 		Disabled = 0,
+
 		MiroStat = 1,
+
 		MiroStat2 = 2
 	}
 

@@ -11,6 +11,6 @@ namespace ChieApi.Factories
 			this._settings = settings;
 		}
 
-		public string GetName() => _settings.DefaultModel;
+		public string GetName() => this._settings.DefaultModel;
 	}
 }

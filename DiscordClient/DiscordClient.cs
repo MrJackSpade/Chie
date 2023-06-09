@@ -23,6 +23,7 @@ namespace Chie
 		private static readonly TaskCompletionSource<bool> _discordReady = new TaskCompletionSource<bool>();
 
 		private readonly AutoResetEvent _connectionGate = new AutoResetEvent(true);
+
 		private readonly DiscordClientSettings _settings;
 
 		public DiscordClient(DiscordClientSettings settings)
@@ -35,6 +36,7 @@ namespace Chie
 		public event Func<SocketMessage, Task> OnMessageReceived;
 
 		public event Func<Cacheable<IUserMessage, ulong>, Cacheable<IMessageChannel, ulong>, SocketReaction, Task> OnReactionAdded;
+
 		public event Func<Cacheable<IUser, ulong>, Cacheable<IMessageChannel, ulong>, Task> OnTypingStart;
 
 		public bool Connected { get; private set; }
@@ -43,13 +45,13 @@ namespace Chie
 
 		public async Task Connect()
 		{
-			_connectionGate.WaitOne();
+			this._connectionGate.WaitOne();
 
 			if (!this.Connected)
 			{
 				_client.Log += Client_Log;
 
-				await _client.LoginAsync(TokenType.Bot, _settings.Token);
+				await _client.LoginAsync(TokenType.Bot, this._settings.Token);
 				await _client.StartAsync();
 				_client.Ready += ClientReady;
 
@@ -63,7 +65,7 @@ namespace Chie
 				_client.UserIsTyping += (a, b) => OnTypingStart?.Invoke(a, b);
 			}
 
-			_connectionGate.Set();
+			this._connectionGate.Set();
 		}
 
 		public SocketTextChannel GetChannel(ulong channelId) => (SocketTextChannel)_client.GetChannel(channelId);

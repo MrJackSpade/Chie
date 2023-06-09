@@ -16,7 +16,7 @@ namespace LLama.Native
 		/// <param name="alpha_frequency"></param>
 		/// <param name="alpha_presence"></param>
 		[DllImport(LIBRARY_NAME)]
-		public static extern void llama_sample_frequency_and_presence_penalties(SafeLLamaContextHandle ctx, IntPtr candidates, llama_token[] last_tokens, ulong last_tokens_size, float alpha_frequency, float alpha_presence);
+		public static extern void llama_sample_frequency_and_presence_penalties(SafeLLamaContext ctx, IntPtr candidates, llama_token[] last_tokens, ulong last_tokens_size, float alpha_frequency, float alpha_presence);
 
 		/// <summary>
 		/// Repetition penalty described in CTRL academic paper https://arxiv.org/abs/1909.05858, with negative logit fix.
@@ -27,7 +27,7 @@ namespace LLama.Native
 		/// <param name="last_tokens_size"></param>
 		/// <param name="penalty"></param>
 		[DllImport(LIBRARY_NAME)]
-		public static extern void llama_sample_repetition_penalty(SafeLLamaContextHandle ctx, IntPtr candidates, llama_token[] last_tokens, ulong last_tokens_size, float penalty);
+		public static extern void llama_sample_repetition_penalty(SafeLLamaContext ctx, IntPtr candidates, llama_token[] last_tokens, ulong last_tokens_size, float penalty);
 
 		/// <summary>
 		/// Sorts candidate tokens by their logits in descending order and calculate probabilities based on logits.
@@ -35,7 +35,7 @@ namespace LLama.Native
 		/// <param name="ctx"></param>
 		/// <param name="candidates">Pointer to LLamaTokenDataArray</param>
 		[DllImport(LIBRARY_NAME)]
-		public static extern void llama_sample_softmax(SafeLLamaContextHandle ctx, IntPtr candidates);
+		public static extern void llama_sample_softmax(SafeLLamaContext ctx, IntPtr candidates);
 
 		/// <summary>
 		/// Tail Free Sampling described in https://www.trentonbricken.com/Tail-Free-Sampling/.
@@ -45,10 +45,10 @@ namespace LLama.Native
 		/// <param name="z"></param>
 		/// <param name="min_keep"></param>
 		[DllImport(LIBRARY_NAME)]
-		public static extern void llama_sample_tail_free(SafeLLamaContextHandle ctx, IntPtr candidates, float z, ulong min_keep);
+		public static extern void llama_sample_tail_free(SafeLLamaContext ctx, IntPtr candidates, float z, ulong min_keep);
 
 		[DllImport(LIBRARY_NAME)]
-		public static extern void llama_sample_temperature(SafeLLamaContextHandle ctx, IntPtr candidates, float temp);
+		public static extern void llama_sample_temperature(SafeLLamaContext ctx, IntPtr candidates, float temp);
 
 		/// <summary>
 		/// Randomly selects a token from the candidates based on their probabilities.
@@ -57,7 +57,7 @@ namespace LLama.Native
 		/// <param name="candidates">Pointer to LLamaTokenDataArray</param>
 		/// <returns></returns>
 		[DllImport(LIBRARY_NAME)]
-		public static extern llama_token llama_sample_token(SafeLLamaContextHandle ctx, IntPtr candidates);
+		public static extern llama_token llama_sample_token(SafeLLamaContext ctx, IntPtr candidates);
 
 		/// <summary>
 		/// Selects the token with the highest probability.
@@ -66,7 +66,7 @@ namespace LLama.Native
 		/// <param name="candidates">Pointer to LLamaTokenDataArray</param>
 		/// <returns></returns>
 		[DllImport(LIBRARY_NAME)]
-		public static extern llama_token llama_sample_token_greedy(SafeLLamaContextHandle ctx, IntPtr candidates);
+		public static extern llama_token llama_sample_token_greedy(SafeLLamaContext ctx, IntPtr candidates);
 
 		/// <summary>
 		/// Mirostat 1.0 algorithm described in the paper https://arxiv.org/abs/2007.14966. Uses tokens instead of words.
@@ -79,7 +79,7 @@ namespace LLama.Native
 		/// <param name="mu">Maximum cross-entropy. This value is initialized to be twice the target cross-entropy (`2 * tau`) and is updated in the algorithm based on the error between the target and observed surprisal.</param>
 		/// <returns></returns>
 		[DllImport(LIBRARY_NAME)]
-		public static extern llama_token llama_sample_token_mirostat(SafeLLamaContextHandle ctx, IntPtr candidates, float tau, float eta, int m, float* mu);
+		public static extern llama_token llama_sample_token_mirostat(SafeLLamaContext ctx, IntPtr candidates, float tau, float eta, int m, float* mu);
 
 		/// <summary>
 		/// Mirostat 2.0 algorithm described in the paper https://arxiv.org/abs/2007.14966. Uses tokens instead of words.
@@ -91,7 +91,7 @@ namespace LLama.Native
 		/// <param name="mu">Maximum cross-entropy. This value is initialized to be twice the target cross-entropy (`2 * tau`) and is updated in the algorithm based on the error between the target and observed surprisal.</param>
 		/// <returns></returns>
 		[DllImport(LIBRARY_NAME)]
-		public static extern llama_token llama_sample_token_mirostat_v2(SafeLLamaContextHandle ctx, IntPtr candidates, float tau, float eta, float* mu);
+		public static extern llama_token llama_sample_token_mirostat_v2(SafeLLamaContext ctx, IntPtr candidates, float tau, float eta, float* mu);
 
 		/// <summary>
 		/// Top-K sampling described in academic paper "The Curious Case of Neural Text Degeneration" https://arxiv.org/abs/1904.09751
@@ -101,7 +101,7 @@ namespace LLama.Native
 		/// <param name="k"></param>
 		/// <param name="min_keep"></param>
 		[DllImport(LIBRARY_NAME)]
-		public static extern void llama_sample_top_k(SafeLLamaContextHandle ctx, IntPtr candidates, int k, ulong min_keep);
+		public static extern void llama_sample_top_k(SafeLLamaContext ctx, IntPtr candidates, int k, ulong min_keep);
 
 		/// <summary>
 		/// Nucleus sampling described in academic paper "The Curious Case of Neural Text Degeneration" https://arxiv.org/abs/1904.09751
@@ -111,7 +111,7 @@ namespace LLama.Native
 		/// <param name="p"></param>
 		/// <param name="min_keep"></param>
 		[DllImport(LIBRARY_NAME)]
-		public static extern void llama_sample_top_p(SafeLLamaContextHandle ctx, IntPtr candidates, float p, ulong min_keep);
+		public static extern void llama_sample_top_p(SafeLLamaContext ctx, IntPtr candidates, float p, ulong min_keep);
 
 		/// <summary>
 		/// Locally Typical Sampling implementation described in the paper https://arxiv.org/abs/2202.00666.
@@ -121,6 +121,6 @@ namespace LLama.Native
 		/// <param name="p"></param>
 		/// <param name="min_keep"></param>
 		[DllImport(LIBRARY_NAME)]
-		public static extern void llama_sample_typical(SafeLLamaContextHandle ctx, IntPtr candidates, float p, ulong min_keep);
+		public static extern void llama_sample_typical(SafeLLamaContext ctx, IntPtr candidates, float p, ulong min_keep);
 	}
 }

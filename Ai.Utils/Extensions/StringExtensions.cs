@@ -1,6 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-
-namespace Ai.Utils.Extensions
+﻿namespace Ai.Utils.Extensions
 {
 	public static class StringExtensions
 	{
@@ -12,17 +10,8 @@ namespace Ai.Utils.Extensions
 			}
 		}
 
-		public static IEnumerable<string> Trim(this IEnumerable<string> source)
-		{
-			foreach(string s in source)
-			{
-				yield return s.Trim();
-			}
-		}
-
 		public static IEnumerable<string> SplitLength(this string source, int length, string breaks = ". ")
 		{
-
 			do
 			{
 				if (source.Length < length)
@@ -34,16 +23,16 @@ namespace Ai.Utils.Extensions
 				int index = length;
 				string chunk = source[..index];
 
-				if(string.IsNullOrWhiteSpace(chunk))
+				if (string.IsNullOrWhiteSpace(chunk))
 				{
 					yield break;
 				}
 
-				foreach(char c in breaks)
+				foreach (char c in breaks)
 				{
 					bool found = false;
 
-					while(index > 0)
+					while (index > 0)
 					{
 						found = c == chunk[^1];
 
@@ -58,7 +47,7 @@ namespace Ai.Utils.Extensions
 						}
 					}
 
-					if(found)
+					if (found)
 					{
 						int split = index;
 
@@ -70,23 +59,32 @@ namespace Ai.Utils.Extensions
 
 						break;
 					}
-					
+
 					index = length;
 					chunk = source[..index];
 				}
 			} while (true);
 		}
 
+		public static IEnumerable<string> Trim(this IEnumerable<string> source)
+		{
+			foreach (string s in source)
+			{
+				yield return s.Trim();
+			}
+		}
+
 		public static bool TryGetSubstring(this string source, int start, int length, out string substring)
 		{
-			if(start + length >= source.Length)
+			if (start + length >= source.Length)
 			{
 				substring = null;
 				return false;
-			} else
+			}
+			else
 			{
 				substring = source.Substring(start, length);
-				return true;	
+				return true;
 			}
 		}
 	}

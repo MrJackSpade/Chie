@@ -5,6 +5,7 @@ namespace DiscordGpt
 	public class ActiveChannel
 	{
 		private readonly SavedId _lastMessageId;
+
 		private IDisposable _typingState;
 
 		public ActiveChannel(ISocketMessageChannel channel)

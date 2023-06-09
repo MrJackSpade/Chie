@@ -2,8 +2,6 @@
 using Blip.Shared.Models;
 using ChieApi.Interfaces;
 using ChieApi.Shared.Entities;
-using System.Drawing;
-using System.Drawing.Imaging;
 
 namespace ChieApi.Pipelines
 {

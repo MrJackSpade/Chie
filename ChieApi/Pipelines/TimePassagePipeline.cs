@@ -7,6 +7,7 @@ namespace ChieApi.Pipelines
 	public class TimePassagePipeline : IRequestPipeline
 	{
 		private readonly ICharacterFactory _characterFactory;
+
 		private readonly ChatService _chatService;
 
 		public TimePassagePipeline(ChatService databaseService, ICharacterFactory characterFactory)
