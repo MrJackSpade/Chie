@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace LLama.Native
+namespace Llama.Native
 {
 	[StructLayout(LayoutKind.Sequential)]
-	internal struct LLamaTokenDataArrayNative
+	internal struct LlamaTokenDataArrayNative
 	{
 		public IntPtr data;
 

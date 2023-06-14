@@ -11,7 +11,7 @@ namespace ChieApi
 		[JsonPropertyName("defaultModel")]
 		public string DefaultModel { get; set; }
 
-		[JsonPropertyName("llamaMainExe")]
+		[JsonPropertyName("LlamaMainExe")]
 		public string LlamaMainExe { get; set; }
 	}
 }

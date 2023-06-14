@@ -1,8 +1,8 @@
-﻿using LLama.Native;
+﻿using Llama.Native;
 using System;
 using System.Linq;
 
-namespace LLama
+namespace Llama
 {
 	public class Quantizer
 	{
@@ -15,11 +15,11 @@ namespace LLama
 		/// <param name="nthread">Thread to be used during the quantization. By default it's the physical core number.</param>
 		/// <returns>Whether the quantization is successful.</returns>
 		/// <exception cref="ArgumentException"></exception>
-		public static bool Quantize(string srcFileName, string dstFilename, LLamaFtype ftype, int nthread = -1)
+		public static bool Quantize(string srcFileName, string dstFilename, LlamaFtype ftype, int nthread = -1)
 		{
 			if (!ValidateFtype(ftype))
 			{
-				throw new ArgumentException($"The type {Enum.GetName(typeof(LLamaFtype), ftype)} is not a valid type " +
+				throw new ArgumentException($"The type {Enum.GetName(typeof(LlamaFtype), ftype)} is not a valid type " +
 					$"to perform quantization.");
 			}
 
@@ -37,39 +37,39 @@ namespace LLama
 		/// <exception cref="ArgumentException"></exception>
 		public static bool Quantize(string srcFileName, string dstFilename, string ftype, int nthread = -1) => Quantize(srcFileName, dstFilename, StringToFtype(ftype), nthread);
 
-		private static string FtypeToString(LLamaFtype ftype)
+		private static string FtypeToString(LlamaFtype ftype)
 		{
 			return ftype switch
 			{
-				LLamaFtype.LLAMA_FTYPE_MOSTLY_Q4_0 => "q4_0",
-				LLamaFtype.LLAMA_FTYPE_MOSTLY_Q4_1 => "q4_1",
-				LLamaFtype.LLAMA_FTYPE_MOSTLY_Q5_0 => "q5_0",
-				LLamaFtype.LLAMA_FTYPE_MOSTLY_Q5_1 => "q5_1",
-				LLamaFtype.LLAMA_FTYPE_MOSTLY_Q8_0 => "q8_0",
-				_ => throw new ArgumentException($"The type {Enum.GetName(typeof(LLamaFtype), ftype)} is not a valid type " +
+				LlamaFtype.LLAMA_FTYPE_MOSTLY_Q4_0 => "q4_0",
+				LlamaFtype.LLAMA_FTYPE_MOSTLY_Q4_1 => "q4_1",
+				LlamaFtype.LLAMA_FTYPE_MOSTLY_Q5_0 => "q5_0",
+				LlamaFtype.LLAMA_FTYPE_MOSTLY_Q5_1 => "q5_1",
+				LlamaFtype.LLAMA_FTYPE_MOSTLY_Q8_0 => "q8_0",
+				_ => throw new ArgumentException($"The type {Enum.GetName(typeof(LlamaFtype), ftype)} is not a valid type " +
 					$"to perform quantization.")
 			};
 		}
 
-		private static LLamaFtype StringToFtype(string str)
+		private static LlamaFtype StringToFtype(string str)
 		{
 			return str switch
 			{
-				"q4_0" => LLamaFtype.LLAMA_FTYPE_MOSTLY_Q4_0,
-				"q4_1" => LLamaFtype.LLAMA_FTYPE_MOSTLY_Q4_1,
-				"q5_0" => LLamaFtype.LLAMA_FTYPE_MOSTLY_Q5_0,
-				"q5_1" => LLamaFtype.LLAMA_FTYPE_MOSTLY_Q5_1,
-				"q8_0" => LLamaFtype.LLAMA_FTYPE_MOSTLY_Q8_0,
+				"q4_0" => LlamaFtype.LLAMA_FTYPE_MOSTLY_Q4_0,
+				"q4_1" => LlamaFtype.LLAMA_FTYPE_MOSTLY_Q4_1,
+				"q5_0" => LlamaFtype.LLAMA_FTYPE_MOSTLY_Q5_0,
+				"q5_1" => LlamaFtype.LLAMA_FTYPE_MOSTLY_Q5_1,
+				"q8_0" => LlamaFtype.LLAMA_FTYPE_MOSTLY_Q8_0,
 				_ => throw new NotImplementedException(),
 			};
 		}
 
 		private static bool ValidateFtype(string ftype) => new string[] { "q4_0", "q4_1", "q5_0", "q5_1", "q8_0" }.Contains(ftype);
 
-		private static bool ValidateFtype(LLamaFtype ftype)
+		private static bool ValidateFtype(LlamaFtype ftype)
 		{
-			return ftype is LLamaFtype.LLAMA_FTYPE_MOSTLY_Q4_0 or LLamaFtype.LLAMA_FTYPE_MOSTLY_Q4_1
-				or LLamaFtype.LLAMA_FTYPE_MOSTLY_Q5_0 or LLamaFtype.LLAMA_FTYPE_MOSTLY_Q5_1 or LLamaFtype.LLAMA_FTYPE_MOSTLY_Q8_0;
+			return ftype is LlamaFtype.LLAMA_FTYPE_MOSTLY_Q4_0 or LlamaFtype.LLAMA_FTYPE_MOSTLY_Q4_1
+				or LlamaFtype.LLAMA_FTYPE_MOSTLY_Q5_0 or LlamaFtype.LLAMA_FTYPE_MOSTLY_Q5_1 or LlamaFtype.LLAMA_FTYPE_MOSTLY_Q8_0;
 		}
 	}
 }

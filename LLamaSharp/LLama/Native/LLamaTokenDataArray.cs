@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
-namespace LLama.Native
+namespace Llama.Native
 {
 	[StructLayout(LayoutKind.Sequential)]
-	internal struct LLamaTokenDataArray
+	internal struct LlamaTokenDataArray
 	{
 		public Memory<LLamaTokenData> data;
 
@@ -14,14 +14,14 @@ namespace LLama.Native
 		[MarshalAs(UnmanagedType.I1)]
 		public bool sorted;
 
-		public LLamaTokenDataArray(LLamaTokenData[] data, ulong size, bool sorted)
+		public LlamaTokenDataArray(LLamaTokenData[] data, ulong size, bool sorted)
 		{
 			this.data = data;
 			this.size = size;
 			this.sorted = sorted;
 		}
 
-		public LLamaTokenDataArray(Span<float> logits)
+		public LlamaTokenDataArray(Span<float> logits)
 		{
 			List<LLamaTokenData> candidates = new(logits.Length);
 

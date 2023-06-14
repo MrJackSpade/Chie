@@ -6,6 +6,7 @@ using ChieApi.Shared.Models;
 using Discord;
 using Discord.WebSocket;
 using DiscordGpt.Constants;
+using DiscordGpt.Events;
 using DiscordGpt.Extensions;
 using System.Text.RegularExpressions;
 
@@ -25,7 +26,15 @@ namespace DiscordGpt.Services
 
 		private readonly DelayedTrigger _outgoingMessageTrigger;
 
+		public event Func<ChieMessageSendEvent, Task> OnMessagesSent;
+
 		private string _lastError = string.Empty;
+
+		public bool EnableSend
+		{
+			get => !_outgoingMessageTrigger.Wait;
+			set => _outgoingMessageTrigger.Wait = !value;
+		}
 
 		public ChieMessageService(ChieClient chieClient, Logger logger, ActiveChannelCollection activeChannels, NameService nameService)
 		{
@@ -99,6 +108,16 @@ namespace DiscordGpt.Services
 				foreach (SocketMessage socketMessage in queuedMessages.Select(m => m.SocketMessage).Distinct())
 				{
 					await this.MarkUnseen(socketMessage);
+				}
+			} else
+			{
+				if (OnMessagesSent != null)
+				{
+					await OnMessagesSent.Invoke(new ChieMessageSendEvent()
+					{
+						MessageId = sendResponse.MessageId,
+						Messages = queuedMessages
+					});
 				}
 			}
 

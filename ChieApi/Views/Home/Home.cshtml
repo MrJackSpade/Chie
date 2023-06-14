@@ -1,0 +1,25 @@
+﻿@using Llama.Events;
+@using Llama.Models;
+@model ContextModificationEventArgs
+
+<html>
+<head>
+    <meta http-equiv="refresh" content="1">
+</head>
+<body>
+    @if (Model != null)
+    {
+        foreach (LlamaToken token in Model.Evaluated)
+        {
+            if (token.Id == 13)
+            {
+                <br />
+            }
+            else
+            {
+                @token.Value
+            }
+        }
+    }
+</body>
+</html>

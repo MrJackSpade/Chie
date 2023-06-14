@@ -1,8 +1,8 @@
-﻿using LLama.Models;
+﻿using Llama.Models;
 using System;
 using System.Collections.Generic;
 
-namespace LLama.Extensions
+namespace Llama.Extensions
 {
 	public static class SpanFloatExtensions
 	{

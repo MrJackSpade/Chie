@@ -1,13 +1,13 @@
-﻿using LLama.Interfaces;
-using LLama.Models;
-using LLama.Native;
+﻿using Llama.Interfaces;
+using Llama.Models;
+using Llama.Native;
 using System.Collections.Generic;
 
-namespace LLama.Extensions
+namespace Llama.Extensions
 {
 	public static class IEnumerableITokenTransformerExtensions
 	{
-		public static IEnumerable<LlamaToken> Transform(this IEnumerable<ITokenTransformer> tokenTransformers, LlamaModelSettings settings, SafeLLamaContext context, IEnumerable<LlamaToken> selectedTokens)
+		public static IEnumerable<LlamaToken> Transform(this IEnumerable<ITokenTransformer> tokenTransformers, LlamaModelSettings settings, SafeLlamaContext context, IEnumerable<LlamaToken> selectedTokens)
 		{
 			IEnumerable<LlamaToken> returnTokens = selectedTokens;
 
@@ -19,6 +19,6 @@ namespace LLama.Extensions
 			return returnTokens;
 		}
 
-		public static IEnumerable<LlamaToken> Transform(this IEnumerable<ITokenTransformer> tokenTransformers, LlamaModelSettings settings, SafeLLamaContext context, LlamaToken selectedToken) => tokenTransformers.Transform(settings, context, new List<LlamaToken>() { selectedToken });
+		public static IEnumerable<LlamaToken> Transform(this IEnumerable<ITokenTransformer> tokenTransformers, LlamaModelSettings settings, SafeLlamaContext context, LlamaToken selectedToken) => tokenTransformers.Transform(settings, context, new List<LlamaToken>() { selectedToken });
 	}
 }

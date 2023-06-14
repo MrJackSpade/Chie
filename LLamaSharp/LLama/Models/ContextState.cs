@@ -1,6 +1,8 @@
-﻿namespace LLama.Models
+﻿using Llama.Collections;
+
+namespace Llama.Models
 {
-	public class ContextState
+    public class ContextState
 	{
 		public int InsertAt { get; set; }
 

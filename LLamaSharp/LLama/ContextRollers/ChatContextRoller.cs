@@ -1,24 +1,30 @@
-﻿using LLama.Interfaces;
-using LLama.Models;
-using LLama.Native;
+﻿using Llama.Collections;
+using Llama.Constants;
+using Llama.Extensions;
+using Llama.Interfaces;
+using Llama.Models;
+using Llama.Native;
 using System.Linq;
 
-namespace LLama.ContextRollers
+namespace Llama.ContextRollers
 {
-	public class ChatContextRoller : IContextRoller
+    public class ChatContextRoller : IContextRoller
 	{
-		public ContextState GenerateContext(SafeLLamaContext context, LlamaTokenCollection originalPrompt, LlamaTokenCollection history, int keepTokens)
+		public LlamaTokenCollection GenerateContext(SafeLlamaContext context, LlamaTokenCollection queue, LlamaTokenCollection originalPrompt, int keepTokens)
 		{
-			ContextState toReturn = new();
+			LlamaTokenCollection existingContext = new(context.Buffer);
+			existingContext.Append(queue);
 
-			LlamaToken newline = context.GetToken(13);
+			LlamaTokenCollection toReturn = new();
+
+			LlamaToken newline = context.GetToken(13, LlamaTokenTags.UNMANAGED);
 
 			//Take half the context after the prompt
 			int n_take = (context.Size - keepTokens) / 2;
 
-			LlamaTokenCollection new_history = history.From(n_take, newline);
+			LlamaTokenCollection new_history = existingContext.From(n_take, newline);
 
-			toReturn.Tokens.AppendControl(NativeApi.llama_token_bos());
+			toReturn.AppendControl(NativeApi.llama_token_bos());
 
 			LlamaTokenCollection[] keepLines = new_history.Split(newline.Id).Where(c => c.Count > 0).ToArray();
 
@@ -26,8 +32,8 @@ namespace LLama.ContextRollers
 			int lineBuffer = 5;
 			if (keepLines.Length < lineBuffer)
 			{
-				toReturn.Tokens.Append(originalPrompt);
-				toReturn.Tokens.Append(history);
+				toReturn.Append(originalPrompt);
+				toReturn.Append(existingContext);
 			}
 			else
 			{
@@ -41,20 +47,20 @@ namespace LLama.ContextRollers
 					{
 						if (nl)
 						{
-							toReturn.Tokens.Append(newline);
+							toReturn.Append(newline);
 						}
 
-						toReturn.Tokens.Append(originalPrompt);
+						toReturn.Append(originalPrompt);
 
 						nl = true;
 					}
 
 					if (nl)
 					{
-						toReturn.Tokens.Append(newline);
+						toReturn.Append(newline);
 					}
 
-					toReturn.Tokens.Append(keepLines[i]);
+					toReturn.Append(keepLines[i]);
 				}
 			}
 

@@ -1,10 +1,10 @@
-﻿using LLama.Models;
-using LLama.Native;
+﻿using Llama.Collections;
+using Llama.Native;
 
-namespace LLama.Interfaces
+namespace Llama.Interfaces
 {
-	public interface IContextRoller
+    public interface IContextRoller
 	{
-		public ContextState GenerateContext(SafeLLamaContext context, LlamaTokenCollection originalPrompt, LlamaTokenCollection history, int keepTokens);
+		public LlamaTokenCollection GenerateContext(SafeLlamaContext context, LlamaTokenCollection queue, LlamaTokenCollection originalPrompt, int keepTokens);
 	}
 }

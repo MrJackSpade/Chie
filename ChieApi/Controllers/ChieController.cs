@@ -1,9 +1,11 @@
 using ChieApi.Extensions;
 using ChieApi.Interfaces;
+using ChieApi.Models;
 using ChieApi.Services;
 using ChieApi.Shared.Entities;
 using ChieApi.Shared.Interfaces;
 using ChieApi.Shared.Models;
+using Llama.Events;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ChieApi.Controllers
@@ -59,9 +61,12 @@ namespace ChieApi.Controllers
 		[HttpGet("IsTyping/{channel}")]
 		public Task<IsTypingResponse> IsTyping(string channel)
 		{
+			LlamaClientResponseState clientResponse = this._llamaService.CheckIfResponding(channel);
+
 			return Task.FromResult(new IsTypingResponse()
 			{
-				IsTyping = this._llamaService.CheckIfResponding(channel),
+				IsTyping = clientResponse.IsTyping,
+				Content = clientResponse.Content,
 			});
 		}
 

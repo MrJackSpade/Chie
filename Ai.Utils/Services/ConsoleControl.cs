@@ -6,7 +6,7 @@ namespace Ai.Utils.Services
 	{
 		// A delegate type to be used as the handler routine
 		// for SetConsoleCtrlHandler.
-		public delegate bool HandlerRoutine(CtrlTypes CtrlType);
+		public delegate bool HandlerRoutine(CtrlTypes ctrlType);
 
 		public enum CtrlTypes
 		{

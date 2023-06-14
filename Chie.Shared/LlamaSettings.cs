@@ -47,6 +47,8 @@
 
 		public int? ContextLength { get; set; }
 
+		public string? FixedInstruction { get; set; }
+
 		public int? GpuLayers { get; set; }
 
 		public string? InPrefix { get; set; }

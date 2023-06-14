@@ -1,18 +1,36 @@
-﻿using System;
+﻿using Llama.Constants;
+using Llama.Interfaces;
+using Llama.Models;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
-namespace LLama.Models
+namespace Llama.Collections
 {
-	public class LlamaTokenCollection : IEnumerable<LlamaToken>
+	public class LlamaTokenCollection : ILlamaTokenCollection
 	{
-		private readonly List<LlamaToken> _tokens = new();
+		protected List<LlamaToken> _tokens = new();
 
 		public LlamaTokenCollection(IEnumerable<LlamaToken> tokens)
 		{
-			this._tokens.AddRange(tokens);
+			foreach (LlamaToken token in tokens)
+			{
+				this.Append(token);
+			}
+		}
+
+		public bool Contains(int tokenId)
+		{
+			foreach (LlamaToken token in this._tokens)
+			{
+				if (token.Id == tokenId)
+				{
+					return true;
+				}
+			}
+
+			return false;
 		}
 
 		public LlamaTokenCollection()
@@ -23,13 +41,20 @@ namespace LLama.Models
 
 		public IEnumerable<int> Ids => this._tokens.Select(t => t.Id);
 
-		public LlamaToken this[int index] => this._tokens[index];
+		public LlamaToken this[int index]
+		{
+			get => this._tokens[index];
+			set => this._tokens[index] = value;
+		}
 
 		public static LlamaTokenCollection operator +(LlamaTokenCollection a, LlamaToken b)
 		{
 			LlamaTokenCollection toReturn = new();
 
-			toReturn.Append(a);
+			foreach (LlamaToken token in a)
+			{
+				toReturn.Append(token);
+			}
 
 			toReturn.Append(b);
 
@@ -42,34 +67,19 @@ namespace LLama.Models
 
 			toReturn.Append(a);
 
-			toReturn.Append(b);
+			foreach (LlamaToken token in b)
+			{
+				toReturn.Append(token);
+			}
 
 			return toReturn;
 		}
 
-		public void Append(LlamaToken token) => this._tokens.Add(token);
+		public virtual void Append(LlamaToken token) => this._tokens.Add(token);
 
-		public void Append(int id, string value) => this._tokens.Add(new LlamaToken(id, value));
+		public void AppendControl(int id) => this.Append(new LlamaToken(id, IntPtr.Zero, LlamaTokenTags.CONTROL));
 
-		public void Append(IEnumerable<LlamaToken> collection)
-		{
-			foreach (LlamaToken token in collection)
-			{
-				this.Append(token);
-			}
-		}
-
-		public void AppendControl(IEnumerable<int> ids)
-		{
-			foreach (int id in ids)
-			{
-				this.AppendControl(id);
-			}
-		}
-
-		public void AppendControl(int id) => this._tokens.Add(new LlamaToken(id, null));
-
-		public void Clear() => this._tokens.Clear();
+		public virtual void Clear() => this._tokens.Clear();
 
 		public LlamaTokenCollection From(int startIndex, LlamaToken startToken)
 		{
@@ -129,8 +139,12 @@ namespace LLama.Models
 				if (isMatch)
 				{
 					i += toFind.Count;
-					toReturn.Append(toReplace);
-				} else
+					foreach (LlamaToken tokenA in toReplace)
+					{
+						toReturn.Append(tokenA);
+					}
+				}
+				else
 				{
 					toReturn.Append(this[i]);
 				}
@@ -139,18 +153,10 @@ namespace LLama.Models
 			return toReturn;
 		}
 
-		public void Slide(LlamaToken token)
+		public void Shift(LlamaToken token)
 		{
 			this._tokens.RemoveAt(0);
 			this._tokens.Add(token);
-		}
-
-		public void Slide(IEnumerable<LlamaToken> tokens)
-		{
-			foreach (LlamaToken token in tokens)
-			{
-				this.Slide(token);
-			}
 		}
 
 		public IEnumerable<LlamaTokenCollection> Split(int id)
@@ -193,16 +199,6 @@ namespace LLama.Models
 			yield return toReturn;
 		}
 
-		public override string ToString()
-		{
-			StringBuilder sb = new();
-
-			foreach (LlamaToken token in this._tokens)
-			{
-				sb.Append(token.ToString());
-			}
-
-			return sb.ToString();
-		}
+		public override string ToString() => string.Join("", this._tokens.Select(t => t.Value));
 	}
 }

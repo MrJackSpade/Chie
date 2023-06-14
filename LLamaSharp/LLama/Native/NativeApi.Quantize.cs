@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace LLama.Native
+namespace Llama.Native
 {
 	public partial class NativeApi
 	{
@@ -14,6 +14,6 @@ namespace LLama.Native
 		/// <remarks>not great API - very likely to change</remarks>
 		/// <returns>Returns 0 on success</returns>
 		[DllImport(LIBRARY_NAME)]
-		public static extern int llama_model_quantize(string fname_inp, string fname_out, LLamaFtype ftype, int nthread);
+		public static extern int llama_model_quantize(string fname_inp, string fname_out, LlamaFtype ftype, int nthread);
 	}
 }

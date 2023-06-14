@@ -12,13 +12,13 @@ namespace ChieApi.Services
 		{
 			List<string> outputLines = new();
 
-			Dictionary<string, object> Macros = new();
+			Dictionary<string, object> macros = new();
 
 			foreach (string line in input.Split(Environment.NewLine))
 			{
 				if (line.StartsWith("#"))
 				{
-					await ResolveCommand(line, Macros);
+					await ResolveCommand(line, macros);
 				}
 				else if (line.Contains("%%"))
 				{
@@ -28,7 +28,7 @@ namespace ChieApi.Services
 
 					foreach (Match m in macroMatches)
 					{
-						string value = Macros[m.Groups[1].Value].ToString();
+						string value = macros[m.Groups[1].Value].ToString();
 						nl = nl.Replace(m.Groups[0].Value, value);
 					}
 

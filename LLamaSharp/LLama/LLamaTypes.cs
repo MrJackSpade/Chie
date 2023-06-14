@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace LLama.Types
+namespace Llama.Types
 {
 	public enum ChatRole
 	{

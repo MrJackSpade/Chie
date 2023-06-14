@@ -2,14 +2,14 @@
 using System.Diagnostics;
 using System.IO;
 
-namespace LLama.Types
+namespace Llama.Types
 {
 	/// <summary>
-	/// The logger of LLamaSharp. On default it write to console. User methods of `LLamaLogger.Default` to change the behavior.
+	/// The logger of LlamaSharp. On default it write to console. User methods of `LlamaLogger.Default` to change the behavior.
 	/// </summary>
-	public sealed class LLamaLogger
+	public sealed class LlamaLogger
 	{
-		private static readonly Lazy<LLamaLogger> _instance = new(() => new LLamaLogger());
+		private static readonly Lazy<LlamaLogger> _instance = new(() => new LlamaLogger());
 
 		private FileStream? _fileStream = null;
 
@@ -19,19 +19,19 @@ namespace LLama.Types
 
 		private bool _toFile = false;
 
-		private LLamaLogger()
+		private LlamaLogger()
 		{
 		}
 
-		public static LLamaLogger Default => _instance.Value;
+		public static LlamaLogger Default => _instance.Value;
 
-		public LLamaLogger DisableConsole()
+		public LlamaLogger DisableConsole()
 		{
 			this._toConsole = false;
 			return this;
 		}
 
-		public LLamaLogger DisableFile(string filename)
+		public LlamaLogger DisableFile(string filename)
 		{
 			if (this._fileWriter is not null)
 			{
@@ -49,13 +49,13 @@ namespace LLama.Types
 			return this;
 		}
 
-		public LLamaLogger EnableConsole()
+		public LlamaLogger EnableConsole()
 		{
 			this._toConsole = true;
 			return this;
 		}
 
-		public LLamaLogger EnableFile(string filename, FileMode mode = FileMode.Append)
+		public LlamaLogger EnableFile(string filename, FileMode mode = FileMode.Append)
 		{
 			this._fileStream = new FileStream(filename, mode, FileAccess.Write);
 			this._fileWriter = new StreamWriter(this._fileStream);

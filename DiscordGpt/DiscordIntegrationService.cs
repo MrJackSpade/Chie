@@ -3,7 +3,9 @@ using Ai.Utils.Extensions;
 using Chie;
 using ChieApi.Client;
 using ChieApi.Shared.Entities;
+using ChieApi.Shared.Models;
 using Discord;
+using Discord.Rest;
 using Discord.WebSocket;
 using DiscordGpt.Constants;
 using DiscordGpt.Extensions;
@@ -14,6 +16,8 @@ namespace DiscordGpt
 {
 	internal class DiscordIntegrationService
 	{
+		private const string TYPING_PREFIX = "*⌨️* ";
+
 		private readonly ActiveChannelCollection _activeChannels;
 
 		private readonly ChieClient _chieClient = new();
@@ -32,6 +36,8 @@ namespace DiscordGpt
 
 		private readonly StartInfo _startInfo;
 
+		private ActiveMessage? _messageBeingWritten;
+
 		private Task? _receiveTask;
 
 		private Task? _typingTask;
@@ -41,6 +47,7 @@ namespace DiscordGpt
 			this._activeChannels = activeChannelCollection;
 			this._nameService = nameService;
 			this._chieMessageService = messageService;
+			this._chieMessageService.OnMessagesSent += this._chieMessageService_OnMessagesSent;
 			this._startInfo = startInfo;
 			this._settings = settings;
 			this._logger = logger;
@@ -74,10 +81,24 @@ namespace DiscordGpt
 
 			await this._logger.Write($"Message: {cleanedMessage}", LogLevel.Private);
 
+			bool useExistingMessage = this._messageBeingWritten?.IsReplyTo == messageResponse.ReplyToId;
+
 			foreach (string part in cleanedMessage.SplitLength(1800))
 			{
-				_ = await activeChannel.Channel.SendMessageAsync(part);
+				if (useExistingMessage)
+				{
+					await this._messageBeingWritten!.SetContent(part);
+					this._messageBeingWritten = null;
+					useExistingMessage = false;
+				}
+				else
+				{
+					_ = await activeChannel.Channel.SendMessageAsync(part);
+				}
 			}
+
+			//now that we've recieved a response, we can allow new messages in
+			_chieMessageService.EnableSend = true;
 		}
 
 		public async Task Start()
@@ -92,6 +113,18 @@ namespace DiscordGpt
 			this._receiveTask = Task.Run(this.ReceiveLoop);
 
 			await LoopUtil.Forever();
+		}
+
+		private async Task _chieMessageService_OnMessagesSent(Events.ChieMessageSendEvent obj)
+		{
+			//wait for response before allowing new messages to go out
+			_chieMessageService.EnableSend = false;
+
+			SocketMessage lastMessage = obj.Messages.Last().SocketMessage;
+
+			RestUserMessage message = await lastMessage.Channel.SendMessageAsync(TYPING_PREFIX);
+
+			this._messageBeingWritten = new ActiveMessage(message, obj.MessageId);
 		}
 
 		private async Task Client_OnMessageReceived(SocketMessage arg)
@@ -214,9 +247,14 @@ namespace DiscordGpt
 			{
 				foreach (ActiveChannel activeChannel in this._activeChannels)
 				{
-					bool isTyping = (await this._chieClient.IsTyping(activeChannel.ChieName)).IsTyping;
+					IsTypingResponse typingResponse = (await this._chieClient.IsTyping(activeChannel.ChieName));
 
-					activeChannel.SetTypingState(isTyping);
+					if (typingResponse.IsTyping)
+					{
+						this._messageBeingWritten?.SetContent(TYPING_PREFIX + typingResponse.Content);
+					}
+
+					activeChannel.SetTypingState(typingResponse.IsTyping);
 				}
 			}, 5000, async ex => await this._logger.Write(ex));
 		}

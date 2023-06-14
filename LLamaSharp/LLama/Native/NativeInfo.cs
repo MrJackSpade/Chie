@@ -1,4 +1,4 @@
-﻿namespace LLama.Native
+﻿namespace Llama.Native
 {
 	internal class NativeInfo
 	{

@@ -1,45 +1,48 @@
-﻿using LLama;
-using LLama.Interfaces;
-using LLama.Models;
-using LLama.Native;
+﻿using Llama;
+using Llama.Collections;
+using Llama.Constants;
+using Llama.Interfaces;
+using Llama.Models;
+using Llama.Native;
 
 namespace Llama.TokenTransformers
 {
 	public class NewlineEnsureTransformer : ITokenTransformer
 	{
-		private readonly List<string> _antiprompts = new();
 
-		private readonly List<LlamaTokenCollection> _antiPromptTokens = new();
+		private readonly int _newlineTokenId = -1;
 
-		private LlamaToken _newLineToken = null;
-
-		public NewlineEnsureTransformer(IEnumerable<string> allReversePrompts)
+		private bool _lastNewLine = false;
+		public NewlineEnsureTransformer()
 		{
-			_antiprompts.AddRange(allReversePrompts.Where(a => a != "\n"));
+			_newlineTokenId = NativeApi.llama_token_nl();
 		}
 
-		public IEnumerable<LlamaToken> TransformToken(LlamaModelSettings settings, SafeLLamaContext context, IEnumerable<LlamaToken> selectedTokens)
+		public IEnumerable<LlamaToken> TransformToken(LlamaModelSettings settings, SafeLlamaContext context, IEnumerable<LlamaToken> selectedTokens)
 		{
 			LlamaTokenCollection input = new(selectedTokens);
 
-			if (this._antiPromptTokens.Count != this._antiprompts.Count)
-			{
-				this._newLineToken = context.GetToken(13);
+			string inputString = input.ToString();
 
-				foreach (string antiPrompt in this._antiprompts)
+			if (inputString.IndexOf("|") == 0)
+			{
+				if (!_lastNewLine)
 				{
-					this._antiPromptTokens.Add(context.Tokenize(antiPrompt));
+					_lastNewLine = true;
+					yield return context.GetToken(_newlineTokenId, LlamaTokenTags.UNMANAGED);
 				}
 			}
-
-			foreach (LlamaTokenCollection antiPromptTokenCollection in this._antiPromptTokens)
+			else
 			{
-				input = input.Replace(antiPromptTokenCollection, this._newLineToken + antiPromptTokenCollection);
-			}
+				foreach (LlamaToken token in input)
+				{
+					if (!_lastNewLine || token.Id != _newlineTokenId)
+					{
+						yield return token;
+					}
 
-			foreach (LlamaToken token in input)
-			{
-				yield return token;
+					_lastNewLine = token.Id == _newlineTokenId;
+				}
 			}
 		}
 	}

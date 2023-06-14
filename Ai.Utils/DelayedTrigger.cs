@@ -15,7 +15,7 @@
 		private DateTime _lastAttempt = DateTime.MinValue;
 
 		private Thread? _thread;
-
+		public bool Wait { get; set; } = false;
 		public DelayedTrigger(Func<Task<bool>> action, int delayMs, int maxDelayMs)
 		{
 			this._delayMs = delayMs;
@@ -98,23 +98,26 @@
 		{
 			do
 			{
-				this._gate.WaitOne();
-
-				try
+				if (!this.Wait)
 				{
-					if (this.Since(this._lastAttempt) > this._delayMs || this.Since(this._firstAttempt) > this._maxDelayMs)
-					{
-						if (await this._action.Invoke())
-						{
-							this._thread = null;
+					this._gate.WaitOne();
 
-							return;
+					try
+					{
+						if (this.Since(this._lastAttempt) > this._delayMs || this.Since(this._firstAttempt) > this._maxDelayMs)
+						{
+							if (await this._action.Invoke())
+							{
+								this._thread = null;
+
+								return;
+							}
 						}
 					}
-				}
-				finally
-				{
-					this._gate.Set();
+					finally
+					{
+						this._gate.Set();
+					}
 				}
 
 				await Task.Delay(this._delayMs);

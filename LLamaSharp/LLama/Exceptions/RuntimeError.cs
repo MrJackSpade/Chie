@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace LLama.Exceptions
+namespace Llama.Exceptions
 {
 	public class RuntimeError : Exception
 	{

@@ -1,11 +1,12 @@
-﻿using ChieApi.TokenTransformers;
-using LLama.ContextRollers;
-using LLama.Interfaces;
+﻿using Llama.ContextRollers;
+using Llama.Interfaces;
+using Llama.PostResponseContextTransformers;
+using Llama.TokenTransformers;
 using System;
 using System.Collections.Generic;
-using llama_token = System.Int32;
+using Llama_token = System.Int32;
 
-namespace LLama
+namespace Llama
 {
 	public class LlamaModelSettings
 	{
@@ -14,6 +15,12 @@ namespace LLama
 		public int BatchSize { get; set; } = 512;
 
 		public IContextRoller ContextRoller { get; set; } = new ChatContextRoller();
+
+		public List<IPostResponseContextTransformer> PostResponseConstextTransformers { get; set; } = new List<IPostResponseContextTransformer> 
+		{
+			new RemoveTemporaryTokens(),
+			new StripNullTokens()
+		};
 
 		public int ContextSize { get; set; } = 512;
 
@@ -35,7 +42,7 @@ namespace LLama
 
 		public int KeepContextTokenCount { get; set; } = 0;
 
-		public Dictionary<llama_token, float> LogitBias { get; set; } = new();
+		public Dictionary<Llama_token, float> LogitBias { get; set; } = new();
 
 		public string LoraAdapter { get; set; } = string.Empty;
 
@@ -79,7 +86,10 @@ namespace LLama
 
 		public int ThreadCount { get; set; } = Math.Max(Environment.ProcessorCount / 2, 1);
 
-		public IList<ITokenTransformer> TokenTransformers { get; } = new List<ITokenTransformer>() { new InteractiveEosReplace() };
+		public IList<ITokenTransformer> TokenTransformers { get; } = new List<ITokenTransformer>() {
+			new InteractiveEosReplace(),
+			new InvalidCharacterBlockingTransformer()
+		};
 
 		public int TopK { get; set; } = 40;
 

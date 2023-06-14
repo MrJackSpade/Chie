@@ -1,22 +1,22 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace LLama.Native
+namespace Llama.Native
 {
-	public abstract class SafeLLamaHandleBase : SafeHandle
+	public abstract class SafeLlamaHandleBase : SafeHandle
 	{
-		protected SafeLLamaHandleBase()
+		protected SafeLlamaHandleBase()
 			: base(IntPtr.Zero, ownsHandle: true)
 		{
 		}
 
-		protected SafeLLamaHandleBase(IntPtr handle)
+		protected SafeLlamaHandleBase(IntPtr handle)
 			: base(IntPtr.Zero, ownsHandle: true)
 		{
 			this.SetHandle(handle);
 		}
 
-		protected SafeLLamaHandleBase(IntPtr handle, bool ownsHandle)
+		protected SafeLlamaHandleBase(IntPtr handle, bool ownsHandle)
 			: base(IntPtr.Zero, ownsHandle)
 		{
 			this.SetHandle(handle);

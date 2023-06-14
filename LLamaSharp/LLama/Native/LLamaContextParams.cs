@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace LLama.Native
+namespace Llama.Native
 {
 	public delegate void LlamaProgressCallback(float progress, IntPtr ctx);
 
 	[StructLayout(LayoutKind.Sequential)]
-	public struct LLamaContextParams
+	public struct LlamaContextParams
 	{
 		/// <summary>
 		/// text context
@@ -30,7 +30,7 @@ namespace LLama.Native
 		public bool f16_kv;
 
 		/// <summary>
-		/// the llama_eval() call computes all logits, not just the last one
+		/// the Llama_eval() call computes all logits, not just the last one
 		/// </summary>
 		[MarshalAs(UnmanagedType.I1)]
 		public bool logits_all;

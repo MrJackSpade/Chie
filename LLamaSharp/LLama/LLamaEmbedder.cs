@@ -1,18 +1,18 @@
-﻿using LLama.Exceptions;
-using LLama.Native;
+﻿using Llama.Exceptions;
+using Llama.Native;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace LLama
+namespace Llama
 {
-	public class LLamaEmbedder : IDisposable
+	public class LlamaEmbedder : IDisposable
 	{
-		private readonly SafeLLamaContext _ctx;
+		private readonly SafeLlamaContext _ctx;
 
 		private readonly int _threads;
 
-		public LLamaEmbedder(LlamaModelSettings @params, Encoding encoding, int threads)
+		public LlamaEmbedder(LlamaModelSettings @params, Encoding encoding, int threads)
 		{
 			@params.GenerateEmbedding = true;
 			this._threads = threads;
@@ -22,14 +22,14 @@ namespace LLama
 				this._threads = Math.Max(Environment.ProcessorCount / 2, 1);
 			}
 
-			this._ctx = Utils.llama_init_from_gpt_params(ref @params, encoding);
+			this._ctx = Utils.Llama_init_from_gpt_params(ref @params, encoding);
 		}
 
 		/// <summary>
 		/// Warning: must ensure the original model has params.embedding = true;
 		/// </summary>
 		/// <param name="ctx"></param>
-		internal LLamaEmbedder(SafeLLamaContext ctx)
+		internal LlamaEmbedder(SafeLlamaContext ctx)
 		{
 			this._ctx = ctx;
 		}
@@ -44,7 +44,7 @@ namespace LLama
 				text = text.Insert(0, " ");
 			}
 
-			List<int> embed_inp = Utils.llama_tokenize(this._ctx, text, add_bos, encoding);
+			List<int> embed_inp = Utils.Llama_tokenize(this._ctx, text, add_bos, encoding);
 
 			// TODO(Rinne): deal with log of prompt
 

@@ -1,6 +1,6 @@
-﻿namespace LLama.Native
+﻿namespace Llama.Native
 {
-	public enum LLamaFtype
+	public enum LlamaFtype
 	{
 		LLAMA_FTYPE_ALL_F32 = 0,
 

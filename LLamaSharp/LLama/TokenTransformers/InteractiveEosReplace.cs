@@ -1,33 +1,41 @@
-﻿using LLama;
-using LLama.Interfaces;
-using LLama.Models;
-using LLama.Native;
+﻿using Llama;
+using Llama.Collections;
+using Llama.Constants;
+using Llama.Interfaces;
+using Llama.Models;
+using Llama.Native;
 using System.Collections.Generic;
 
-namespace ChieApi.TokenTransformers
+namespace Llama.TokenTransformers
 {
-	public class InteractiveEosReplace : ITokenTransformer
+    public class InteractiveEosReplace : ITokenTransformer
 	{
-		public IEnumerable<LlamaToken> TransformToken(LlamaModelSettings settings, SafeLLamaContext context, IEnumerable<LlamaToken> selectedTokens)
+		public IEnumerable<LlamaToken> TransformToken(LlamaModelSettings settings, SafeLlamaContext context, IEnumerable<LlamaToken> selectedTokens)
 		{
 			foreach (LlamaToken selectedToken in selectedTokens)
 			{
 				// replace end of text token with newline token when in interactive mode
 				if (selectedToken.Id == NativeApi.llama_token_eos() && settings.Interactive && !settings.Instruct)
 				{
-					yield return context.GetToken(13);
+					yield return context.GetToken(13, LlamaTokenTags.RESPONSE);
 
 					if (settings.Antiprompt.Count != 0)
 					{
-						// tokenize and inject first reverse prompt
-						LlamaTokenCollection first_antiprompt = context.Tokenize(settings.Antiprompt[0]);
+						string firstAnti = settings.Antiprompt[0];
 
-						foreach (LlamaToken token in first_antiprompt)
+						if (firstAnti != "\n") 
 						{
-							yield return token;
+							// tokenize and inject first reverse prompt
+							LlamaTokenCollection first_antiprompt = context.Tokenize(firstAnti, LlamaTokenTags.RESPONSE);
+
+							foreach (LlamaToken token in first_antiprompt)
+							{
+								yield return token;
+							}
 						}
 					}
-				} else
+				}
+				else
 				{
 					yield return selectedToken;
 				}

@@ -20,7 +20,8 @@ namespace ChieApi
 			AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 			Console.OutputEncoding = System.Text.Encoding.UTF8;
 			Console.InputEncoding = System.Text.Encoding.UTF8;
-
+			Console.BufferHeight = Console.WindowHeight;
+			Console.BufferWidth = Console.WindowWidth;
 			ConfigurationBuilder configurationBuilder = new();
 			configurationBuilder.AddUserSecrets<Program>();
 			IConfigurationRoot configuration = configurationBuilder.Build();
@@ -31,7 +32,7 @@ namespace ChieApi
 
 			// Add services to the container.
 
-			_ = builder.Services.AddControllers();
+			_ = builder.Services.AddControllersWithViews();
 
 			if (args.Length > 0)
 			{

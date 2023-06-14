@@ -1,12 +1,12 @@
-﻿using LLama.Interfaces;
-using LLama.Models;
-using LLama.Native;
+﻿using Llama.Collections;
+using Llama.Interfaces;
+using Llama.Native;
 using System;
 
-namespace LLama.ContextRollers
+namespace Llama.ContextRollers
 {
-	public class DefaultContextRoller : IContextRoller
+    public class DefaultContextRoller : IContextRoller
 	{
-		public ContextState GenerateContext(SafeLLamaContext context, LlamaTokenCollection originalPrompt, LlamaTokenCollection history, int keepTokens) => throw new NotImplementedException();
+		public LlamaTokenCollection GenerateContext(SafeLlamaContext context, LlamaTokenCollection queue, LlamaTokenCollection originalPrompt, int keepTokens) => throw new NotImplementedException();
 	}
 }

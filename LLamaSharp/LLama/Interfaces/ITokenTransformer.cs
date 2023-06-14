@@ -1,12 +1,12 @@
-﻿using LLama;
-using LLama.Models;
-using LLama.Native;
+﻿using Llama;
+using Llama.Models;
+using Llama.Native;
 using System.Collections.Generic;
 
-namespace LLama.Interfaces
+namespace Llama.Interfaces
 {
 	public interface ITokenTransformer
 	{
-		IEnumerable<LlamaToken> TransformToken(LlamaModelSettings settings, SafeLLamaContext context, IEnumerable<LlamaToken> selectedTokens);
+		IEnumerable<LlamaToken> TransformToken(LlamaModelSettings settings, SafeLlamaContext context, IEnumerable<LlamaToken> selectedTokens);
 	}
 }

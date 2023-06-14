@@ -10,7 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Ai.Utils\Ai.Utils.csproj" />
     <ProjectReference Include="..\Chie.Shared\Llama.Shared.csproj" />
-    <ProjectReference Include="..\LLamaSharp\LLama\LLamaSharp.csproj" />
+    <ProjectReference Include="..\LlamaSharp\Llama\LlamaSharp.csproj" />
     <ProjectReference Include="Y:\Git\Loxifi.ProcessRunner\Loxifi.ProcessRunner.csproj" />
   </ItemGroup>
 

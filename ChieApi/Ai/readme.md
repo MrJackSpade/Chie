@@ -13,6 +13,6 @@ Configuration.json
 Prompt.txt
 Start.txt
 
-Configuration.json contains (some) llama.cpp arguments to use when initializing the client
+Configuration.json contains (some) Llama.cpp arguments to use when initializing the client
 Prompt.txt populates the Llama.cpp -p tag
 Start.txt is streamed into Main.exe as the first input, allowing for what functions as part of the initial prompt, that isn't saved when the context rolls forward. Good for text to start a conversation that doesn't need to be remembered later.

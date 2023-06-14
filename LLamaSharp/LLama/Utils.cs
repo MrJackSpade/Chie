@@ -1,20 +1,20 @@
-﻿using LLama.Exceptions;
-using LLama.Native;
+﻿using Llama.Exceptions;
+using Llama.Native;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using llama_token = System.Int32;
+using Llama_token = System.Int32;
 
-namespace LLama
+namespace Llama
 {
 	internal static class Utils
 	{
-		public static SafeLLamaContext llama_init_from_gpt_params(ref LlamaModelSettings settings, Encoding encoding)
+		public static SafeLlamaContext Llama_init_from_gpt_params(ref LlamaModelSettings settings, Encoding encoding)
 		{
-			LLamaContextParams lparams = NativeApi.llama_context_default_params();
+			LlamaContextParams lparams = NativeApi.llama_context_default_params();
 
 			lparams.n_ctx = settings.ContextSize;
 			lparams.n_gpu_layers = settings.GpuLayerCount;
@@ -37,7 +37,7 @@ namespace LLama
 				throw new RuntimeError($"Failed to load model {settings.Model}.");
 			}
 
-			SafeLLamaContext ctx = new(ctx_ptr, encoding, settings.ThreadCount, settings.ContextSize);
+			SafeLlamaContext ctx = new(ctx_ptr, encoding, settings.ThreadCount, settings.ContextSize, settings.BatchSize);
 
 			if (!string.IsNullOrEmpty(settings.LoraAdapter))
 			{
@@ -51,10 +51,10 @@ namespace LLama
 			return ctx;
 		}
 
-		public static List<llama_token> llama_tokenize(SafeLLamaContext ctx, string text, bool add_bos, Encoding encoding)
+		public static List<Llama_token> Llama_tokenize(SafeLlamaContext ctx, string text, bool add_bos, Encoding encoding)
 		{
 			int cnt = encoding.GetByteCount(text);
-			llama_token[] res = new llama_token[cnt + (add_bos ? 1 : 0)];
+			Llama_token[] res = new Llama_token[cnt + (add_bos ? 1 : 0)];
 			int n = NativeApi.llama_tokenize(ctx, text, encoding, res, res.Length, add_bos);
 			if (n < 0)
 			{
@@ -64,7 +64,7 @@ namespace LLama
 			return res.Take(n).ToList();
 		}
 
-		public static unsafe Span<float> llama_get_logits(SafeLLamaContext ctx, int length)
+		public static unsafe Span<float> Llama_get_logits(SafeLlamaContext ctx, int length)
 		{
 			float* logits = NativeApi.llama_get_logits(ctx);
 			return new Span<float>(logits, length);
