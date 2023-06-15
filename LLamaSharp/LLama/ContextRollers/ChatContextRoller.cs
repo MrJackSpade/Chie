@@ -9,62 +9,70 @@ using System.Linq;
 namespace Llama.ContextRollers
 {
     public class ChatContextRoller : IContextRoller
-	{
-		public LlamaTokenCollection GenerateContext(SafeLlamaContext context, LlamaTokenCollection queue, LlamaTokenCollection originalPrompt, int keepTokens)
-		{
-			LlamaTokenCollection existingContext = new(context.Buffer);
-			existingContext.Append(queue);
+    {
+        private void AppendNewline(SafeLlamaContext context, LlamaTokenCollection tokens)
+        {
+            if (tokens.Count == 0)
+            {
+                tokens.Append(context.GetToken(13, LlamaTokenTags.UNMANAGED));
+                return;
+            }
 
-			LlamaTokenCollection toReturn = new();
+            LlamaToken lastToken = tokens[^1];
+            tokens.Append(context.GetToken(13, lastToken.Tag));
+        }
 
-			LlamaToken newline = context.GetToken(13, LlamaTokenTags.UNMANAGED);
+        public LlamaTokenCollection GenerateContext(SafeLlamaContext context, LlamaTokenCollection queue, LlamaTokenCollection originalPrompt, int keepTokens)
+        {
+            LlamaTokenCollection existingContext = new(context.Buffer);
+            existingContext.Append(queue);
 
-			//Take half the context after the prompt
-			int n_take = (context.Size - keepTokens) / 2;
+            LlamaTokenCollection toReturn = new();
 
-			LlamaTokenCollection new_history = existingContext.From(n_take, newline);
+            LlamaToken splitNewLine = context.GetToken(13, LlamaTokenTags.UNMANAGED);
 
-			toReturn.AppendControl(NativeApi.llama_token_bos());
+            //Take half the context after the prompt
+            int n_take = (context.Size - keepTokens) / 2;
 
-			LlamaTokenCollection[] keepLines = new_history.Split(newline.Id).Where(c => c.Count > 0).ToArray();
+            LlamaTokenCollection new_history = existingContext.From(n_take, splitNewLine);
 
-			//TODO: Make me a parameter. Dont allow 0;
-			int lineBuffer = 5;
-			if (keepLines.Length < lineBuffer)
-			{
-				toReturn.Append(originalPrompt);
-				toReturn.Append(existingContext);
-			}
-			else
-			{
-				for (int i = 0; i < keepLines.Length; i++)
-				{
-					int remaining = keepLines.Length - i;
+            toReturn.AppendControl(NativeApi.llama_token_bos());
 
-					bool nl = i != 0;
+            LlamaTokenCollection[] keepLines = new_history.Split(splitNewLine.Id).Where(c => c.Count > 0).ToArray();
 
-					if (remaining == lineBuffer)
-					{
-						if (nl)
-						{
-							toReturn.Append(newline);
-						}
+            //TODO: Make me a parameter. Dont allow 0;
+            int lineBuffer = 5;
+            if (keepLines.Length < lineBuffer)
+            {
+                toReturn.Append(originalPrompt);
+                toReturn.Append(existingContext);
+            }
+            else
+            {
+                for (int i = 0; i < keepLines.Length; i++)
+                {
+                    int remaining = keepLines.Length - i;
 
-						toReturn.Append(originalPrompt);
+                    bool nl = i != 0;
 
-						nl = true;
-					}
+                    if (remaining == lineBuffer)
+                    {
+                        this.AppendNewline(context, toReturn);
+                        toReturn.Append(originalPrompt);
 
-					if (nl)
-					{
-						toReturn.Append(newline);
-					}
+                        nl = true;
+                    }
 
-					toReturn.Append(keepLines[i]);
-				}
-			}
+                    if (nl)
+                    {
+                        this.AppendNewline(context, toReturn);
+                    }
 
-			return toReturn;
-		}
-	}
+                    toReturn.Append(keepLines[i]);
+                }
+            }
+
+            return toReturn;
+        }
+    }
 }

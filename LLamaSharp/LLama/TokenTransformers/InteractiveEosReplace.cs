@@ -10,7 +10,7 @@ namespace Llama.TokenTransformers
 {
     public class InteractiveEosReplace : ITokenTransformer
 	{
-		public IEnumerable<LlamaToken> TransformToken(LlamaModelSettings settings, SafeLlamaContext context, IEnumerable<LlamaToken> selectedTokens)
+		public IEnumerable<LlamaToken> TransformToken(LlamaModelSettings settings, IReadOnlyLlamaTokenCollection thisGeneration, SafeLlamaContext context, IEnumerable<LlamaToken> selectedTokens)
 		{
 			foreach (LlamaToken selectedToken in selectedTokens)
 			{

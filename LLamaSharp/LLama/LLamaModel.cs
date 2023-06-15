@@ -230,9 +230,10 @@ namespace Llama
 					logits.Update(no_penalize);
 
 					List<LlamaToken> selectedTokens;
+                    LlamaTokenCollection selectedCollection;
 
-					do
-					{
+                    do
+                    {
 						if (this._settings.Temp <= 0)
 						{
 							// Greedy sampling
@@ -268,10 +269,10 @@ namespace Llama
 							}
 						}
 
-						selectedTokens = this._settings.TokenTransformers.Transform(this._settings, this.LlamaContext, this.LlamaContext.GetToken(id, LlamaTokenTags.RESPONSE)).ToList();
-					} while (selectedTokens.Count == 0);
+						selectedTokens = this._settings.TokenTransformers.Transform(this._settings, thisCall, this.LlamaContext, this.LlamaContext.GetToken(id, LlamaTokenTags.RESPONSE)).ToList();
 
-					LlamaTokenCollection selectedCollection = new(selectedTokens);
+                        selectedCollection = new(selectedTokens);
+                    } while ((thisCall.IsNullOrWhiteSpace && selectedCollection.IsNullOrWhiteSpace) || selectedCollection.IsNullOrEmpty);
 
 					this._evaluationQueue.Append(selectedCollection);
 

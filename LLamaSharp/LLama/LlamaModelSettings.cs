@@ -88,7 +88,8 @@ namespace Llama
 
 		public IList<ITokenTransformer> TokenTransformers { get; } = new List<ITokenTransformer>() {
 			new InteractiveEosReplace(),
-			new InvalidCharacterBlockingTransformer()
+			new InvalidCharacterBlockingTransformer(),
+			new LetterFrequencyTransformer()
 		};
 
 		public int TopK { get; set; } = 40;

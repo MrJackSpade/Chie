@@ -7,6 +7,6 @@ namespace Llama.Interfaces
 {
 	public interface ITokenTransformer
 	{
-		IEnumerable<LlamaToken> TransformToken(LlamaModelSettings settings, SafeLlamaContext context, IEnumerable<LlamaToken> selectedTokens);
+		IEnumerable<LlamaToken> TransformToken(LlamaModelSettings settings, IReadOnlyLlamaTokenCollection thisGeneration, SafeLlamaContext context, IEnumerable<LlamaToken> selectedTokens);
 	}
 }

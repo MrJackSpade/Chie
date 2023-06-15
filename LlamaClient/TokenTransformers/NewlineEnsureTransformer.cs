@@ -18,7 +18,7 @@ namespace Llama.TokenTransformers
 			_newlineTokenId = NativeApi.llama_token_nl();
 		}
 
-		public IEnumerable<LlamaToken> TransformToken(LlamaModelSettings settings, SafeLlamaContext context, IEnumerable<LlamaToken> selectedTokens)
+		public IEnumerable<LlamaToken> TransformToken(LlamaModelSettings settings,IReadOnlyLlamaTokenCollection thisGeneration, SafeLlamaContext context, IEnumerable<LlamaToken> selectedTokens)
 		{
 			LlamaTokenCollection input = new(selectedTokens);
 

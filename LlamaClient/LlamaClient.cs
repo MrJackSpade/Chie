@@ -68,17 +68,17 @@ namespace Llama
 			{			
 				string toSend = this._settings.Start;
 
-				if(!this._settings.Prompt.EndsWith("\n"))
-				{
-					toSend = "\n" + toSend;
-				}
-
 				if (File.Exists(this._settings.Start))
 				{
 					toSend = File.ReadAllText(this._settings.Start);
 				}
 
-				this.Send(toSend, LlamaTokenTags.INPUT, false);
+                if (!this._settings.Prompt.EndsWith("\n"))
+                {
+                    toSend = "\n" + toSend;
+                }
+
+                this.Send(toSend, LlamaTokenTags.INPUT, false);
 			}
 		}
 

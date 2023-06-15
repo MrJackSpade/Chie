@@ -1,4 +1,5 @@
-﻿using Llama.Interfaces;
+﻿using Llama.Collections;
+using Llama.Interfaces;
 using System;
 
 namespace Llama.Events
@@ -7,8 +8,8 @@ namespace Llama.Events
 	{
 		public ContextModificationEventArgs(IReadOnlyLlamaTokenCollection evaluated, IReadOnlyLlamaTokenCollection buffer, int matchedCount, int evaluatingIndex, int evaluatingCount)
 		{
-			this.Evaluated = evaluated;
-			this.Buffer = buffer;
+			this.Evaluated = new LlamaTokenBuffer(evaluated, evaluated.Count);
+			this.Buffer = new LlamaTokenBuffer(buffer, buffer.Count);
 			this.EvaluatingIndex = evaluatingIndex;
 			this.EvaluatingCount = evaluatingCount;
 			this.MatchedCount = matchedCount;

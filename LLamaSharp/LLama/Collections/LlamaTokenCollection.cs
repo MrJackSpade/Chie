@@ -1,5 +1,4 @@
-﻿using Llama.Constants;
-using Llama.Interfaces;
+﻿using Llama.Interfaces;
 using Llama.Models;
 using System;
 using System.Collections;
@@ -8,197 +7,205 @@ using System.Linq;
 
 namespace Llama.Collections
 {
-	public class LlamaTokenCollection : ILlamaTokenCollection
-	{
-		protected List<LlamaToken> _tokens = new();
+    public class LlamaTokenCollection : ILlamaTokenCollection
+    {
+        protected List<LlamaToken> _tokens = new();
 
-		public LlamaTokenCollection(IEnumerable<LlamaToken> tokens)
-		{
-			foreach (LlamaToken token in tokens)
-			{
-				this.Append(token);
-			}
-		}
+        public LlamaTokenCollection(IEnumerable<LlamaToken> tokens)
+        {
+            foreach (LlamaToken token in tokens)
+            {
+                this.Append(token);
+            }
+        }
 
-		public bool Contains(int tokenId)
-		{
-			foreach (LlamaToken token in this._tokens)
-			{
-				if (token.Id == tokenId)
-				{
-					return true;
-				}
-			}
+        public LlamaTokenCollection()
+        {
+        }
 
-			return false;
-		}
+        public int Count => this._tokens.Count;
 
-		public LlamaTokenCollection()
-		{
-		}
+        public IEnumerable<int> Ids => this._tokens.Select(t => t.Id);
 
-		public int Count => this._tokens.Count;
+        public bool IsNullOrEmpty => this._tokens.Count == 0;
 
-		public IEnumerable<int> Ids => this._tokens.Select(t => t.Id);
+        public bool IsNullOrWhiteSpace => string.IsNullOrWhiteSpace(this.ToString());
 
-		public LlamaToken this[int index]
-		{
-			get => this._tokens[index];
-			set => this._tokens[index] = value;
-		}
+        public bool IsSingleLlamaTokenTag => this.LlamaTokenTags.Count() == 1;
 
-		public static LlamaTokenCollection operator +(LlamaTokenCollection a, LlamaToken b)
-		{
-			LlamaTokenCollection toReturn = new();
+        public IEnumerable<string> LlamaTokenTags => this._tokens.Select(t => t.Tag).Distinct();
 
-			foreach (LlamaToken token in a)
-			{
-				toReturn.Append(token);
-			}
+        public LlamaToken this[int index]
+        {
+            get => this._tokens[index];
+            set => this._tokens[index] = value;
+        }
 
-			toReturn.Append(b);
+        public static LlamaTokenCollection operator +(LlamaTokenCollection a, LlamaToken b)
+        {
+            LlamaTokenCollection toReturn = new();
 
-			return toReturn;
-		}
+            foreach (LlamaToken token in a)
+            {
+                toReturn.Append(token);
+            }
 
-		public static LlamaTokenCollection operator +(LlamaToken a, LlamaTokenCollection b)
-		{
-			LlamaTokenCollection toReturn = new();
+            toReturn.Append(b);
 
-			toReturn.Append(a);
+            return toReturn;
+        }
 
-			foreach (LlamaToken token in b)
-			{
-				toReturn.Append(token);
-			}
+        public static LlamaTokenCollection operator +(LlamaToken a, LlamaTokenCollection b)
+        {
+            LlamaTokenCollection toReturn = new();
 
-			return toReturn;
-		}
+            toReturn.Append(a);
 
-		public virtual void Append(LlamaToken token) => this._tokens.Add(token);
+            foreach (LlamaToken token in b)
+            {
+                toReturn.Append(token);
+            }
 
-		public void AppendControl(int id) => this.Append(new LlamaToken(id, IntPtr.Zero, LlamaTokenTags.CONTROL));
+            return toReturn;
+        }
 
-		public virtual void Clear() => this._tokens.Clear();
+        public virtual void Append(LlamaToken token) => this._tokens.Add(token);
 
-		public LlamaTokenCollection From(int startIndex, LlamaToken startToken)
-		{
-			// Calculate the index to start from
-			int start = this._tokens.Count - startIndex;
+        public void AppendControl(int id) => this.Append(new LlamaToken(id, IntPtr.Zero, Llama.Constants.LlamaTokenTags.CONTROL));
 
-			// Ensure the index is within valid bounds
-			if (start < 0)
-			{
-				start = 0;
-			}
-			else if (start > this._tokens.Count)
-			{
-				start = this._tokens.Count;
-			}
+        public virtual void Clear() => this._tokens.Clear();
 
-			// Find the first instance of startToken
-			int index = this._tokens.FindIndex(start, token => startToken.Id == token.Id);
+        public bool Contains(int tokenId)
+        {
+            foreach (LlamaToken token in this._tokens)
+            {
+                if (token.Id == tokenId)
+                {
+                    return true;
+                }
+            }
 
-			// If startToken was not found, use the original start position
-			if (index == -1)
-			{
-				index = start;
-			}
+            return false;
+        }
 
-			// Copy from the found position (or the original start position if startToken was not found)
-			return new LlamaTokenCollection(this._tokens.Skip(index));
-		}
+        public LlamaTokenCollection From(int startIndex, LlamaToken startToken)
+        {
+            // Calculate the index to start from
+            int start = this._tokens.Count - startIndex;
 
-		public IEnumerator<LlamaToken> GetEnumerator() => ((IEnumerable<LlamaToken>)this._tokens).GetEnumerator();
+            // Ensure the index is within valid bounds
+            if (start < 0)
+            {
+                start = 0;
+            }
+            else if (start > this._tokens.Count)
+            {
+                start = this._tokens.Count;
+            }
 
-		IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)this._tokens).GetEnumerator();
+            // Find the first instance of startToken
+            int index = this._tokens.FindIndex(start, token => startToken.Id == token.Id);
 
-		public LlamaTokenCollection Replace(LlamaTokenCollection toFind, LlamaTokenCollection toReplace)
-		{
-			LlamaTokenCollection toReturn = new();
+            // If startToken was not found, use the original start position
+            if (index == -1)
+            {
+                index = start;
+            }
 
-			for (int i = 0; i < this.Count; i++)
-			{
-				bool isMatch = false;
+            // Copy from the found position (or the original start position if startToken was not found)
+            return new LlamaTokenCollection(this._tokens.Skip(index));
+        }
 
-				if (i + toFind.Count <= this.Count)
-				{
-					for (int ii = 0; ii < toFind.Count; ii++)
-					{
-						LlamaToken tokenA = toFind[ii];
-						LlamaToken tokenB = this[ii + i];
+        public IEnumerator<LlamaToken> GetEnumerator() => ((IEnumerable<LlamaToken>)this._tokens).GetEnumerator();
 
-						if (tokenA.Value == tokenB.Value)
-						{
-							isMatch = true;
-							break;
-						}
-					}
-				}
+        IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)this._tokens).GetEnumerator();
 
-				if (isMatch)
-				{
-					i += toFind.Count;
-					foreach (LlamaToken tokenA in toReplace)
-					{
-						toReturn.Append(tokenA);
-					}
-				}
-				else
-				{
-					toReturn.Append(this[i]);
-				}
-			}
+        public LlamaTokenCollection Replace(LlamaTokenCollection toFind, LlamaTokenCollection toReplace)
+        {
+            LlamaTokenCollection toReturn = new();
 
-			return toReturn;
-		}
+            for (int i = 0; i < this.Count; i++)
+            {
+                bool isMatch = false;
 
-		public void Shift(LlamaToken token)
-		{
-			this._tokens.RemoveAt(0);
-			this._tokens.Add(token);
-		}
+                if (i + toFind.Count <= this.Count)
+                {
+                    for (int ii = 0; ii < toFind.Count; ii++)
+                    {
+                        LlamaToken tokenA = toFind[ii];
+                        LlamaToken tokenB = this[ii + i];
 
-		public IEnumerable<LlamaTokenCollection> Split(int id)
-		{
-			LlamaTokenCollection toReturn = new();
+                        if (tokenA.Value == tokenB.Value)
+                        {
+                            isMatch = true;
+                            break;
+                        }
+                    }
+                }
 
-			foreach (LlamaToken token in this._tokens)
-			{
-				if (token.Id == id)
-				{
-					yield return toReturn;
-					toReturn = new LlamaTokenCollection();
-				}
-				else
-				{
-					toReturn.Append(token);
-				}
-			}
+                if (isMatch)
+                {
+                    i += toFind.Count;
+                    foreach (LlamaToken tokenA in toReplace)
+                    {
+                        toReturn.Append(tokenA);
+                    }
+                }
+                else
+                {
+                    toReturn.Append(this[i]);
+                }
+            }
 
-			yield return toReturn;
-		}
+            return toReturn;
+        }
 
-		public IEnumerable<LlamaTokenCollection> Split(string value, StringComparison stringComparison = StringComparison.Ordinal)
-		{
-			LlamaTokenCollection toReturn = new();
+        public void Shift(LlamaToken token)
+        {
+            this._tokens.RemoveAt(0);
+            this._tokens.Add(token);
+        }
 
-			foreach (LlamaToken token in this._tokens)
-			{
-				if (string.Equals(token.Value, value, stringComparison))
-				{
-					yield return toReturn;
-					toReturn = new LlamaTokenCollection();
-				}
-				else
-				{
-					toReturn.Append(token);
-				}
-			}
+        public IEnumerable<LlamaTokenCollection> Split(int id)
+        {
+            LlamaTokenCollection toReturn = new();
 
-			yield return toReturn;
-		}
+            foreach (LlamaToken token in this._tokens)
+            {
+                if (token.Id == id)
+                {
+                    yield return toReturn;
+                    toReturn = new LlamaTokenCollection();
+                }
+                else
+                {
+                    toReturn.Append(token);
+                }
+            }
 
-		public override string ToString() => string.Join("", this._tokens.Select(t => t.Value));
-	}
+            yield return toReturn;
+        }
+
+        public IEnumerable<LlamaTokenCollection> Split(string value, StringComparison stringComparison = StringComparison.Ordinal)
+        {
+            LlamaTokenCollection toReturn = new();
+
+            foreach (LlamaToken token in this._tokens)
+            {
+                if (string.Equals(token.Value, value, stringComparison))
+                {
+                    yield return toReturn;
+                    toReturn = new LlamaTokenCollection();
+                }
+                else
+                {
+                    toReturn.Append(token);
+                }
+            }
+
+            yield return toReturn;
+        }
+
+        public override string ToString() => string.Join("", this._tokens.Select(t => t.Value));
+    }
 }

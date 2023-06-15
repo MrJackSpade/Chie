@@ -192,6 +192,8 @@ namespace Llama.Native
 				this._buffer[i + start] = evaluationQueue[i];
 			}
 
+			string buffer = _buffer.ToString();
+
 			this.TriggerModificationEvent();
 		}
 
@@ -206,7 +208,9 @@ namespace Llama.Native
 
 			this._buffer = new LlamaTokenBuffer(toSet, this.Size);
 
-			this.EnsureBuffer();
+            string buffer = _buffer.ToString();
+
+            this.EnsureBuffer();
 
 			this.TriggerModificationEvent();
 		}
