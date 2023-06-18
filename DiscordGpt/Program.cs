@@ -7,34 +7,34 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace DiscordGpt
 {
-	internal class Program
-	{
-		private static async Task Main(string[] args)
-		{
-			ConfigurationBuilder builder = new();
+    internal class Program
+    {
+        private static async Task Main(string[] args)
+        {
+            ConfigurationBuilder builder = new();
 
-			builder.AddUserSecrets<Program>();
+            builder.AddUserSecrets<Program>();
 
-			IConfigurationRoot configuration = builder.Build();
+            IConfigurationRoot configuration = builder.Build();
 
-			ServiceCollection serviceCollection = new();
-			serviceCollection.RegisterSecret<DiscordIntegrationSettings>(configuration);
-			serviceCollection.RegisterSecret<DiscordClientSettings>(configuration);
+            ServiceCollection serviceCollection = new();
+            serviceCollection.RegisterSecret<DiscordIntegrationSettings>(configuration);
+            serviceCollection.RegisterSecret<DiscordClientSettings>(configuration);
 
-			serviceCollection.AddSingleton<DiscordIntegrationService>();
-			serviceCollection.AddSingleton<NameService>();
-			serviceCollection.AddSingleton<ActiveChannelCollection>();
-			serviceCollection.AddSingleton<ChieMessageService>();
-			serviceCollection.AddSingleton<ChieClient>();
-			serviceCollection.AddSingleton<Logger>();
-			serviceCollection.AddSingleton<DiscordClient>();
-			serviceCollection.AddSingleton<StartInfo>();
+            serviceCollection.AddSingleton<DiscordIntegrationService>();
+            serviceCollection.AddSingleton<NameService>();
+            serviceCollection.AddSingleton<ActiveChannelCollection>();
+            serviceCollection.AddSingleton<ChieMessageService>();
+            serviceCollection.AddSingleton<ChieClient>();
+            serviceCollection.AddSingleton<Logger>();
+            serviceCollection.AddSingleton<DiscordClient>();
+            serviceCollection.AddSingleton<StartInfo>();
 
-			IServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
+            IServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
 
-			DiscordIntegrationService discordIntegrationService = serviceProvider.GetService<DiscordIntegrationService>();
+            DiscordIntegrationService discordIntegrationService = serviceProvider.GetService<DiscordIntegrationService>();
 
-			await discordIntegrationService.Start();
-		}
-	}
+            await discordIntegrationService.Start();
+        }
+    }
 }

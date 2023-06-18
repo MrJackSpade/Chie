@@ -2,9 +2,9 @@
 
 namespace ChieApi.Tasks.Boredom
 {
-	public class BoredomTaskAction : TriggerPeriod
-	{
-		[JsonPropertyName("text")]
-		public string Text { get; set; }
-	}
+    public class BoredomTaskAction : TriggerPeriod
+    {
+        [JsonPropertyName("text")]
+        public string Text { get; set; }
+    }
 }

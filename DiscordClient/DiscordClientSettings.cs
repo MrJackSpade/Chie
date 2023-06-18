@@ -2,12 +2,12 @@
 
 namespace Chie
 {
-	public class DiscordClientSettings
-	{
-		[JsonPropertyName("applicationId")]
-		public string ApplicationId { get; set; }
+    public class DiscordClientSettings
+    {
+        [JsonPropertyName("applicationId")]
+        public string ApplicationId { get; set; }
 
-		[JsonPropertyName("token")]
-		public string Token { get; set; }
-	}
+        [JsonPropertyName("token")]
+        public string Token { get; set; }
+    }
 }

@@ -37,7 +37,6 @@
     <ProjectReference Include="..\Blip.Client\Blip.Client.csproj" />
     <ProjectReference Include="..\Chie.Shared\Llama.Shared.csproj" />
     <ProjectReference Include="..\ChieApi.Shared\ChieApi.Shared.csproj" />
-    <ProjectReference Include="..\ImageRecognition\BlipClient.csproj" />
     <ProjectReference Include="..\LlamaClient\LlamaClient.csproj" />
   </ItemGroup>
 

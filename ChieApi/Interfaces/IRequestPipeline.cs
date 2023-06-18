@@ -2,8 +2,8 @@
 
 namespace ChieApi.Interfaces
 {
-	public interface IRequestPipeline
-	{
-		IAsyncEnumerable<ChatEntry> Process(ChatEntry chatEntry);
-	}
+    public interface IRequestPipeline
+    {
+        IAsyncEnumerable<ChatEntry> Process(ChatEntry chatEntry);
+    }
 }

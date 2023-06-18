@@ -1,6 +1,6 @@
 ﻿namespace Blip.Shared.Interfaces
 {
-	internal interface IBlipApiClient
-	{
-	}
+    internal interface IBlipApiClient
+    {
+    }
 }

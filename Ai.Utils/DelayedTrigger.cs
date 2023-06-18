@@ -1,127 +1,129 @@
 ﻿namespace Ai.Utils
 {
-	public class DelayedTrigger
-	{
-		public Func<Task<bool>> _action;
+    public class DelayedTrigger
+    {
+        public Func<Task<bool>> _action;
 
-		private readonly int _delayMs;
+        private readonly int _delayMs;
 
-		private readonly AutoResetEvent _gate = new(true);
+        private readonly AutoResetEvent _gate = new(true);
 
-		private readonly int _maxDelayMs;
+        private readonly int _maxDelayMs;
 
-		private DateTime _firstAttempt = DateTime.MinValue;
+        private DateTime _firstAttempt = DateTime.MinValue;
 
-		private DateTime _lastAttempt = DateTime.MinValue;
+        private DateTime _lastAttempt = DateTime.MinValue;
 
-		private Thread? _thread;
-		public bool Wait { get; set; } = false;
-		public DelayedTrigger(Func<Task<bool>> action, int delayMs, int maxDelayMs)
-		{
-			this._delayMs = delayMs;
+        private Thread? _thread;
 
-			this._action = action;
-			this._maxDelayMs = maxDelayMs;
-		}
+        public DelayedTrigger(Func<Task<bool>> action, int delayMs, int maxDelayMs)
+        {
+            this._delayMs = delayMs;
 
-		public void ResetWait(DateTime newTarget)
-		{
-			if (this._thread != null)
-			{
-				this._lastAttempt = newTarget.AddMilliseconds(0 - this._delayMs);
-			}
-		}
+            this._action = action;
+            this._maxDelayMs = maxDelayMs;
+        }
 
-		/// <summary>
-		/// Attempts to lock the thread and then executes the queued action, and
-		/// sets the timer to fire the fire event
-		/// </summary>
-		/// <param name="prep">A preparatory action guaranteed to not invoke during the firing process</param>
-		/// <returns>True if the thread was captured and the prep action was executed. False if the event was already firing</returns>
-		public bool TryFire(Action prep)
-		{
-			return this.TryFire(() =>
-			{
-				prep.Invoke();
-				return true;
-			});
-		}
+        public bool Wait { get; set; } = false;
 
-		/// <summary>
-		/// Attempts to lock the thread and then executes the queued action, and
-		/// sets the timer to fire the fire event
-		/// </summary>
-		/// <param name="prep">A preparatory action guaranteed to not invoke during the firing process</param>
-		/// <returns>True if the thread was captured and the prep action was executed. False if the event was already firing</returns>
-		public bool TryFire(Func<bool> prep)
-		{
-			if (!this._gate.WaitOne(0))
-			{
-				return false;
-			}
+        public void ResetWait(DateTime newTarget)
+        {
+            if (this._thread != null)
+            {
+                this._lastAttempt = newTarget.AddMilliseconds(0 - this._delayMs);
+            }
+        }
 
-			DateTime now = DateTime.Now;
+        /// <summary>
+        /// Attempts to lock the thread and then executes the queued action, and
+        /// sets the timer to fire the fire event
+        /// </summary>
+        /// <param name="prep">A preparatory action guaranteed to not invoke during the firing process</param>
+        /// <returns>True if the thread was captured and the prep action was executed. False if the event was already firing</returns>
+        public bool TryFire(Action prep)
+        {
+            return this.TryFire(() =>
+            {
+                prep.Invoke();
+                return true;
+            });
+        }
 
-			if (this._lastAttempt < now)
-			{
-				this._lastAttempt = DateTime.Now;
-			}
+        /// <summary>
+        /// Attempts to lock the thread and then executes the queued action, and
+        /// sets the timer to fire the fire event
+        /// </summary>
+        /// <param name="prep">A preparatory action guaranteed to not invoke during the firing process</param>
+        /// <returns>True if the thread was captured and the prep action was executed. False if the event was already firing</returns>
+        public bool TryFire(Func<bool> prep)
+        {
+            if (!this._gate.WaitOne(0))
+            {
+                return false;
+            }
 
-			bool threadNeedsInit = this._thread is null;
+            DateTime now = DateTime.Now;
 
-			if (threadNeedsInit)
-			{
-				this._firstAttempt = now;
-				this._thread = new Thread(async () => await this.TryFireLoop());
-			}
+            if (this._lastAttempt < now)
+            {
+                this._lastAttempt = DateTime.Now;
+            }
 
-			try
-			{
-				prep.Invoke();
+            bool threadNeedsInit = this._thread is null;
 
-				if (threadNeedsInit)
-				{
-					this._thread!.Start();
-				}
-			}
-			finally
-			{
-				this._gate.Set();
-			}
+            if (threadNeedsInit)
+            {
+                this._firstAttempt = now;
+                this._thread = new Thread(async () => await this.TryFireLoop());
+            }
 
-			return true;
-		}
+            try
+            {
+                prep.Invoke();
 
-		private double Since(DateTime dateTime) => (DateTime.Now - dateTime).TotalMilliseconds;
+                if (threadNeedsInit)
+                {
+                    this._thread!.Start();
+                }
+            }
+            finally
+            {
+                this._gate.Set();
+            }
 
-		private async Task TryFireLoop()
-		{
-			do
-			{
-				if (!this.Wait)
-				{
-					this._gate.WaitOne();
+            return true;
+        }
 
-					try
-					{
-						if (this.Since(this._lastAttempt) > this._delayMs || this.Since(this._firstAttempt) > this._maxDelayMs)
-						{
-							if (await this._action.Invoke())
-							{
-								this._thread = null;
+        private double Since(DateTime dateTime) => (DateTime.Now - dateTime).TotalMilliseconds;
 
-								return;
-							}
-						}
-					}
-					finally
-					{
-						this._gate.Set();
-					}
-				}
+        private async Task TryFireLoop()
+        {
+            do
+            {
+                if (!this.Wait)
+                {
+                    this._gate.WaitOne();
 
-				await Task.Delay(this._delayMs);
-			} while (true);
-		}
-	}
+                    try
+                    {
+                        if (this.Since(this._lastAttempt) > this._delayMs || this.Since(this._firstAttempt) > this._maxDelayMs)
+                        {
+                            if (await this._action.Invoke())
+                            {
+                                this._thread = null;
+
+                                return;
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        this._gate.Set();
+                    }
+                }
+
+                await Task.Delay(this._delayMs);
+            } while (true);
+        }
+    }
 }

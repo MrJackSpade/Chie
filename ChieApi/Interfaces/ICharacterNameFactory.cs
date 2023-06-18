@@ -1,7 +1,7 @@
 ﻿namespace ChieApi.Interfaces
 {
-	public interface ICharacterNameFactory
-	{
-		public string GetName();
-	}
+    public interface ICharacterNameFactory
+    {
+        public string GetName();
+    }
 }

@@ -1,0 +1,18 @@
+﻿@using Llama.Events;
+@using Llama.Data;
+
+@model ContextModificationEventArgs
+
+@if (Model != null)
+{
+    foreach (LlamaToken token in Model.Evaluated)
+    {
+        if (token.Id == 13)
+        {
+            <br />
+        } else
+        {
+            @token.ToString()
+        }
+    }
+}

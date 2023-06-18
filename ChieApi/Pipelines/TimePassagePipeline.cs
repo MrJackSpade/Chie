@@ -1,74 +1,76 @@
 ﻿using ChieApi.Interfaces;
 using ChieApi.Services;
 using ChieApi.Shared.Entities;
+using Llama.Constants;
 
 namespace ChieApi.Pipelines
 {
-	public class TimePassagePipeline : IRequestPipeline
-	{
-		private readonly ICharacterFactory _characterFactory;
+    public class TimePassagePipeline : IRequestPipeline
+    {
+        private readonly ICharacterFactory _characterFactory;
 
-		private readonly ChatService _chatService;
+        private readonly ChatService _chatService;
 
-		public TimePassagePipeline(ChatService databaseService, ICharacterFactory characterFactory)
-		{
-			this._chatService = databaseService;
-			this._characterFactory = characterFactory;
-		}
+        public TimePassagePipeline(ChatService databaseService, ICharacterFactory characterFactory)
+        {
+            this._chatService = databaseService;
+            this._characterFactory = characterFactory;
+        }
 
-		public async IAsyncEnumerable<ChatEntry> Process(ChatEntry chatEntry)
-		{
-			ChatEntry lastMessage = this._chatService.GetLastMessage();
+        public async IAsyncEnumerable<ChatEntry> Process(ChatEntry chatEntry)
+        {
+            ChatEntry lastMessage = this._chatService.GetLastMessage();
 
-			if (lastMessage != null)
-			{
-				TimeSpan sinceLast = DateTime.Now - lastMessage.DateCreated;
+            if (lastMessage != null)
+            {
+                TimeSpan sinceLast = DateTime.Now - lastMessage.DateCreated;
 
-				double totalHours = sinceLast.TotalHours;
+                double totalHours = sinceLast.TotalHours;
 
-				if (totalHours > 1)
-				{
-					string timeSpan = this.GetTimeSpan(totalHours, out bool plural);
+                if (totalHours > 1)
+                {
+                    string timeSpan = this.GetTimeSpan(totalHours, out bool plural);
 
-					string pos = plural ? "have" : "has";
+                    string pos = plural ? "have" : "has";
 
-					yield return new ChatEntry()
-					{
-						SourceUser = (await this._characterFactory.Build()).CharacterName,
-						Content = $"*Notices {timeSpan} {pos} passed*"
-					};
-				}
-			}
+                    yield return new ChatEntry()
+                    {
+                        SourceUser = (await this._characterFactory.Build()).CharacterName,
+                        Content = $"*Notices {timeSpan} {pos} passed*",
+                        Tag = LlamaTokenTags.TEMPORARY
+                    };
+                }
+            }
 
-			yield return chatEntry;
-		}
+            yield return chatEntry;
+        }
 
-		private string GetTimeSpan(double totalHours, out bool plural)
-		{
-			string period;
-			int count;
+        private string GetTimeSpan(double totalHours, out bool plural)
+        {
+            string period;
+            int count;
 
-			TimeSpan sinceLast = TimeSpan.FromHours(totalHours);
+            TimeSpan sinceLast = TimeSpan.FromHours(totalHours);
 
-			if (sinceLast.TotalDays < 1)
-			{
-				period = "hour";
-				count = (int)sinceLast.TotalHours;
-			}
-			else
-			{
-				period = "day";
-				count = (int)sinceLast.TotalDays;
-			}
+            if (sinceLast.TotalDays < 1)
+            {
+                period = "hour";
+                count = (int)sinceLast.TotalHours;
+            }
+            else
+            {
+                period = "day";
+                count = (int)sinceLast.TotalDays;
+            }
 
-			plural = count > 1;
+            plural = count > 1;
 
-			if (plural)
-			{
-				period += "s";
-			}
+            if (plural)
+            {
+                period += "s";
+            }
 
-			return $"{count} {period}";
-		}
-	}
+            return $"{count} {period}";
+        }
+    }
 }

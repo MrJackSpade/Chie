@@ -1,91 +1,91 @@
 ﻿namespace Ai.Utils.Extensions
 {
-	public static class StringExtensions
-	{
-		public static IEnumerable<string> CleanSplit(this string source, char splitOn = '\n')
-		{
-			foreach (string chunk in source.Split(splitOn).Select(s => s.Trim()).Where(s => !string.IsNullOrWhiteSpace(s)))
-			{
-				yield return chunk;
-			}
-		}
+    public static class StringExtensions
+    {
+        public static IEnumerable<string> CleanSplit(this string source, char splitOn = '\n')
+        {
+            foreach (string chunk in source.Split(splitOn).Select(s => s.Trim()).Where(s => !string.IsNullOrWhiteSpace(s)))
+            {
+                yield return chunk;
+            }
+        }
 
-		public static IEnumerable<string> SplitLength(this string source, int length, string breaks = ". ")
-		{
-			do
-			{
-				if (source.Length < length)
-				{
-					yield return source;
-					yield break;
-				}
+        public static IEnumerable<string> SplitLength(this string source, int length, string breaks = ". ")
+        {
+            do
+            {
+                if (source.Length < length)
+                {
+                    yield return source;
+                    yield break;
+                }
 
-				int index = length;
-				string chunk = source[..index];
+                int index = length;
+                string chunk = source[..index];
 
-				if (string.IsNullOrWhiteSpace(chunk))
-				{
-					yield break;
-				}
+                if (string.IsNullOrWhiteSpace(chunk))
+                {
+                    yield break;
+                }
 
-				foreach (char c in breaks)
-				{
-					bool found = false;
+                foreach (char c in breaks)
+                {
+                    bool found = false;
 
-					while (index > 0)
-					{
-						found = c == chunk[^1];
+                    while (index > 0)
+                    {
+                        found = c == chunk[^1];
 
-						if (found)
-						{
-							break;
-						}
-						else
-						{
-							index--;
-							chunk = source[..index];
-						}
-					}
+                        if (found)
+                        {
+                            break;
+                        }
+                        else
+                        {
+                            index--;
+                            chunk = source[..index];
+                        }
+                    }
 
-					if (found)
-					{
-						int split = index;
+                    if (found)
+                    {
+                        int split = index;
 
-						string newPart = source[..split];
+                        string newPart = source[..split];
 
-						yield return newPart;
+                        yield return newPart;
 
-						source = source[split..];
+                        source = source[split..];
 
-						break;
-					}
+                        break;
+                    }
 
-					index = length;
-					chunk = source[..index];
-				}
-			} while (true);
-		}
+                    index = length;
+                    chunk = source[..index];
+                }
+            } while (true);
+        }
 
-		public static IEnumerable<string> Trim(this IEnumerable<string> source)
-		{
-			foreach (string s in source)
-			{
-				yield return s.Trim();
-			}
-		}
+        public static IEnumerable<string> Trim(this IEnumerable<string> source)
+        {
+            foreach (string s in source)
+            {
+                yield return s.Trim();
+            }
+        }
 
-		public static bool TryGetSubstring(this string source, int start, int length, out string substring)
-		{
-			if (start + length >= source.Length)
-			{
-				substring = null;
-				return false;
-			}
-			else
-			{
-				substring = source.Substring(start, length);
-				return true;
-			}
-		}
-	}
+        public static bool TryGetSubstring(this string source, int start, int length, out string substring)
+        {
+            if (start + length >= source.Length)
+            {
+                substring = null;
+                return false;
+            }
+            else
+            {
+                substring = source.Substring(start, length);
+                return true;
+            }
+        }
+    }
 }

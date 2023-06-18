@@ -2,9 +2,9 @@
 
 namespace Blip.Client
 {
-	public class BlipApiClientSettings
-	{
-		[JsonPropertyName("rootUrl")]
-		public string RootUrl { get; set; }
-	}
+    public class BlipApiClientSettings
+    {
+        [JsonPropertyName("rootUrl")]
+        public string RootUrl { get; set; }
+    }
 }

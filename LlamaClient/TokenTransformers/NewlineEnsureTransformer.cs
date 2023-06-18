@@ -1,49 +1,52 @@
-﻿using Llama;
-using Llama.Collections;
+﻿using Llama.Collections;
+using Llama.Collections.Interfaces;
 using Llama.Constants;
-using Llama.Interfaces;
-using Llama.Models;
+using Llama.Context;
+using Llama.Context.Extensions;
+using Llama.Context.Interfaces;
+using Llama.Data;
 using Llama.Native;
+using Llama.Pipeline.Interfaces;
 
 namespace Llama.TokenTransformers
 {
-	public class NewlineEnsureTransformer : ITokenTransformer
-	{
+    public class NewlineEnsureTransformer : ITokenTransformer
+    {
+        private readonly int _newlineTokenId = -1;
 
-		private readonly int _newlineTokenId = -1;
+        private bool _lastNewLine = false;
 
-		private bool _lastNewLine = false;
-		public NewlineEnsureTransformer()
-		{
-			_newlineTokenId = NativeApi.llama_token_nl();
-		}
+        public NewlineEnsureTransformer()
+        {
+            this._newlineTokenId = NativeApi.llama_token_nl();
+        }
 
-		public IEnumerable<LlamaToken> TransformToken(LlamaModelSettings settings,IReadOnlyLlamaTokenCollection thisGeneration, SafeLlamaContext context, IEnumerable<LlamaToken> selectedTokens)
-		{
-			LlamaTokenCollection input = new(selectedTokens);
+        public IEnumerable<LlamaToken> TransformToken(LlamaContextSettings settings, IContext context, IReadOnlyLlamaTokenCollection thisGeneration, IEnumerable<LlamaToken> selectedTokens)
+        {
+            LlamaTokenCollection input = new(selectedTokens);
 
-			string inputString = input.ToString();
+            string inputString = input.ToString();
 
-			if (inputString.IndexOf("|") == 0)
-			{
-				if (!_lastNewLine)
-				{
-					_lastNewLine = true;
-					yield return context.GetToken(_newlineTokenId, LlamaTokenTags.UNMANAGED);
-				}
-			}
-			else
-			{
-				foreach (LlamaToken token in input)
-				{
-					if (!_lastNewLine || token.Id != _newlineTokenId)
-					{
-						yield return token;
-					}
+            if (inputString.IndexOf("|") == 0)
+            {
+                if (!this._lastNewLine)
+                {
+                    this._lastNewLine = true;
+                    yield return context.GetToken(this._newlineTokenId, LlamaTokenTags.UNMANAGED);
+                }
+            }
+            else
+            {
+                foreach (LlamaToken token in input)
+                {
+                    if (!this._lastNewLine || token.Id != this._newlineTokenId)
+                    {
+                        yield return token;
+                    }
 
-					_lastNewLine = token.Id == _newlineTokenId;
-				}
-			}
-		}
-	}
+                    this._lastNewLine = token.Id == this._newlineTokenId;
+                }
+            }
+        }
+    }
 }

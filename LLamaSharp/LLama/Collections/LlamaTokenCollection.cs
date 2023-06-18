@@ -1,8 +1,28 @@
-﻿using Llama.Interfaces;
-using Llama.Models;
+﻿using Llama.Collections.Interfaces;
+
+/* Unmerged change from project 'LLamaSharp (net7.0)'
+Before:
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using Llama.Extensions;
+using Llama.Constants;
+After:
+using System.Constants;
+using System.Data;
+using Llama.Extensions;
+using System;
+using Llama.Collections;
+using System.Collections.Constants;
+*/
+
+using Llama.Data;
+using Llama.Extensions;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Llama.Collections
@@ -86,6 +106,38 @@ namespace Llama.Collections
             }
 
             return false;
+        }
+
+        public virtual void Ensure()
+        {
+            LlamaTokenCollection[] lineCollection = this.Split(13).Select(l => l.Trim()).ToArray();
+
+            for (int i = 0; i < lineCollection.Length; i++)
+            {
+                LlamaTokenCollection l = lineCollection[i];
+
+                if (i == lineCollection.Length - 1 && l.Count == 0)
+                {
+                    continue;
+                }
+
+                if (!l.ToString().StartsWith("|") && l.Count > 0)
+                {
+                    //Debugger.Break();
+                }
+
+                if (!l.IsSingleLlamaTokenTag)
+                {
+                    List<string> tags = l.LlamaTokenTags.ToList();
+
+                    tags.Remove(Llama.Constants.LlamaTokenTags.CONTROL);
+
+                    if (tags.Count > 1 && tags.Contains(Llama.Constants.LlamaTokenTags.TEMPORARY))
+                    {
+                        Debugger.Break();
+                    }
+                }
+            }
         }
 
         public LlamaTokenCollection From(int startIndex, LlamaToken startToken)
@@ -207,5 +259,35 @@ namespace Llama.Collections
         }
 
         public override string ToString() => string.Join("", this._tokens.Select(t => t.Value));
+
+        public virtual LlamaTokenCollection Trim(int id = 0)
+        {
+            LlamaTokenCollection llamaTokens = new();
+
+            List<LlamaToken> tokens = new();
+
+            bool isStarted = false;
+
+            foreach (LlamaToken token in this._tokens)
+            {
+                if (token.Id != id)
+                {
+                    isStarted = true;
+                }
+
+                if (isStarted)
+                {
+                    tokens.Add(token);
+                }
+
+                if (token.Id != id)
+                {
+                    llamaTokens.Append(tokens);
+                    tokens.Clear();
+                }
+            }
+
+            return llamaTokens;
+        }
     }
 }

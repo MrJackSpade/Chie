@@ -1,25 +1,40 @@
-﻿@using Llama.Events;
-@using Llama.Models;
-@model ContextModificationEventArgs
+﻿
 
 <html>
 <head>
-    <meta http-equiv="refresh" content="1">
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"
+            integrity="sha256-2Pmvv0kuTBOenSvLm6bvfBSSHrUJ+3A7x6P5Ebd07/g="
+            crossorigin="anonymous"></script>
 </head>
 <body>
-    @if (Model != null)
-    {
-        foreach (LlamaToken token in Model.Evaluated)
-        {
-            if (token.Id == 13)
-            {
-                <br />
-            }
-            else
-            {
-                @token.Value
-            }
+    <style>
+        #content * {
+            overflow-anchor: none;
+            overflow-x: auto;
+            overflow-y: scroll;
         }
-    }
+
+        #anchor {
+            overflow-anchor: auto;
+            height: 1px;
+        }
+    </style>
+    <script>
+        var lastContent = '';
+
+        setInterval(() => {
+            $.get('/context',(data) => 
+            {
+                if(lastContent != data) 
+                {
+                    $('#content').html(data + '<div id="anchor"></div>');
+                    lastContent = data;
+                }
+            });
+        }, 1000);
+    </script>
+    <div id="content">
+   
+    </div>
 </body>
 </html>

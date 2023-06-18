@@ -1,0 +1,330 @@
+﻿using Llama.Collections;
+using Llama.Collections.Interfaces;
+using Llama.Constants;
+using Llama.Context.Extensions;
+using Llama.Context.Interfaces;
+using Llama.Context.Samplers;
+using Llama.Context.Samplers.Interfaces;
+using Llama.Data;
+using Llama.Events;
+using Llama.Exceptions;
+using Llama.Extensions;
+using Llama.Model;
+using Llama.Native;
+using Llama.Native.Data;
+using Llama.Pipeline.Interfaces;
+using Llama.Utilities;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
+
+namespace Llama.Context
+{
+    public class LlamaContextWrapper : IContext
+    {
+        private readonly LlamaTokenCollection _buffer;
+
+        private readonly IContextRoller _contextRoller;
+
+        private readonly int _evalThreadCount;
+
+        private readonly LlamaTokenCollection _evaluated;
+
+        private readonly IFinalSampler _finalSampler;
+
+        private readonly IList<IPostResponseContextTransformer> _postResponseTransforms;
+
+        private readonly LlamaTokenCollection _prompt;
+
+        private readonly SafeLlamaHandleBase _safeLlamaHandleBase;
+
+        private readonly LlamaContextSettings _settings;
+
+        private readonly IList<ISimpleSampler> _simpleSamplers;
+
+        private readonly IList<ITokenTransformer> _tokenTransformers;
+
+        private int _bufferPointer = 0;
+
+        private int _evalPointer = 0;
+
+        public LlamaContextWrapper(IHasNativeContextHandle handle, LlamaModelSettings modelSettings, LlamaContextSettings settings, IEnumerable<IPostResponseContextTransformer> postResponseTransforms, IEnumerable<ITokenTransformer> tokenTransformers, IEnumerable<ISimpleSampler> simpleSamplers, IFinalSampler finalSampler, IContextRoller contextRoller)
+        {
+            if (handle is null)
+            {
+                throw new ArgumentNullException(nameof(handle));
+            }
+
+            if (modelSettings is null)
+            {
+                throw new ArgumentNullException(nameof(modelSettings));
+            }
+
+            if (postResponseTransforms is null)
+            {
+                throw new ArgumentNullException(nameof(postResponseTransforms));
+            }
+
+            if (tokenTransformers is null)
+            {
+                throw new ArgumentNullException(nameof(tokenTransformers));
+            }
+
+            if (simpleSamplers is null)
+            {
+                throw new ArgumentNullException(nameof(simpleSamplers));
+            }
+
+            if (contextRoller is null)
+            {
+                throw new ArgumentNullException(nameof(contextRoller));
+            }
+
+            this._contextRoller = contextRoller;
+            this._safeLlamaHandleBase = new SafeLlamaHandleBase(handle.Pointer);
+            this._tokenTransformers = tokenTransformers.ToList();
+            this._postResponseTransforms = postResponseTransforms.ToList();
+            this._simpleSamplers = simpleSamplers.ToList();
+            this._finalSampler = finalSampler ?? throw new ArgumentNullException(nameof(finalSampler));
+            this._settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            this._evalThreadCount = modelSettings.ThreadCount;
+            this.Size = this._settings.ContextSize;
+            this._buffer = new LlamaTokenBuffer(this.Size);
+            this._buffer[0] = LlamaToken.Bos;
+            this._evaluated = new LlamaTokenBuffer(this.Size);
+
+            this._prompt = this.Tokenize(settings.Prompt, LlamaTokenTags.PROMPT);
+
+        }
+
+        protected LlamaContextWrapper()
+        {
+        }
+
+        public event Action<ContextModificationEventArgs> OnContextModification;
+
+        public int AvailableBuffer => this.Size - this._bufferPointer;
+
+        public IReadOnlyLlamaTokenCollection Buffer => this._buffer;
+
+        public Encoding Encoding => this._settings.Encoding;
+
+        public IReadOnlyLlamaTokenCollection Evaluated => this._evaluated;
+
+        public IntPtr Pointer => this._safeLlamaHandleBase.Pointer;
+
+        public SafeHandle SafeHandle => this._safeLlamaHandleBase.SafeHandle;
+
+        public int Size { get; private set; }
+
+        public void Clear()
+        {
+            this._buffer.Clear();
+            this._bufferPointer = 0;
+            this._evalPointer = 0;
+        }
+
+        public void Dispose() => this._safeLlamaHandleBase.Dispose();
+
+        public int Evaluate(int count = -1)
+        {
+            if (count != -1)
+            {
+                throw new NotImplementedException();
+            }
+
+            this.Ensure();
+
+            int start = this._evalPointer;
+
+            int end = this._bufferPointer;
+
+            int[] toEvaluate = this._buffer.Skip(start).Take(end - start).Select(t => t.Id).ToArray();
+
+            // evaluate tokens in batches
+            // embed is typically prepared beforehand to fit within a batch, but not always
+            for (int i = 0; i < toEvaluate.Length; i += this._settings.BatchSize)
+            {
+                int n_eval = toEvaluate.Length - i;
+
+                if (n_eval > this._settings.BatchSize)
+                {
+                    n_eval = this._settings.BatchSize;
+                }
+
+                int[] tokens = toEvaluate.Skip(i).Take(n_eval).ToArray();
+
+                this.TriggerModificationEvent(this._evalPointer, n_eval);
+
+                if (NativeApi.llama_eval(this._safeLlamaHandleBase, tokens, n_eval, this._evalPointer, this._evalThreadCount) != 0)
+                {
+                    LlamaLogger.Default.Error($"Failed to eval.");
+                    throw new RuntimeError("Failed to eval.");
+                }
+
+                for (int c = 0; c < n_eval; c++)
+                {
+                    this._evaluated[c + _evalPointer] = this._buffer[c + _evalPointer];
+                }
+
+                this._evalPointer += n_eval;
+
+                this.TriggerModificationEvent(this._evalPointer);
+            }
+
+            for (int i = this._evalPointer; i < this.Evaluated.Count; i++)
+            {
+                this._evaluated[i] = LlamaToken.Null;
+            }
+
+            this.TriggerModificationEvent();
+
+            //The entirety of the token data needs to be synced for all tokens regardless
+            //once the eval is complete, because otherwise metadata wont be copied across
+            //The copy call above only intends on copying for the sake of the modification
+            //event but an additional "full sync" call is needed.
+            for (int i = 0; i < this._evaluated.Count; i++)
+            {
+                this._evaluated[i] = this._buffer[i];
+            }
+
+            return toEvaluate.Length;
+        }
+
+        public void PostProcess()
+        {
+            IEnumerable<LlamaToken> contextBuffer = this.Evaluated;
+
+            LlamaTokenCollection checkMe = new(contextBuffer.Where(t => t.Id != 0));
+
+            checkMe.Ensure();
+
+            LlamaTokenCollection postEvaluationTransform = new(this._postResponseTransforms.Transform(contextBuffer));
+
+            postEvaluationTransform.Ensure();
+
+            this.SetBuffer(postEvaluationTransform);
+
+            this.Evaluate();
+        }
+
+        public SampleResult SampleNext(IReadOnlyLlamaTokenCollection thisCall)
+        {
+            LlamaTokenCollection selectedCollection;
+
+            Span<float> logits = this.GetLogits();
+
+            // Apply params.logit_bias map
+            logits.Add(this._settings.LogitBias);
+
+            LlamaTokenDataArray candidates = new(logits);
+
+            Dictionary<LlamaToken, float> no_penalize = logits.Extract(this.NoPenalize());
+
+            SampleContext sampleContext = new()
+            {
+                Candidates = candidates,
+                ContextHandle = this._safeLlamaHandleBase,
+                ContextTokens = this.Evaluated,
+                InferrenceTokens = thisCall
+            };
+
+            foreach (ISimpleSampler simpleSampler in this._simpleSamplers)
+            {
+                simpleSampler.SampleNext(sampleContext);
+            }
+
+            logits.Update(no_penalize);
+
+            List<LlamaToken> selectedTokens;
+            do
+            {
+                int tokenId = this._finalSampler.SampleNext(sampleContext);
+
+                LlamaToken token = this.GetToken(tokenId, LlamaTokenTags.RESPONSE);
+
+                selectedTokens = this._tokenTransformers.Transform(this._settings, thisCall, this, token).ToList();
+
+                selectedCollection = new(selectedTokens);
+            } while (thisCall.IsNullOrWhiteSpace && selectedCollection.IsNullOrWhiteSpace || selectedCollection.IsNullOrEmpty);
+
+            LlamaTokenCollection appendedCall = new(thisCall);
+            appendedCall.Append(selectedCollection);
+
+            return new()
+            {
+                Tokens = selectedCollection,
+                IsFinal = this.ShouldBreak(appendedCall)
+            };
+        }
+
+        public void SetHandle(IntPtr pointer) => this._safeLlamaHandleBase.SetHandlePublic(pointer);
+
+        public void Write(LlamaToken token)
+        {
+            // infinite text generation via context swapping
+            // if we run out of context:
+            // - take the n_keep first tokens from the original prompt (via n_past)
+            // - take half of the last (n_ctx - n_keep) tokens and recompute the logits in batches
+            if (this.AvailableBuffer == 0)
+            {
+                LlamaTokenCollection newContext = this._contextRoller.GenerateContext(this, this._prompt, this._settings.KeepContextTokenCount);
+
+                this.SetBuffer(newContext);
+            }
+
+            if (this._bufferPointer == 0 && token.Id != NativeApi.llama_token_bos())
+            {
+                throw new Exception("First token must be BOS");
+            }
+
+            if(this._bufferPointer > 0 && token.Id == NativeApi.llama_token_bos())
+            {
+                Debugger.Break();
+            }
+
+            this._buffer[this._bufferPointer++] = token;
+
+            this.TriggerModificationEvent();
+        }
+
+        private LlamaTokenCollection NoPenalize()
+        {
+            LlamaTokenCollection collection = new();
+            collection.Append(this.GetToken(13, LlamaTokenTags.UNMANAGED)); //NL
+            collection.Append(this.GetToken(334, LlamaTokenTags.UNMANAGED)); // *
+            collection.Append(this.GetToken(29930, LlamaTokenTags.UNMANAGED)); //*
+            return collection;
+        }
+
+        private bool ShouldBreak(LlamaTokenCollection toTest)
+        {
+            string returnValue = toTest.ToString();
+
+            foreach (string antiprompt in this._settings.Antiprompt)
+            {
+                if (returnValue.EndsWith(antiprompt))
+                {
+                    return true;
+                }
+            }
+
+            if (toTest.Contains(NativeApi.llama_token_eos()))
+            {
+                return true;
+            }
+
+            if (this._settings.PredictCount > 0 && toTest.Count >= this._settings.PredictCount)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private void TriggerModificationEvent(int evalIndex = -1, int evalCount = -1) => OnContextModification?.Invoke(new ContextModificationEventArgs(this._evaluated, this._buffer, this._evalPointer, evalIndex, evalCount));
+    }
+}

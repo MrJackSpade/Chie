@@ -2,12 +2,12 @@
 
 namespace ChieApi.Tasks
 {
-	public class TriggerPeriod
-	{
-		[JsonPropertyName("endMinutes")]
-		public uint EndMinutes { get; set; } = uint.MaxValue;
+    public class TriggerPeriod
+    {
+        [JsonPropertyName("endMinutes")]
+        public uint EndMinutes { get; set; } = uint.MaxValue;
 
-		[JsonPropertyName("startMinutes")]
-		public uint StartMinutes { get; set; } = uint.MinValue;
-	}
+        [JsonPropertyName("startMinutes")]
+        public uint StartMinutes { get; set; } = uint.MinValue;
+    }
 }

@@ -2,15 +2,15 @@
 
 namespace ChieApi.Factories
 {
-	public class CommandLineCharacterNameFactory : ICharacterNameFactory
-	{
-		private readonly string _name;
+    public class CommandLineCharacterNameFactory : ICharacterNameFactory
+    {
+        private readonly string _name;
 
-		public CommandLineCharacterNameFactory(string arg)
-		{
-			this._name = arg;
-		}
+        public CommandLineCharacterNameFactory(string arg)
+        {
+            this._name = arg;
+        }
 
-		public string GetName() => this._name;
-	}
+        public string GetName() => this._name;
+    }
 }

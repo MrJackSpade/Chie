@@ -2,12 +2,12 @@
 
 namespace Blip.Shared.Models
 {
-	public class DescribeRequest
-	{
-		[JsonPropertyName("fileData")]
-		public byte[]? FileData { get; set; }
+    public class DescribeRequest
+    {
+        [JsonPropertyName("fileData")]
+        public byte[]? FileData { get; set; }
 
-		[JsonPropertyName("filePath")]
-		public string? FilePath { get; set; }
-	}
+        [JsonPropertyName("filePath")]
+        public string? FilePath { get; set; }
+    }
 }
