@@ -339,3 +339,4 @@ test/TensorFlowNET.Examples/mnist
 /redist
 *.xml
 *.xsd
+ChieApi/StateSaves/Context.638226785314203370.dat
