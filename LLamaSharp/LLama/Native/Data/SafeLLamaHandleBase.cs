@@ -1,24 +1,22 @@
-﻿using Llama.Context.Extensions;
-using Llama.Context.Interfaces;
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 
-namespace Llama.Native.Data
+namespace LLama.Native
 {
-    public class SafeLlamaHandleBase : SafeHandle, IHasNativeContextHandle
+    public abstract class SafeLLamaHandleBase : SafeHandle
     {
-        public SafeLlamaHandleBase(IntPtr handle)
+        private protected SafeLLamaHandleBase()
+            : base(IntPtr.Zero, ownsHandle: true)
+        {
+        }
+
+        private protected SafeLLamaHandleBase(IntPtr handle)
             : base(IntPtr.Zero, ownsHandle: true)
         {
             this.SetHandle(handle);
         }
 
-        protected SafeLlamaHandleBase()
-                    : base(IntPtr.Zero, ownsHandle: true)
-        {
-        }
-
-        protected SafeLlamaHandleBase(IntPtr handle, bool ownsHandle)
+        private protected SafeLLamaHandleBase(IntPtr handle, bool ownsHandle)
             : base(IntPtr.Zero, ownsHandle)
         {
             this.SetHandle(handle);
@@ -26,16 +24,6 @@ namespace Llama.Native.Data
 
         public override bool IsInvalid => this.handle == IntPtr.Zero;
 
-        public IntPtr Pointer => base.handle;
-
-        public SafeHandle SafeHandle => this;
-
-        void IHasNativeContextHandle.SetHandle(IntPtr pointer) => base.SetHandle(pointer);
-
-        public override string ToString() => $"0x{this.handle:x16}";
-
-        internal void SetHandlePublic(IntPtr pointer) => this.SetHandle(pointer);
-
-        protected override bool ReleaseHandle() => (this as IHasNativeContextHandle).ReleaseHandle();
+        public override string ToString()  => $"0x{this.handle:x16}";
     }
 }

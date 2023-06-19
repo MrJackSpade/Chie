@@ -1,12 +1,13 @@
 ﻿using Llama.Collections.Interfaces;
 using Llama.Data;
 using Llama.Events;
+using LLama.Native;
 using System;
 using System.Text;
 
 namespace Llama.Context.Interfaces
 {
-    public interface IContext : IDisposable, IHasNativeContextHandle
+    public interface IContext : IDisposable
     {
         event Action<ContextModificationEventArgs> OnContextModification { add { } remove { } }
 
@@ -17,6 +18,8 @@ namespace Llama.Context.Interfaces
         Encoding Encoding { get; }
 
         public IReadOnlyLlamaTokenCollection Evaluated { get; }
+
+        SafeLLamaContextHandle Handle { get; }
 
         int Size { get; }
 

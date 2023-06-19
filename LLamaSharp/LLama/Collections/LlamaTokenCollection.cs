@@ -258,6 +258,8 @@ namespace Llama.Collections
             yield return toReturn;
         }
 
+        public string ToEscapedString() => string.Join("", this._tokens.Select(t => t.EscapedValue));
+
         public override string ToString() => string.Join("", this._tokens.Select(t => t.Value));
 
         public virtual LlamaTokenCollection Trim(int id = 0)

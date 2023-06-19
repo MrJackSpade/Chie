@@ -10,3 +10,4 @@ ChieApi/StateSaves
 BlipApi/TempFile.png
 ChieApi/Ai/*/
 ChieApi/Frequency.log
+*.log

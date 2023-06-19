@@ -87,7 +87,7 @@ namespace Llama.Model
 
             foreach (KeyValuePair<int, float> kvp in contextSettings.LogitBias)
             {
-                string toLog = $"Logit Bias: {Utils.PtrToStringUTF8(NativeApi.llama_token_to_str(this._context.SafeHandle, kvp.Key))} -> {kvp.Value}";
+                string toLog = $"Logit Bias: {Utils.PtrToStringUTF8(NativeApi.llama_token_to_str(this._context.Handle, kvp.Key))} -> {kvp.Value}";
                 LlamaLogger.Default.Info(toLog);
             }
 
@@ -143,6 +143,7 @@ namespace Llama.Model
                     SampleResult sample = this._context.SampleNext(thisCall);
 
                     this._evaluationQueue.Append(sample.Tokens);
+                    thisCall.Append(sample.Tokens);
 
                     Console.Write(sample.Tokens.ToString());
 

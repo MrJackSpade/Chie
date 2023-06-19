@@ -1,6 +1,7 @@
 ﻿using Llama.Context.Interfaces;
 using Llama.Native;
 using Llama.Native.Data;
+using LLama.Native;
 using System;
 
 namespace Llama.Services
@@ -16,7 +17,7 @@ namespace Llama.Services
         /// <param name="last_tokens_size"></param>
         /// <param name="alpha_frequency"></param>
         /// <param name="alpha_presence"></param>
-        public static void FrequencyAndPresencePenalties(IHasNativeContextHandle ctx, LlamaTokenDataArray candidates, int[] last_tokens, ulong last_tokens_size, float alpha_frequency, float alpha_presence)
+        public static void FrequencyAndPresencePenalties(SafeLLamaContextHandle ctx, LlamaTokenDataArray candidates, int[] last_tokens, ulong last_tokens_size, float alpha_frequency, float alpha_presence)
         {
             System.Buffers.MemoryHandle handle = candidates.data.Pin();
             LlamaTokenDataArrayNative st = new()
@@ -26,7 +27,7 @@ namespace Llama.Services
                 sorted = candidates.sorted
             };
 
-            NativeApi.llama_sample_frequency_and_presence_penalties(ctx.SafeHandle, new IntPtr(&st), last_tokens, last_tokens_size, alpha_frequency, alpha_presence);
+            NativeApi.llama_sample_frequency_and_presence_penalties(ctx, new IntPtr(&st), last_tokens, last_tokens_size, alpha_frequency, alpha_presence);
         }
 
         /// <summary>
@@ -37,7 +38,7 @@ namespace Llama.Services
         /// <param name="last_tokens"></param>
         /// <param name="last_tokens_size"></param>
         /// <param name="penalty"></param>
-        public static void RepetitionPenalty(IHasNativeContextHandle ctx, LlamaTokenDataArray candidates, int[] last_tokens, ulong last_tokens_size, float penalty)
+        public static void RepetitionPenalty(SafeLLamaContextHandle ctx, LlamaTokenDataArray candidates, int[] last_tokens, ulong last_tokens_size, float penalty)
         {
             System.Buffers.MemoryHandle handle = candidates.data.Pin();
             LlamaTokenDataArrayNative st = new()
@@ -46,7 +47,7 @@ namespace Llama.Services
                 size = candidates.size,
                 sorted = candidates.sorted
             };
-            NativeApi.llama_sample_repetition_penalty(ctx.SafeHandle, new IntPtr(&st), last_tokens, last_tokens_size, penalty);
+            NativeApi.llama_sample_repetition_penalty(ctx, new IntPtr(&st), last_tokens, last_tokens_size, penalty);
         }
 
         /// <summary>
@@ -54,7 +55,7 @@ namespace Llama.Services
         /// </summary>
         /// <param name="ctx"></param>
         /// <param name="candidates">Pointer to LlamaTokenDataArray</param>
-        public static void SoftMax(IHasNativeContextHandle ctx, LlamaTokenDataArray candidates)
+        public static void SoftMax(SafeLLamaContextHandle ctx, LlamaTokenDataArray candidates)
         {
             System.Buffers.MemoryHandle handle = candidates.data.Pin();
             LlamaTokenDataArrayNative st = new()
@@ -63,7 +64,7 @@ namespace Llama.Services
                 size = candidates.size,
                 sorted = candidates.sorted
             };
-            NativeApi.llama_sample_softmax(ctx.SafeHandle, new IntPtr(&st));
+            NativeApi.llama_sample_softmax(ctx, new IntPtr(&st));
         }
 
         /// <summary>
@@ -73,7 +74,7 @@ namespace Llama.Services
         /// <param name="candidates">Pointer to LlamaTokenDataArray</param>
         /// <param name="z"></param>
         /// <param name="min_keep"></param>
-        public static void TailFree(IHasNativeContextHandle ctx, LlamaTokenDataArray candidates, float z, ulong min_keep)
+        public static void TailFree(SafeLLamaContextHandle ctx, LlamaTokenDataArray candidates, float z, ulong min_keep)
         {
             System.Buffers.MemoryHandle handle = candidates.data.Pin();
             LlamaTokenDataArrayNative st = new()
@@ -82,10 +83,10 @@ namespace Llama.Services
                 size = candidates.size,
                 sorted = candidates.sorted
             };
-            NativeApi.llama_sample_tail_free(ctx.SafeHandle, new IntPtr(&st), z, min_keep);
+            NativeApi.llama_sample_tail_free(ctx, new IntPtr(&st), z, min_keep);
         }
 
-        public static void Temperature(IHasNativeContextHandle ctx, LlamaTokenDataArray candidates, float temp)
+        public static void Temperature(SafeLLamaContextHandle ctx, LlamaTokenDataArray candidates, float temp)
         {
             System.Buffers.MemoryHandle handle = candidates.data.Pin();
             LlamaTokenDataArrayNative st = new()
@@ -94,7 +95,7 @@ namespace Llama.Services
                 size = candidates.size,
                 sorted = candidates.sorted
             };
-            NativeApi.llama_sample_temperature(ctx.SafeHandle, new IntPtr(&st), temp);
+            NativeApi.llama_sample_temperature(ctx, new IntPtr(&st), temp);
         }
 
         /// <summary>
@@ -103,7 +104,7 @@ namespace Llama.Services
         /// <param name="ctx"></param>
         /// <param name="candidates">Pointer to LlamaTokenDataArray</param>
         /// <returns></returns>
-        public static int Token(IHasNativeContextHandle ctx, LlamaTokenDataArray candidates)
+        public static int Token(SafeLLamaContextHandle ctx, LlamaTokenDataArray candidates)
         {
             System.Buffers.MemoryHandle handle = candidates.data.Pin();
             LlamaTokenDataArrayNative st = new()
@@ -112,7 +113,7 @@ namespace Llama.Services
                 size = candidates.size,
                 sorted = candidates.sorted
             };
-            return NativeApi.llama_sample_token(ctx.SafeHandle, new IntPtr(&st));
+            return NativeApi.llama_sample_token(ctx, new IntPtr(&st));
         }
 
         /// <summary>
@@ -121,7 +122,7 @@ namespace Llama.Services
         /// <param name="ctx"></param>
         /// <param name="candidates">Pointer to LlamaTokenDataArray</param>
         /// <returns></returns>
-        public static int TokenGreedy(IHasNativeContextHandle ctx, LlamaTokenDataArray candidates)
+        public static int TokenGreedy(SafeLLamaContextHandle ctx, LlamaTokenDataArray candidates)
         {
             System.Buffers.MemoryHandle handle = candidates.data.Pin();
             LlamaTokenDataArrayNative st = new()
@@ -130,7 +131,7 @@ namespace Llama.Services
                 size = candidates.size,
                 sorted = candidates.sorted
             };
-            return NativeApi.llama_sample_token_greedy(ctx.SafeHandle, new IntPtr(&st));
+            return NativeApi.llama_sample_token_greedy(ctx, new IntPtr(&st));
         }
 
         /// <summary>
@@ -143,7 +144,7 @@ namespace Llama.Services
         /// <param name="m">The number of tokens considered in the estimation of `s_hat`. This is an arbitrary value that is used to calculate `s_hat`, which in turn helps to calculate the value of `k`. In the paper, they use `m = 100`, but you can experiment with different values to see how it affects the performance of the algorithm.</param>
         /// <param name="mu">Maximum cross-entropy. This value is initialized to be twice the target cross-entropy (`2 * tau`) and is updated in the algorithm based on the error between the target and observed surprisal.</param>
         /// <returns></returns>
-        public static int TokenMirostat(IHasNativeContextHandle ctx, LlamaTokenDataArray candidates, float tau, float eta, int m, ref float mu)
+        public static int TokenMirostat(SafeLLamaContextHandle ctx, LlamaTokenDataArray candidates, float tau, float eta, int m, ref float mu)
         {
             System.Buffers.MemoryHandle handle = candidates.data.Pin();
             LlamaTokenDataArrayNative st = new()
@@ -155,7 +156,7 @@ namespace Llama.Services
             int res;
             fixed (float* pmu = &mu)
             {
-                res = NativeApi.llama_sample_token_mirostat(ctx.SafeHandle, new IntPtr(&st), tau, eta, m, pmu);
+                res = NativeApi.llama_sample_token_mirostat(ctx, new IntPtr(&st), tau, eta, m, pmu);
             }
 
             return res;
@@ -170,7 +171,7 @@ namespace Llama.Services
         /// <param name="eta">The learning rate used to update `mu` based on the error between the target and observed surprisal of the sampled word. A larger learning rate will cause `mu` to be updated more quickly, while a smaller learning rate will result in slower updates.</param>
         /// <param name="mu">Maximum cross-entropy. This value is initialized to be twice the target cross-entropy (`2 * tau`) and is updated in the algorithm based on the error between the target and observed surprisal.</param>
         /// <returns></returns>
-        public static int TokenMirostatV2(IHasNativeContextHandle ctx, LlamaTokenDataArray candidates, float tau, float eta, ref float mu)
+        public static int TokenMirostatV2(SafeLLamaContextHandle ctx, LlamaTokenDataArray candidates, float tau, float eta, ref float mu)
         {
             System.Buffers.MemoryHandle handle = candidates.data.Pin();
             LlamaTokenDataArrayNative st = new()
@@ -182,7 +183,7 @@ namespace Llama.Services
             int res;
             fixed (float* pmu = &mu)
             {
-                res = NativeApi.llama_sample_token_mirostat_v2(ctx.SafeHandle, new IntPtr(&st), tau, eta, pmu);
+                res = NativeApi.llama_sample_token_mirostat_v2(ctx, new IntPtr(&st), tau, eta, pmu);
             }
 
             return res;
@@ -195,7 +196,7 @@ namespace Llama.Services
         /// <param name="candidates">Pointer to LlamaTokenDataArray</param>
         /// <param name="k"></param>
         /// <param name="min_keep"></param>
-        public static void TopK(IHasNativeContextHandle ctx, LlamaTokenDataArray candidates, int k, ulong min_keep)
+        public static void TopK(SafeLLamaContextHandle ctx, LlamaTokenDataArray candidates, int k, ulong min_keep)
         {
             System.Buffers.MemoryHandle handle = candidates.data.Pin();
             LlamaTokenDataArrayNative st = new()
@@ -204,7 +205,7 @@ namespace Llama.Services
                 size = candidates.size,
                 sorted = candidates.sorted
             };
-            NativeApi.llama_sample_top_k(ctx.SafeHandle, new IntPtr(&st), k, min_keep);
+            NativeApi.llama_sample_top_k(ctx, new IntPtr(&st), k, min_keep);
         }
 
         /// <summary>
@@ -214,7 +215,7 @@ namespace Llama.Services
         /// <param name="candidates">Pointer to LlamaTokenDataArray</param>
         /// <param name="p"></param>
         /// <param name="min_keep"></param>
-        public static void TopP(IHasNativeContextHandle ctx, LlamaTokenDataArray candidates, float p, ulong min_keep)
+        public static void TopP(SafeLLamaContextHandle ctx, LlamaTokenDataArray candidates, float p, ulong min_keep)
         {
             System.Buffers.MemoryHandle handle = candidates.data.Pin();
             LlamaTokenDataArrayNative st = new()
@@ -223,7 +224,7 @@ namespace Llama.Services
                 size = candidates.size,
                 sorted = candidates.sorted
             };
-            NativeApi.llama_sample_top_p(ctx.SafeHandle, new IntPtr(&st), p, min_keep);
+            NativeApi.llama_sample_top_p(ctx, new IntPtr(&st), p, min_keep);
         }
 
         /// <summary>
@@ -233,7 +234,7 @@ namespace Llama.Services
         /// <param name="candidates">Pointer to LlamaTokenDataArray</param>
         /// <param name="p"></param>
         /// <param name="min_keep"></param>
-        public static void Typical(IHasNativeContextHandle ctx, LlamaTokenDataArray candidates, float p, ulong min_keep)
+        public static void Typical(SafeLLamaContextHandle ctx, LlamaTokenDataArray candidates, float p, ulong min_keep)
         {
             System.Buffers.MemoryHandle handle = candidates.data.Pin();
             LlamaTokenDataArrayNative st = new()
@@ -242,7 +243,7 @@ namespace Llama.Services
                 size = candidates.size,
                 sorted = candidates.sorted
             };
-            NativeApi.llama_sample_typical(ctx.SafeHandle, new IntPtr(&st), p, min_keep);
+            NativeApi.llama_sample_typical(ctx, new IntPtr(&st), p, min_keep);
         }
     }
 }

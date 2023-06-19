@@ -4,6 +4,7 @@ using Llama.Exceptions;
 using Llama.Model;
 using Llama.Native;
 using Llama.Native.Data;
+using LLama.Native;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,7 +17,7 @@ namespace Llama.Utilities
 {
     public static class Utils
     {
-        public static IHasNativeContextHandle InitContextFromParams(LlamaModelSettings modelSettings, LlamaContextSettings contextSettings)
+        public static SafeLLamaContextHandle InitContextFromParams(LlamaModelSettings modelSettings, LlamaContextSettings contextSettings)
         {
             LlamaContextParams lparams = NativeApi.llama_context_default_params();
 
@@ -41,7 +42,7 @@ namespace Llama.Utilities
                 throw new RuntimeError($"Failed to load model {modelSettings.Model}.");
             }
 
-            SafeLlamaHandleBase ctx = new(ctx_ptr);
+            SafeLLamaContextHandle ctx = new(ctx_ptr);
 
             if (!string.IsNullOrEmpty(modelSettings.LoraAdapter))
             {
@@ -55,7 +56,7 @@ namespace Llama.Utilities
             return ctx;
         }
 
-        public static List<Llama_token> Llama_tokenize(SafeHandle ctx, string text, bool add_bos, Encoding encoding)
+        public static List<Llama_token> LlamaTokenize(SafeLLamaContextHandle ctx, string text, bool add_bos, Encoding encoding)
         {
             int cnt = encoding.GetByteCount(text);
             Llama_token[] res = new Llama_token[cnt + (add_bos ? 1 : 0)];
@@ -68,9 +69,9 @@ namespace Llama.Utilities
             return res.Take(n).ToList();
         }
 
-        public static unsafe Span<float> GetLogits(IHasNativeContextHandle ctx, int length)
+        public static unsafe Span<float> GetLogits(SafeLLamaContextHandle ctx, int length)
         {
-            float* logits = NativeApi.llama_get_logits(ctx.SafeHandle);
+            float* logits = NativeApi.llama_get_logits(ctx);
             return new Span<float>(logits, length);
         }
 

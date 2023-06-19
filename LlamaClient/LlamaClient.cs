@@ -71,7 +71,8 @@ namespace Llama
             serviceDescriptors.AddSingleton<IContextRoller, ChatContextRoller>();
             serviceDescriptors.AddSingleton<ITokenTransformer, InteractiveEosReplace>();
             serviceDescriptors.AddSingleton<ITokenTransformer, InvalidCharacterBlockingTransformer>();
-            serviceDescriptors.AddSingleton<ITokenTransformer, LetterFrequencyTransformer>();
+            serviceDescriptors.AddSingleton<ITokenTransformer, NewlineEnsureTransformer>();
+            //serviceDescriptors.AddSingleton<ITokenTransformer, LetterFrequencyTransformer>();
 
             this._model = serviceDescriptors.BuildServiceProvider().GetRequiredService<LlamaModel>();
 

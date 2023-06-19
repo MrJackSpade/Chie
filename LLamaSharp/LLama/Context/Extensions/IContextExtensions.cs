@@ -88,7 +88,7 @@ namespace Llama.Context.Extensions
         {
             LlamaTokenCollection tokens = new();
 
-            foreach (int id in Utils.Llama_tokenize(context.SafeHandle, value, addBos, context.Encoding))
+            foreach (int id in Utils.LlamaTokenize(context.Handle, value, addBos, context.Encoding))
             {
                 tokens.Append(context.GetToken(id, tag));
             }
@@ -100,15 +100,53 @@ namespace Llama.Context.Extensions
         {
             LlamaTokenCollection toWrite = new LlamaTokenCollection(tokens).Trim();
 
-            if (toWrite.Count > context.AvailableBuffer)
-            {
-                throw new Exception("Write content too large for buffer");
-            }
-
             foreach (Data.LlamaToken token in toWrite)
             {
                 context.Write(token);
             }
         }
+
+        public static float[] GetEmbeddings(this IContext handler)
+        {
+            unsafe
+            {
+                int n_embed = NativeApi.llama_n_embd(handler.Handle);
+                float* embeddings = NativeApi.llama_get_embeddings(handler.Handle);
+                if (embeddings == null)
+                {
+                    return Array.Empty<float>();
+                }
+
+                Span<float> span = new(embeddings, n_embed);
+                float[] res = new float[n_embed];
+                span.CopyTo(res.AsSpan());
+                return res;
+            }
+        }
+
+        public static Span<float> GetLogits(this IContext handler)
+        {
+            int n_vocab = handler.VocabCount();
+
+            Span<float> logits = Utils.GetLogits(handler.Handle, n_vocab);
+
+            return logits;
+        }
+
+        public static LlamaToken GetToken(this IContext handler, int id, string tag) => new(id, NativeApi.llama_token_to_str(handler.Handle, id), tag);
+
+        public static LlamaTokenCollection Tokenize(this IContext context, IEnumerable<int> value, string tag)
+        {
+            LlamaTokenCollection tokens = new();
+
+            foreach (int id in value)
+            {
+                tokens.Append(context.GetToken(id, tag));
+            }
+
+            return tokens;
+        }
+
+        public static int VocabCount(this IContext handler) => NativeApi.llama_n_vocab(handler.Handle);
     }
 }
