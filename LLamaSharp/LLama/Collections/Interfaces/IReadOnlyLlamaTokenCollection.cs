@@ -17,5 +17,6 @@ namespace Llama.Collections.Interfaces
 
         LlamaTokenCollection Replace(LlamaTokenCollection toFind, LlamaTokenCollection toReplace);
         LlamaTokenCollection Trim(int id = 0);
+        void Ensure();
     }
 }

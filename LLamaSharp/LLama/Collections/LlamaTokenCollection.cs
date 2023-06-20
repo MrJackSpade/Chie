@@ -110,6 +110,11 @@ namespace Llama.Collections
 
         public virtual void Ensure()
         {
+            if(this.Contains(30004))
+            {
+                Debugger.Break();
+            }
+
             LlamaTokenCollection[] lineCollection = this.Split(13).Select(l => l.Trim()).ToArray();
 
             for (int i = 0; i < lineCollection.Length; i++)
@@ -121,9 +126,14 @@ namespace Llama.Collections
                     continue;
                 }
 
+                if(l.IsNullOrWhiteSpace)
+                {
+                    Debugger.Break();
+                }
+
                 if (!l.ToString().StartsWith("|") && l.Count > 0)
                 {
-                    //Debugger.Break();
+                    Debugger.Break();
                 }
 
                 if (!l.IsSingleLlamaTokenTag)

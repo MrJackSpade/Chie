@@ -13,15 +13,15 @@ namespace ChieApi.Controllers
     [Route("[controller]")]
     public class ChieController : ControllerBase, IChieClient
     {
-        private readonly LogService _databaseService;
+        private readonly LogService _logService;
 
         private readonly LlamaService _llamaService;
 
         private readonly List<IRequestPipeline> _pipelines;
 
-        public ChieController(IEnumerable<IRequestPipeline> pipelines, LlamaService llamaService, LogService databaseService)
+        public ChieController(IEnumerable<IRequestPipeline> pipelines, LlamaService llamaService, LogService logService)
         {
-            this._databaseService = databaseService;
+            this._logService = logService;
             this._llamaService = llamaService;
             this._pipelines = pipelines.ToList();
         }
@@ -31,15 +31,15 @@ namespace ChieApi.Controllers
         {
             return Task.FromResult(new ContinueRequestResponse()
             {
-                Success = this._llamaService.ReturnControl(false)
+                MessageId = this._llamaService.ReturnControl(false, channelId)
             });
         }
 
         [HttpGet("GetLogsByDate")]
-        public Task<List<LogEntry>> GetLogsByDate(string after) => Task.FromResult(this._databaseService.GetLogs(DateTime.Parse(after)));
+        public Task<List<LogEntry>> GetLogsByDate(string after) => Task.FromResult(this._logService.GetLogs(DateTime.Parse(after)));
 
         [HttpGet("GetLogsById")]
-        public Task<List<LogEntry>> GetLogsById(long after) => Task.FromResult(this._databaseService.GetLogs(after));
+        public Task<List<LogEntry>> GetLogsById(long after) => Task.FromResult(this._logService.GetLogs(after));
 
         [HttpGet("GetReply")]
         public Task<ChatEntry?> GetReply(long id)

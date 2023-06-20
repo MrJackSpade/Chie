@@ -21,21 +21,18 @@ namespace ChieApi.Services
 
         private readonly string _connectionString;
 
-        private readonly UserData _defaultUserData;
-
         public UserDataService(IHasConnectionString connectionString)
         {
             this._connectionString = connectionString.ConnectionString;
-            this._defaultUserData = this.GetUserData("");
         }
 
-        public UserData GetUserData(string userName)
+        public UserData? GetUserData(string userName)
         {
             using SqlConnection connection = new(this._connectionString);
 
             string query = $"select * from UserData where UserName = '{userName}'";
-
-            return connection.Query<UserData>(query).FirstOrDefault() ?? this._defaultUserData;
+            string noUserQuery = $"select * from UserData where UserName = '{userName}'";
+            return connection.Query<UserData>(query).FirstOrDefault() ?? connection.Query<UserData>(noUserQuery).FirstOrDefault();
         }
 
         public async Task<long> Save(UserData userData)

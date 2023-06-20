@@ -23,7 +23,19 @@ namespace Llama.TokenTransformers
 
         public IEnumerable<LlamaToken> TransformToken(LlamaContextSettings settings, IContext context, IReadOnlyLlamaTokenCollection thisGeneration, IEnumerable<LlamaToken> selectedTokens)
         {
-            LlamaTokenCollection input = new(selectedTokens);
+            LlamaTokenCollection input = new();
+
+            foreach (LlamaToken token in selectedTokens)
+            {
+                if (token.Id == 30004) //\r
+                {
+                    input.Append(context.GetToken(this._newlineTokenId, token.Tag));
+                }
+                else
+                {
+                    input.Append(token);
+                }
+            }
 
             string inputString = input.ToString();
 

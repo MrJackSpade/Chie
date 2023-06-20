@@ -1,27 +1,30 @@
 ﻿using Ai.Utils;
 using Ai.Utils.Extensions;
 using Chie;
-using ChieApi.Client;
 using ChieApi.Shared.Entities;
+using ChieApi.Shared.Interfaces;
 using ChieApi.Shared.Models;
 using Discord;
-using Discord.Rest;
 using Discord.WebSocket;
 using DiscordGpt.Constants;
+using DiscordGpt.EmojiReactions;
+using DiscordGpt.Events;
 using DiscordGpt.Extensions;
+using DiscordGpt.Interfaces;
 using DiscordGpt.Models;
 using DiscordGpt.Services;
+using DiscordGpt.Utils;
 using System.Text.RegularExpressions;
 
 namespace DiscordGpt
 {
     internal class DiscordIntegrationService
     {
-        private const string TYPING_PREFIX = "*⌨️* ";
-
         private readonly ActiveChannelCollection _activeChannels;
 
-        private readonly ChieClient _chieClient = new();
+        private readonly IActiveMessageContainer _activeMessageContainer;
+
+        private readonly IChieClient _chieClient;
 
         private readonly ChieMessageService _chieMessageService;
 
@@ -33,18 +36,20 @@ namespace DiscordGpt
 
         private readonly NameService _nameService;
 
+        private readonly ReactionActionCollection _reactionActionCollection;
+
         private readonly DiscordIntegrationSettings _settings;
 
         private readonly StartInfo _startInfo;
-
-        private ActiveMessage? _messageBeingWritten;
 
         private Task? _receiveTask;
 
         private Task? _typingTask;
 
-        public DiscordIntegrationService(ActiveChannelCollection activeChannelCollection, NameService nameService, ChieMessageService messageService, StartInfo startInfo, DiscordClient discordClient, Logger logger, DiscordIntegrationSettings settings)
+        public DiscordIntegrationService(IChieClient chieClient, IActiveMessageContainer activeMessagecontainer, IEnumerable<IReactionAction> reactionActions, ActiveChannelCollection activeChannelCollection, NameService nameService, ChieMessageService messageService, StartInfo startInfo, DiscordClient discordClient, Logger logger, DiscordIntegrationSettings settings)
         {
+            this._activeMessageContainer = activeMessagecontainer;
+            this._chieClient = chieClient;
             this._nameService = nameService;
             this._activeChannels = activeChannelCollection;
             this._chieMessageService = messageService;
@@ -53,10 +58,12 @@ namespace DiscordGpt
             this._settings = settings;
             this._logger = logger;
             this._discordClient = discordClient;
+            this._reactionActionCollection = new(reactionActions);
             this._discordClient.OnReactionAdded += this.OnReactionAdded;
             this._discordClient.OnTypingStart += this.OnTypingStart;
+            this._discordClient.OnReactionRemoved += this.OnReactionRemoved;
 
-            foreach (long channelId in settings.PublicChannels)
+            foreach (ulong channelId in settings.PublicChannels)
             {
                 Console.WriteLine("Monitoring Channel: " + channelId);
             }
@@ -87,14 +94,13 @@ namespace DiscordGpt
 
             await this._logger.Write($"Message: {cleanedMessage}", LogLevel.Private);
 
-            bool useExistingMessage = this._messageBeingWritten?.IsReplyTo == messageResponse.ReplyToId;
+            bool useExistingMessage = this._activeMessageContainer.Value?.IsReplyTo == messageResponse.ReplyToId;
 
             foreach (string part in cleanedMessage.SplitLength(1800))
             {
                 if (useExistingMessage)
                 {
-                    await this._messageBeingWritten!.SetContent(part);
-                    this._messageBeingWritten = null;
+                    await this._activeMessageContainer.Finalize(part);
                     useExistingMessage = false;
                 }
                 else
@@ -113,6 +119,7 @@ namespace DiscordGpt
             await this._discordClient.Connect();
             Console.WriteLine("Connected Discord.");
 
+            this._reactionActionCollection.SetOwner(this._discordClient.CurrentUser.Username);
             this._discordClient.OnMessageReceived += this.Client_OnMessageReceived;
 
             this._typingTask = Task.Run(this.TypingLoop);
@@ -121,16 +128,12 @@ namespace DiscordGpt
             await LoopUtil.Forever();
         }
 
-        private async Task _chieMessageService_OnMessagesSent(Events.ChieMessageSendEvent obj)
+        private async Task _chieMessageService_OnMessagesSent(ChieMessageSendEvent obj)
         {
             //wait for response before allowing new messages to go out
             this._chieMessageService.EnableSend = false;
 
-            SocketMessage lastMessage = obj.Messages.Last().SocketMessage;
-
-            RestUserMessage message = await lastMessage.Channel.SendMessageAsync(TYPING_PREFIX);
-
-            this._messageBeingWritten = new ActiveMessage(message, obj.MessageId);
+            await this._activeMessageContainer.Create(obj.Messages.Last().SocketMessage.Channel, obj.MessageId);
         }
 
         private async Task<IncomingDiscordMessage> BuildDiscordMessage(SocketMessage arg)
@@ -236,26 +239,16 @@ namespace DiscordGpt
             return newMessage;
         }
 
-        private async Task OnReactionAdded(Discord.Cacheable<Discord.IUserMessage, ulong> cachedMessage, Discord.Cacheable<Discord.IMessageChannel, ulong> cachedChannel, SocketReaction reaction)
+        private async Task OnReactionAdded(Cacheable<IUserMessage, ulong> cachedMessage, Cacheable<IMessageChannel, ulong> cachedChannel, SocketReaction reaction)
         {
-            if (reaction.Emote.Name != Emoji.Parse(Emojis.GO).Name)
-            {
-                return;
-            }
+            ReactionData data = await ReactionDataParser.GetDataAsync(cachedMessage, cachedChannel, reaction);
+            await this._reactionActionCollection.AddReaction(data.Name, data.RemainingCount, data.ReactedUser, data.ReactedMessage);
+        }
 
-            if (!this._activeChannels.TryGetValue(cachedChannel.Id, out ActiveChannel? activeChannel))
-            {
-                return;
-            }
-
-            IUserMessage reactedMessage = await cachedMessage.DownloadAsync();
-
-            if (reactedMessage.Author.Username != this._discordClient.CurrentUser.Username)
-            {
-                return;
-            }
-
-            await this._chieClient.ContinueRequest(activeChannel.ChieName);
+        private async Task OnReactionRemoved(Cacheable<IUserMessage, ulong> cachedMessage, Cacheable<IMessageChannel, ulong> cachedChannel, SocketReaction reaction)
+        {
+            ReactionData data = await ReactionDataParser.GetDataAsync(cachedMessage, cachedChannel, reaction);
+            await this._reactionActionCollection.RemoveReaction(data.Name, data.RemainingCount, data.ReactedUser, data.ReactedMessage);
         }
 
         private async Task OnTypingStart(Cacheable<IUser, ulong> cachedUser, Cacheable<IMessageChannel, ulong> cachedChannel)
@@ -301,7 +294,7 @@ namespace DiscordGpt
 
                     if (typingResponse.IsTyping && !string.IsNullOrWhiteSpace(typingResponse.Content))
                     {
-                        this._messageBeingWritten?.SetContent(TYPING_PREFIX + typingResponse.Content);
+                        this._activeMessageContainer.Value?.SetContent($"*{Emojis.KEYBOARD}*" + typingResponse.Content);
                     }
 
                     activeChannel.SetTypingState(typingResponse.IsTyping);

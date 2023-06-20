@@ -4,7 +4,7 @@ namespace DiscordGpt.Extensions
 {
     public static class StringExtensions
     {
-        private const string ESCAPE_CHARS = @"*\";
+        private const string ESCAPE_CHARS = @"*\~";
 
         public static string DiscordEscape(this string str)
         {

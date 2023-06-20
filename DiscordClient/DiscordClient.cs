@@ -36,6 +36,7 @@ namespace Chie
         public event Func<SocketMessage, Task> OnMessageReceived;
 
         public event Func<Cacheable<IUserMessage, ulong>, Cacheable<IMessageChannel, ulong>, SocketReaction, Task> OnReactionAdded;
+        public event Func<Cacheable<IUserMessage, ulong>, Cacheable<IMessageChannel, ulong>, SocketReaction, Task> OnReactionRemoved;
 
         public event Func<Cacheable<IUser, ulong>, Cacheable<IMessageChannel, ulong>, Task> OnTypingStart;
 
@@ -63,6 +64,7 @@ namespace Chie
                 _client.ReactionAdded += (a, b, c) => OnReactionAdded?.Invoke(a, b, c);
                 _client.MessageDeleted += (a, b) => OnMessageDeleted?.Invoke(a, b);
                 _client.UserIsTyping += (a, b) => OnTypingStart?.Invoke(a, b);
+                _client.ReactionRemoved += (a, b, c) => OnReactionRemoved?.Invoke(a, b, c);
             }
 
             this._connectionGate.Set();
@@ -79,84 +81,10 @@ namespace Chie
                 return user;
             }
 
-            //user = await restUserMessage.Channel.GetUserAsync(restUserMessage.Author.Id);
             return null;
         }
 
         public Task<IMessage> GetMessage(ulong channelId, ulong messageId) => this.GetChannel(channelId).GetMessageAsync(messageId);
-
-        public async IAsyncEnumerable<IMessage> GetNewMessages(SocketTextChannel channel, string key)
-        {
-            FileInfo f = new FileInfo($"{key}.dat");
-
-            if (!f.Directory.Exists)
-            {
-                f.Directory.Create();
-            }
-
-            DictionaryFile lastCheckedMessage = new DictionaryFile(f.FullName);
-
-            ulong channelId = channel.Id;
-
-            ulong stopMessageId = 0;
-            ulong lastMessageId = 0;
-            ulong startMessageId = 0;
-
-            if (lastCheckedMessage.TryGetValue(channelId, out ulong messageId))
-            {
-                stopMessageId = messageId;
-            }
-
-            List<IMessage> messages = new List<IMessage>();
-
-            do
-            {
-                IAsyncEnumerable<IReadOnlyCollection<IMessage>> dataSource = lastMessageId == 0 ? channel.GetMessagesAsync(100) : channel.GetMessagesAsync(lastMessageId, Direction.Before, 100);
-
-                List<IMessage> newMessages = (await dataSource.ToListAsync()).SelectMany(page => page).ToList();
-
-                if (!newMessages.Any())
-                {
-                    break;
-                }
-
-                foreach (IMessage message in newMessages)
-                {
-                    if (startMessageId == 0)
-                    {
-                        startMessageId = message.Id;
-                    }
-
-                    lastMessageId = message.Id;
-
-                    if (lastMessageId >= stopMessageId)
-                    {
-                        messages.Add(message);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-
-                Console.WriteLine($"Loaded {messages.Count} messages...");
-            } while (lastMessageId >= stopMessageId);
-
-            messages.Reverse();
-
-            foreach (IMessage message in messages)
-            {
-                Console.WriteLine("Current Message Time: " + message.Timestamp);
-
-                yield return message;
-            }
-
-            await Task.Delay(500);
-
-            stopMessageId = startMessageId;
-
-            lastCheckedMessage[$"{channel.Id}"] = $"{stopMessageId}";
-        }
 
         public IEnumerable<IThreadChannel> GetThreads(ITextChannel threadRoot)
         {

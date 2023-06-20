@@ -1,6 +1,10 @@
 ﻿using Ai.Utils.Extensions;
 using Chie;
 using ChieApi.Client;
+using ChieApi.Shared.Interfaces;
+using DiscordGpt.EmojiReactions;
+using DiscordGpt.Interfaces;
+using DiscordGpt.Models;
 using DiscordGpt.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +33,16 @@ namespace DiscordGpt
             serviceCollection.AddSingleton<Logger>();
             serviceCollection.AddSingleton<DiscordClient>();
             serviceCollection.AddSingleton<StartInfo>();
+            serviceCollection.AddSingleton<IReactionAction, EyesReaction>();
+            serviceCollection.AddSingleton<IReactionAction, ContinueReaction>();
+            serviceCollection.AddSingleton<IReactionAction, StopReaction>();
+
+            ActiveMessageContainer activeMessageContainer = new();
+
+            serviceCollection.AddSingleton<ISingletonContainer<ActiveMessage>>(activeMessageContainer);
+            serviceCollection.AddSingleton<IReadOnlySingletonContainer<ActiveMessage>>(activeMessageContainer);
+            serviceCollection.AddSingleton<IActiveMessageContainer>(activeMessageContainer);
+            serviceCollection.AddSingleton<IChieClient>(new ChieClient());
 
             IServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
 

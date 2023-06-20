@@ -30,19 +30,22 @@ namespace ChieApi.Pipelines
 
             if (chatEntry.SourceUser != this._characterName &&
                 !string.IsNullOrWhiteSpace(chatEntry.SourceUser) &&
-                //Gotta check to make sure we haven't already returnedthis request
+                //Gotta check to make sure we haven't already returned this request
                 this._returnedData.Add(chatEntry.SourceUser))
             {
-                UserData userData = this._userDataService.GetUserData(chatEntry.SourceUser);
+                UserData? userData = this._userDataService.GetUserData(chatEntry.SourceUser);
 
-                yield return new ChatEntry()
+                if (userData != null)
                 {
-                    SourceUser = _characterName,
-                    Content = userData.UserPrompt,
-                    IsVisible = false,
-                    SourceChannel = chatEntry.SourceChannel,
-                    Tag = LlamaTokenTags.TEMPORARY
-                };
+                    yield return new ChatEntry()
+                    {
+                        SourceUser = _characterName,
+                        Content = userData.UserPrompt,
+                        IsVisible = false,
+                        SourceChannel = chatEntry.SourceChannel,
+                        Tag = LlamaTokenTags.TEMPORARY
+                    };
+                }
             }
 
             yield return chatEntry;

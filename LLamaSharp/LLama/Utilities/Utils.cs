@@ -23,6 +23,7 @@ namespace Llama.Utilities
 
             lparams.n_ctx = contextSettings.ContextSize;
             lparams.n_gpu_layers = modelSettings.GpuLayerCount;
+            lparams.n_batch = contextSettings.BatchSize;
             lparams.seed = modelSettings.Seed;
             lparams.f16_kv = modelSettings.MemoryFloat16;
             lparams.use_mmap = modelSettings.UseMemoryMap;

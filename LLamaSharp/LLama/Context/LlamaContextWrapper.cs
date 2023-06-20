@@ -95,16 +95,19 @@ namespace Llama.Context
             this._evaluated = new LlamaTokenBuffer(this.Size);
 
             this._prompt = this.Tokenize(settings.Prompt, LlamaTokenTags.PROMPT);
-
-            Log("");
-            Log("");
         }
 
         protected LlamaContextWrapper()
         {
         }
 
-        public event Action<ContextModificationEventArgs> OnContextModification;
+        event EventHandler<ContextModificationEventArgs> IContext.OnContextModification
+        {
+            add => OnContextModification += value;
+            remove => OnContextModification -= value;
+        }
+
+        public event EventHandler<ContextModificationEventArgs> OnContextModification;
 
         public int AvailableBuffer => this.Size - this._bufferPointer;
 
@@ -159,22 +162,9 @@ namespace Llama.Context
 
                 try
                 {
-                    Log(toEvaluate.ToEscapedString());
-                    Log($"[{string.Join(",", tokens)}]");
-                    Log($"n_eval: {n_eval}; evalPointer: {this._evalPointer}; Handle: {this.Handle}");
-                    Log($"--------------------------------------------------");
-
-                    //for (int s = 0; s < 2048; s *= 2)
-                    //{
-                    //    int[] ts = new int[] { 13 };
-
-                    //    Debug.WriteLine("Evaluating: " + s);
-                    //    if (NativeApi.llama_eval(this._safeLlamaHandleBase, ts, ts.Length, s + 1, this._evalThreadCount) != 0)
-                    //    {
-                    //    }
-                    //}
 
                     Debug.WriteLine($"{this._evalPointer + 1}/{end}");
+
                     if (NativeApi.llama_eval(this.Handle, tokens, tokens.Length, this._evalPointer, this._evalThreadCount) != 0)
                     {
                         LlamaLogger.Default.Error($"Failed to eval.");
@@ -183,6 +173,7 @@ namespace Llama.Context
                 }
                 catch (Exception e) when (Debugger.IsAttached)
                 {
+                    Debug.WriteLine(e);
                     Debugger.Break();
                 }
 
@@ -250,7 +241,8 @@ namespace Llama.Context
                 Candidates = candidates,
                 ContextHandle = this.Handle,
                 ContextTokens = this.Evaluated,
-                InferrenceTokens = thisCall
+                InferrenceTokens = thisCall,
+                Logits = logits
             };
 
             foreach (ISimpleSampler simpleSampler in this._simpleSamplers)
@@ -334,13 +326,6 @@ namespace Llama.Context
             this.TriggerModificationEvent();
         }
 
-        private static void Log(string message)
-        {
-            string fName = "chiecrash.log";
-            message = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {message}{System.Environment.NewLine}";
-            System.IO.File.AppendAllText(fName, message);
-        }
-
         private LlamaTokenCollection NoPenalize()
         {
             LlamaTokenCollection collection = new();
@@ -375,6 +360,6 @@ namespace Llama.Context
             return false;
         }
 
-        private void TriggerModificationEvent(int evalIndex = -1, int evalCount = -1) => OnContextModification?.Invoke(new ContextModificationEventArgs(this._evaluated, this._buffer, this._evalPointer, evalIndex, evalCount));
+        private void TriggerModificationEvent(int evalIndex = -1, int evalCount = -1) => OnContextModification?.Invoke(this, new ContextModificationEventArgs(this._evaluated, this._buffer, this._evalPointer, evalIndex, evalCount));
     }
 }

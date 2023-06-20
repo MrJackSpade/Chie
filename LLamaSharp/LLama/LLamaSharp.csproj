@@ -35,6 +35,25 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="llama.dll" />
+    <None Remove="llama.dll.bak" />
+    <None Remove="llama.ilk" />
+    <None Remove="llama.pdb" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="llama.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="llama.ilk">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="llama.pdb">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
@@ -45,12 +64,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Llama.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
 </Project>

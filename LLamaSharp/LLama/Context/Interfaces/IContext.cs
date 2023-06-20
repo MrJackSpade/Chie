@@ -9,7 +9,7 @@ namespace Llama.Context.Interfaces
 {
     public interface IContext : IDisposable
     {
-        event Action<ContextModificationEventArgs> OnContextModification { add { } remove { } }
+        event EventHandler<ContextModificationEventArgs> OnContextModification { add { } remove { } }
 
         int AvailableBuffer { get; }
 

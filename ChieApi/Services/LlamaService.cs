@@ -106,35 +106,21 @@ namespace ChieApi.Services
             } while (true);
         }
 
-        public bool ReturnControl(bool force, string channelId = null)
+        public long ReturnControl(bool force, string? channelId = null)
         {
             try
             {
-                if (force || this.TryLock())
+
+                bool clearToProceed = force || this.TryLock();
+                bool channelAllowed = channelId == null || this.LastChannel == channelId;
+                
+                if (!clearToProceed || !channelAllowed)
                 {
-                    if (channelId != null && this.LastChannel != channelId)
-                    {
-                        return false;
-                    }
-
-                    string toSend;
-
-                    if (!this._client.HasQueuedMessages && this._client.EndsWithReverse)
-                    {
-                        toSend = $"{this.CharacterName}>";
-                    }
-                    else
-                    {
-                        toSend = $"|{this.CharacterName}>";
-                    }
-
-                    this._client.Send(toSend, LlamaTokenTags.INPUT, true);
-                    return true;
+                    return 0;
                 }
-                else
-                {
-                    return false;
-                }
+
+                this._client.Send($"|{this.CharacterName}>", LlamaTokenTags.INPUT, true);
+                return this.LastMessageId;
             }
             finally
             {

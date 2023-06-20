@@ -5,6 +5,7 @@ using Llama.Context.Interfaces;
 using Llama.Context.Samplers.FrequencyAndPresence;
 using Llama.Context.Samplers.Interfaces;
 using Llama.Context.Samplers.Mirostat;
+using Llama.Context.Samplers.NewLineSampler;
 using Llama.Context.Samplers.Repetition;
 using Llama.Context.Samplers.Temperature;
 using Llama.Data;
@@ -73,6 +74,8 @@ namespace Llama
             serviceDescriptors.AddSingleton<ITokenTransformer, InvalidCharacterBlockingTransformer>();
             serviceDescriptors.AddSingleton<ITokenTransformer, NewlineEnsureTransformer>();
             //serviceDescriptors.AddSingleton<ITokenTransformer, LetterFrequencyTransformer>();
+
+            serviceDescriptors.AddTransient<ISimpleSampler, NewLineSampler>();  
 
             this._model = serviceDescriptors.BuildServiceProvider().GetRequiredService<LlamaModel>();
 

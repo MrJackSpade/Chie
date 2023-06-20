@@ -63,7 +63,7 @@ namespace Llama.Model
             this.Verbose = verbose;
             this._context = context;
 
-            context.OnContextModification += this.OnContextModification;
+            context.OnContextModification += (s, o) => this.OnContextModification?.Invoke(o);
 
             // prefix & suffix for instruct mode
             this._inputPrefix = this._context.Tokenize("\n\n### Instruction:\n\n", LlamaTokenTags.INPUT, true);
@@ -118,6 +118,8 @@ namespace Llama.Model
             LlamaTokenCollection thisCall = new();
 
             this.ProcessInputText(text);
+
+            this._evaluationQueue.Ensure();
 
             bool breakAfterEval = false;
 
@@ -249,6 +251,7 @@ namespace Llama.Model
 
                 if (this._contextSettings.AutoSave)
                 {
+                    this._context.Evaluated.Ensure();
                     this.Save();
                 }
 
@@ -287,6 +290,7 @@ namespace Llama.Model
                     this._context.Load(latest.FullName);
                     this.IsNewSession = false;
                     this._prompt = this._context.Tokenize(this._contextSettings.Prompt, LlamaTokenTags.PROMPT);
+                    this._prompt.Ensure();
                     return;
                 }
                 else
