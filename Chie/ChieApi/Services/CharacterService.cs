@@ -15,10 +15,11 @@ namespace ChieApi.Services
         private readonly ChieApiSettings _settings;
 
         private CharacterConfiguration _characterConfiguration;
-
-        public CharacterService(ChieApiSettings settings)
+        private readonly ICharacterNameFactory _characterNameFactory;
+        public CharacterService(ChieApiSettings settings, ICharacterNameFactory characterNameFactory)
         {
             this._settings = settings;
+            this._characterNameFactory = characterNameFactory;
         }
 
         public IEnumerable<string> Characters => Directory.EnumerateDirectories(ROOT_PATH).Select(d => new DirectoryInfo(d).Name);
@@ -37,7 +38,7 @@ namespace ChieApi.Services
         {
             lock (this._characterLock)
             {
-                this._characterConfiguration ??= this.Load(this._settings.DefaultModel);
+                this._characterConfiguration ??= this.Load(this._characterNameFactory.GetName());
             }
 
             this._characterConfiguration.MainPath = this._settings.LlamaMainExe;
