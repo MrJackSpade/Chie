@@ -1,0 +1,55 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.6.33712.159
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LoggingApi", "LoggingApi.csproj", "{5F3E2345-5FE1-4442-9062-170AF56CF455}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LoggingApiClient", "..\LoggingApiClient\LoggingApiClient.csproj", "{F3D146FB-3032-4B34-ADED-CB9B7DBAD4C3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Logging.Shared", "..\Logging.Shared\Logging.Shared.csproj", "{C9A07E36-AE7D-483E-B5A5-792D35D6EE34}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Loxifi.Database", "..\..\Utils\Ai.Database\Loxifi.Database.csproj", "{80AF77DC-80F6-4B35-B8B1-ED1398F0044D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Utils", "Utils", "{435C75CC-611B-4971-8EE0-D18D4813963A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ai.Utils", "..\..\Utils\Ai.Utils\Ai.Utils.csproj", "{5BB350F3-180D-4B18-A132-8878642076E2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5F3E2345-5FE1-4442-9062-170AF56CF455}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F3E2345-5FE1-4442-9062-170AF56CF455}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5F3E2345-5FE1-4442-9062-170AF56CF455}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5F3E2345-5FE1-4442-9062-170AF56CF455}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F3D146FB-3032-4B34-ADED-CB9B7DBAD4C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3D146FB-3032-4B34-ADED-CB9B7DBAD4C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3D146FB-3032-4B34-ADED-CB9B7DBAD4C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3D146FB-3032-4B34-ADED-CB9B7DBAD4C3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C9A07E36-AE7D-483E-B5A5-792D35D6EE34}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C9A07E36-AE7D-483E-B5A5-792D35D6EE34}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C9A07E36-AE7D-483E-B5A5-792D35D6EE34}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C9A07E36-AE7D-483E-B5A5-792D35D6EE34}.Release|Any CPU.Build.0 = Release|Any CPU
+		{80AF77DC-80F6-4B35-B8B1-ED1398F0044D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{80AF77DC-80F6-4B35-B8B1-ED1398F0044D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{80AF77DC-80F6-4B35-B8B1-ED1398F0044D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{80AF77DC-80F6-4B35-B8B1-ED1398F0044D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5BB350F3-180D-4B18-A132-8878642076E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5BB350F3-180D-4B18-A132-8878642076E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5BB350F3-180D-4B18-A132-8878642076E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5BB350F3-180D-4B18-A132-8878642076E2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{80AF77DC-80F6-4B35-B8B1-ED1398F0044D} = {435C75CC-611B-4971-8EE0-D18D4813963A}
+		{5BB350F3-180D-4B18-A132-8878642076E2} = {435C75CC-611B-4971-8EE0-D18D4813963A}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {097DA2E0-7950-4AC8-BA87-3A55D7C55E4B}
+	EndGlobalSection
+EndGlobal

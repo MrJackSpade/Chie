@@ -9,5 +9,10 @@ ChieApi/TempFile.png
 ChieApi/StateSaves
 BlipApi/TempFile.png
 ChieApi/Ai/*/
+Chie/ChieApi/Ai/*/
 ChieApi/Frequency.log
 *.log
+Blip/BlipApi/TempFile.png
+Chie/ChieApi/StateSaves
+Chie/ChieApi/TempFile.png
+Chie/ChieApi/tempStart.txt
