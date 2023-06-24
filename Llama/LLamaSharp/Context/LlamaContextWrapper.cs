@@ -49,7 +49,7 @@ namespace Llama.Context
 
         private int _evalPointer = 0;
 
-        public LlamaContextWrapper(SafeLLamaContextHandle handle, LlamaModelSettings modelSettings, LlamaContextSettings settings, IEnumerable<IPostResponseContextTransformer> postResponseTransforms, IEnumerable<ITokenTransformer> tokenTransformers, IEnumerable<ISimpleSampler> simpleSamplers, IFinalSampler finalSampler, IContextRoller contextRoller)
+        public LlamaContextWrapper(ITextSanitizer textSanitizer, SafeLLamaContextHandle handle, LlamaModelSettings modelSettings, LlamaContextSettings settings, IEnumerable<IPostResponseContextTransformer> postResponseTransforms, IEnumerable<ITokenTransformer> tokenTransformers, IEnumerable<ISimpleSampler> simpleSamplers, IFinalSampler finalSampler, IContextRoller contextRoller)
         {
             if (handle is null)
             {
@@ -94,7 +94,7 @@ namespace Llama.Context
             this._buffer[0] = LlamaToken.Bos;
             this._evaluated = new LlamaTokenBuffer(this.Size);
 
-            this._prompt = this.Tokenize(settings.Prompt, LlamaTokenTags.PROMPT);
+            this._prompt = this.Tokenize(textSanitizer.Sanitize(settings.Prompt), LlamaTokenTags.PROMPT);
         }
 
         protected LlamaContextWrapper()

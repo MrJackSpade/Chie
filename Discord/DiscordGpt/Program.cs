@@ -51,7 +51,14 @@ namespace DiscordGpt
 
             DiscordIntegrationService discordIntegrationService = serviceProvider.GetService<DiscordIntegrationService>();
 
-            await discordIntegrationService.Start();
+            try
+            {
+                await discordIntegrationService.Start();
+            } catch(Exception ex) 
+            {
+                Console.WriteLine(ex);
+                Console.ReadKey();
+            }
         }
     }
 }

@@ -51,7 +51,7 @@ namespace ChieApi
             builder.Services.RegisterSecret<BoredomTaskSettings>(configuration);
 
             _ = builder.Services.AddSingleton<ChatService>();
-            _ = builder.Services.AddTransient<ILogger, LoggingApiClient>();
+            _ = builder.Services.AddSingleton<ILogger, LoggingApiClient>();
 
             _ = builder.Services.AddSingleton<UserDataService>();
             _ = builder.Services.AddSingleton<BlipApiClient>();

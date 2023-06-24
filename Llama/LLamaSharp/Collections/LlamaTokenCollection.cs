@@ -89,7 +89,15 @@ namespace Llama.Collections
             return toReturn;
         }
 
-        public virtual void Append(LlamaToken token) => this._tokens.Add(token);
+        public virtual void Append(LlamaToken token)
+        {
+            if (token.Id == 30004)
+            {
+                Debugger.Break();
+            }
+
+            this._tokens.Add(token);
+        }
 
         public void AppendControl(int id) => this.Append(new LlamaToken(id, IntPtr.Zero, Llama.Constants.LlamaTokenTags.CONTROL));
 
@@ -110,11 +118,6 @@ namespace Llama.Collections
 
         public virtual void Ensure()
         {
-            if(this.Contains(30004))
-            {
-                Debugger.Break();
-            }
-
             LlamaTokenCollection[] lineCollection = this.Split(13).Select(l => l.Trim()).ToArray();
 
             for (int i = 0; i < lineCollection.Length; i++)

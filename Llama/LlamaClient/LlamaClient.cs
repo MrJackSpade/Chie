@@ -11,6 +11,7 @@ using Llama.Context.Samplers.Temperature;
 using Llama.Data;
 using Llama.Events;
 using Llama.Model;
+using Llama.Pipeline;
 using Llama.Pipeline.ContextRollers;
 using Llama.Pipeline.Interfaces;
 using Llama.Pipeline.PostResponseContextTransformers;
@@ -19,7 +20,6 @@ using Llama.Shared;
 using Llama.TokenTransformers;
 using Llama.Utilities;
 using Microsoft.Extensions.DependencyInjection;
-using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Llama
@@ -60,8 +60,16 @@ namespace Llama
             serviceDescriptors.AddTransient<IContext, LlamaContextWrapper>();
 
             serviceDescriptors.AddTransient<LlamaModel>();
-            this.RegisterTemp(serviceDescriptors, settings);
-            this.RegisterMirostat(serviceDescriptors, settings);
+
+            if (settings.MiroStat == MiroStatMode.Disabled)
+            {
+                this.RegisterTemp(serviceDescriptors, settings);
+            }
+            else
+            {
+                this.RegisterMirostat(serviceDescriptors, settings);
+            }
+
             this.RegisterRepeat(serviceDescriptors, settings);
             this.RegisterFrequency(serviceDescriptors, settings);
             this.RegisterModelSettings(serviceDescriptors, settings);
@@ -74,9 +82,11 @@ namespace Llama
             serviceDescriptors.AddSingleton<ITokenTransformer, InteractiveEosReplace>();
             serviceDescriptors.AddSingleton<ITokenTransformer, InvalidCharacterBlockingTransformer>();
             serviceDescriptors.AddSingleton<ITokenTransformer, NewlineEnsureTransformer>();
+            serviceDescriptors.AddSingleton<ITextSanitizer, ChatTextSanitizer>();
+
             //serviceDescriptors.AddSingleton<ITokenTransformer, LetterFrequencyTransformer>();
 
-            serviceDescriptors.AddTransient<ISimpleSampler, NewLineSampler>();  
+            serviceDescriptors.AddTransient<ISimpleSampler, NewLineSampler>();
 
             this._model = serviceDescriptors.BuildServiceProvider().GetRequiredService<LlamaModel>();
 
@@ -266,7 +276,7 @@ namespace Llama
         {
             FrequencyAndPresenceSamplerSettings frequencyAndPresenceSamplerSettings = new();
 
-            if(settings.RepeatPenaltyWindow.HasValue)
+            if (settings.RepeatPenaltyWindow.HasValue)
             {
                 frequencyAndPresenceSamplerSettings.RepeatTokenPenaltyWindow = settings.RepeatPenaltyWindow.Value;
             }
@@ -287,17 +297,22 @@ namespace Llama
                     mirostatSamplerSettings.Eta = settings.MiroStatEntropy.Value;
                 }
 
+                if (settings.Temp.HasValue)
+                {
+                    mirostatSamplerSettings.Temperature = settings.Temp.Value;
+                }
+
                 serviceDescriptors.AddSingleton<MirostatSamplerSettings>();
 
                 if (settings.MiroStat == MiroStatMode.MiroStat)
                 {
-                    serviceDescriptors.AddSingleton<MirostatOneSampler>();
+                    serviceDescriptors.AddSingleton<IFinalSampler, MirostatOneSampler>();
                     return;
                 }
 
                 if (settings.MiroStat == MiroStatMode.MiroStat2)
                 {
-                    serviceDescriptors.AddSingleton<MirostatTwoSampler>();
+                    serviceDescriptors.AddSingleton<IFinalSampler, MirostatTwoSampler>();
                     return;
                 }
 

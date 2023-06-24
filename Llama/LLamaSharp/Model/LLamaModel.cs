@@ -8,6 +8,7 @@ using Llama.Events;
 using Llama.Exceptions;
 using Llama.Extensions;
 using Llama.Native;
+using Llama.Pipeline.Interfaces;
 using Llama.Utilities;
 using System;
 using System.Collections.Generic;
@@ -28,17 +29,11 @@ namespace Llama.Model
 
         private readonly AutoResetEvent _inferenceGate = new(true);
 
-        private readonly LlamaTokenCollection _inputPrefix;
-
-        private readonly LlamaTokenCollection _inputSuffix;
-
-        private readonly LlamaToken _llama_token_newline;
-
-        private readonly LlamaModelSettings _modelSettings;
-
         private Thread _cleanupThread;
 
         private LlamaTokenCollection _prompt;
+
+        private readonly ITextSanitizer _textSanitizer;
 
         /// <summary>
         /// Please refer `LlamaModelSettings` to find the meanings of each arg. Be sure to have set the `n_gpu_layers`, otherwise it will
@@ -49,41 +44,22 @@ namespace Llama.Model
         /// <param name="verbose">Whether to output the detailed info.</param>
         /// <param name="encoding"></param>
         /// <exception cref="RuntimeError"></exception>
-        public unsafe LlamaModel(IContext context, LlamaModelSettings llamaModelSettings, LlamaContextSettings contextSettings, string name = "", bool verbose = false)
+        public unsafe LlamaModel(IContext context, ITextSanitizer textSanitizer, LlamaModelSettings llamaModelSettings, LlamaContextSettings contextSettings, string name = "", bool verbose = false)
         {
             if (contextSettings.Encoding == Encoding.Unicode)
             {
                 throw new ArgumentException("Unicode not supported. Did you mean UTF8?");
             }
 
+            this._textSanitizer = textSanitizer;
+
             this._contextSettings = contextSettings;
 
             this.Name = name;
-            this._modelSettings = llamaModelSettings;
             this.Verbose = verbose;
             this._context = context;
 
             context.OnContextModification += (s, o) => this.OnContextModification?.Invoke(o);
-
-            // prefix & suffix for instruct mode
-            this._inputPrefix = this._context.Tokenize("\n\n### Instruction:\n\n", LlamaTokenTags.INPUT, true);
-            this._inputSuffix = this._context.Tokenize("\n\n### Response:\n\n", LlamaTokenTags.RESPONSE);
-
-            // in instruct mode, we inject a prefix and a suffix to each input by the user
-            if (contextSettings.Instruct)
-            {
-                contextSettings.InteractiveFirst = true;
-                contextSettings.Antiprompt.Add("### Instruction:\n\n");
-            }
-
-            // enable interactive mode if reverse prompt or interactive start is specified
-            if (contextSettings.InteractiveFirst)
-            {
-                contextSettings.Interactive = true;
-            }
-
-            // determine newline token
-            this._llama_token_newline = this._context.GetToken(13, LlamaTokenTags.UNMANAGED);
 
             foreach (KeyValuePair<int, float> kvp in contextSettings.LogitBias)
             {
@@ -128,7 +104,7 @@ namespace Llama.Model
                 if (this._evaluationQueue.Count > 0)
                 {
                     this._context.Write(this._evaluationQueue);
-                    Console.Title = $"{this._context.AvailableBuffer}"; 
+                    Console.Title = $"{this._context.AvailableBuffer}";
                     this._evaluationQueue.Clear();
                 }
 
@@ -215,7 +191,7 @@ namespace Llama.Model
         /// <exception cref="ArgumentException"></exception>
         public LlamaModel WithPrompt(string prompt)
         {
-            prompt = prompt.Replace("\r\n", "\n");
+            prompt = this._textSanitizer.Sanitize(prompt);
 
             if (!prompt.StartsWith(" ") && char.IsLetter(prompt[0]))
             {
@@ -265,7 +241,7 @@ namespace Llama.Model
         {
             foreach (InputText inputText in inputTexts)
             {
-                string text = inputText.Content.Replace("\r\n", "\n");
+                string text = this._textSanitizer.Sanitize(inputText.Content);
 
                 Console.Write(text);
 
@@ -289,13 +265,8 @@ namespace Llama.Model
                     Console.WriteLine("Context found: " + latest);
                     this._context.Load(latest.FullName);
                     this.IsNewSession = false;
-                    string cleanedPrompt = this._contextSettings.Prompt;
+                    string cleanedPrompt = this._textSanitizer.Sanitize(this._contextSettings.Prompt);
 
-                    while(cleanedPrompt.Contains("\r\n"))
-                    {
-                        cleanedPrompt = cleanedPrompt.Replace("\r\n", "\n");
-                    }
-  
                     this._prompt = this._context.Tokenize(cleanedPrompt, LlamaTokenTags.PROMPT);
                     this._prompt.Ensure();
                     return;
