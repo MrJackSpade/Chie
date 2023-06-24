@@ -16,7 +16,7 @@ namespace Llama.Context.Samplers.Mirostat
         {
             float mu = this._settings.InitialMu;
             SamplingService.Temperature(sampleContext.ContextHandle, sampleContext.Candidates, this._settings.Temperature);
-            return SamplingService.TokenMirostatV2(sampleContext.ContextHandle, sampleContext.Candidates, this._settings.Tau, this._settings.Eta, ref this._mu);
+            return SamplingService.TokenMirostatV2(sampleContext.ContextHandle, sampleContext.Candidates, this._settings.Tau, this._settings.Eta, ref mu);
         }
     }
 }
