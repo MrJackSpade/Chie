@@ -1,25 +1,24 @@
-﻿using Llama.Native;
-using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Text;
+﻿using System;
 
-namespace LLama.Native
+namespace Llama.Native
 {
-    public class SafeLLamaContextHandle: SafeLLamaHandleBase
+    public class SafeLlamaContextHandle : SafeLlamaHandleBase
     {
-        protected SafeLLamaContextHandle()
+        private readonly SafeLlamaModelHandle _model;
+
+        public SafeLlamaContextHandle(IntPtr contextPtr, SafeLlamaModelHandle model)
+            : base(contextPtr)
         {
+            _model = model;
         }
 
-        public SafeLLamaContextHandle(IntPtr handle)
-            : base(handle)
+        protected SafeLlamaContextHandle()
         {
         }
 
         protected override bool ReleaseHandle()
         {
-            NativeApi.llama_free(handle);
+            NativeApi.FreeContext(handle);
             this.SetHandle(IntPtr.Zero);
             return true;
         }

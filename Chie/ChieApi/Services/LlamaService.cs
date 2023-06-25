@@ -25,11 +25,7 @@ namespace ChieApi.Services
 
         private CharacterConfiguration _characterConfiguration;
 
-        private int _characterTimeoutMs = int.MaxValue;
-
         private LlamaClient _client;
-
-        private DateTime _lastKeyStroke = DateTime.MinValue;
 
         public LlamaService(ICharacterFactory characterFactory, ILogger logger, ChatService chatService)
         {
@@ -42,10 +38,6 @@ namespace ChieApi.Services
             _ = this.SetState(AiState.Initializing);
 
             this.Initialization = Task.Run(this.Init);
-
-            this._killThread = new Thread(async () => await this.KillThread());
-
-            this._killThread.Start();
         }
 
         public AiState AiState { get; private set; }
@@ -79,41 +71,13 @@ namespace ChieApi.Services
 
         public ChatEntry[] GetResponses(string channelId, long after) => this._chatService.GetMessages(channelId, after, this.CharacterName);
 
-        public async Task KillThread()
-        {
-            do
-            {
-                await Task.Delay(1000);
-
-                if (this._client is null)
-                {
-                    continue;
-                }
-
-                try
-                {
-                    if (this.AiState == AiState.Responding && (DateTime.Now - this._lastKeyStroke).TotalMilliseconds > this._characterTimeoutMs)
-                    {
-                        this._logger.LogWarning("Timed out. Sending kill signal to return control...");
-                        this._client.Kill();
-                        this._client.Send(System.Environment.NewLine, LlamaTokenTags.INPUT, false);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    this._logger.LogError(ex.Message);
-                }
-            } while (true);
-        }
-
         public long ReturnControl(bool force, string? channelId = null)
         {
             try
             {
-
                 bool clearToProceed = force || this.TryLock();
                 bool channelAllowed = channelId == null || this.LastChannel == channelId;
-                
+
                 if (!clearToProceed || !channelAllowed)
                 {
                     return 0;
@@ -175,7 +139,6 @@ namespace ChieApi.Services
             this._logger.LogInformation("Constructing Llama Client");
             this._characterConfiguration ??= await this._characterFactory.Build();
             this.CharacterName = this._characterConfiguration.CharacterName;
-            this._characterTimeoutMs = this._characterConfiguration.Timeout;
 
             this._client = new LlamaClient(this._characterConfiguration);
             this._logger.LogDebug(System.Text.Json.JsonSerializer.Serialize(this._client.Params, new System.Text.Json.JsonSerializerOptions()
@@ -187,9 +150,9 @@ namespace ChieApi.Services
             this._client.ResponseReceived += new EventHandler<string>(async (s, e) => await this.LlamaClient_ResponseReceived(s, e));
             this._client.TokenGenerated += new EventHandler<LlameClientTokenGeneratedEventArgs>(async (s, e) => await this.LlamaClient_IsTyping(s, e));
             this._client.OnContextModification += (c) => this.LastContextModification = c;
-             this._logger.LogInformation("Connecting to client...");
+            this._logger.LogInformation("Connecting to client...");
             await this._client.Connect();
-             this._logger.LogInformation("Connected to client.");
+            this._logger.LogInformation("Connected to client.");
 
             if (this.AiState == AiState.Initializing)
             {
@@ -199,8 +162,6 @@ namespace ChieApi.Services
 
         private async Task LlamaClient_IsTyping(object? s, LlameClientTokenGeneratedEventArgs e)
         {
-            this._lastKeyStroke = DateTime.Now;
-
             if (this.AiState == AiState.Processing)
             {
                 _ = await this.SetState(AiState.Responding);

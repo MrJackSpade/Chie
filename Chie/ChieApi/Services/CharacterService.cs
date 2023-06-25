@@ -12,10 +12,12 @@ namespace ChieApi.Services
 
         private readonly object _characterLock = new();
 
+        private readonly ICharacterNameFactory _characterNameFactory;
+
         private readonly ChieApiSettings _settings;
 
         private CharacterConfiguration _characterConfiguration;
-        private readonly ICharacterNameFactory _characterNameFactory;
+
         public CharacterService(ChieApiSettings settings, ICharacterNameFactory characterNameFactory)
         {
             this._settings = settings;

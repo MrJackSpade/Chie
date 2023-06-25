@@ -7,14 +7,14 @@ namespace Llama.Native.Data
     [StructLayout(LayoutKind.Sequential)]
     public struct LlamaTokenDataArray
     {
-        public Memory<LLamaTokenData> data;
+        public Memory<LlamaTokenData> data;
 
         public ulong size;
 
         [MarshalAs(UnmanagedType.I1)]
         public bool sorted;
 
-        public LlamaTokenDataArray(LLamaTokenData[] data, ulong size, bool sorted)
+        public LlamaTokenDataArray(LlamaTokenData[] data, ulong size, bool sorted)
         {
             this.data = data;
             this.size = size;
@@ -23,11 +23,11 @@ namespace Llama.Native.Data
 
         public LlamaTokenDataArray(Span<float> logits)
         {
-            List<LLamaTokenData> candidates = new(logits.Length);
+            List<LlamaTokenData> candidates = new(logits.Length);
 
             for (int token_id = 0; token_id < logits.Length; token_id++)
             {
-                candidates.Add(new LLamaTokenData(token_id, logits[token_id], 0.0f));
+                candidates.Add(new LlamaTokenData(token_id, logits[token_id], 0.0f));
             }
 
             this.data = candidates.ToArray();

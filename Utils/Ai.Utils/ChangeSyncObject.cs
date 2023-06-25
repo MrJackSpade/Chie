@@ -48,7 +48,7 @@
         {
             this._lastSet = value;
 
-            if (this._invokeEnabled)
+            if (this._invokeEnabled || force)
             {
                 await this.Flush(force);
             }

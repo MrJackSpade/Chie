@@ -1,10 +1,13 @@
 ﻿using Llama.Collections;
+using Llama.Collections.Interfaces;
 using Llama.Constants;
+using Llama.Context;
 using Llama.Context.Extensions;
 using Llama.Context.Interfaces;
 using Llama.Data;
 using Llama.Extensions;
 using Llama.Native;
+using Llama.Pipeline.Interfaces;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -12,24 +15,30 @@ namespace Llama.Pipeline.ContextRollers
 {
     public class ChatContextRoller : IContextRoller
     {
+        private readonly IBlockProcessor _summarizer;
+
+        private readonly int _blocks;
+        public ChatContextRoller(IBlockProcessor summarizer, LlamaContextSettings contextSettings)
+        {
+            this._summarizer = summarizer;
+            this._blocks = contextSettings.Blocks;
+        }
+
         public LlamaTokenCollection GenerateContext(IContext context, LlamaTokenCollection originalPrompt, int keepTokens)
         {
-            LlamaTokenCollection existingContext = new(context.Buffer);
+            LlamaToken splitNewLine = context.GetToken(13, LlamaTokenTags.UNMANAGED);
+
+            List<LlamaTokenCollection> chatBlocks = this._summarizer.Finalize().ToList();
 
             LlamaTokenCollection toReturn = new();
 
-            LlamaToken splitNewLine = context.GetToken(13, LlamaTokenTags.UNMANAGED);
+            List<LlamaTokenCollection> new_history = chatBlocks.ToList();
 
-            //Take half the context after the prompt
-            int n_take = (int)((context.Size - keepTokens) * 0.75f);
-
-            LlamaTokenCollection new_history = existingContext.From(n_take, splitNewLine);
-
-            toReturn.AppendControl(NativeApi.llama_token_bos());
+            toReturn.AppendControl(NativeApi.TokenBos());
 
             List<LlamaTokenCollection> keepLines = new();
 
-            foreach (LlamaTokenCollection line in new_history.Split(splitNewLine.Id))
+            foreach (LlamaTokenCollection line in new_history.SelectMany(l => l.Split(splitNewLine.Id)))
             {
                 if (line.Count == 0)
                 {
@@ -49,7 +58,7 @@ namespace Llama.Pipeline.ContextRollers
             if (keepLines.Count < lineBuffer)
             {
                 toReturn.Append(originalPrompt);
-                toReturn.Append(existingContext);
+                toReturn.Append(new LlamaTokenCollection(context.Buffer));
             }
             else
             {
@@ -78,6 +87,8 @@ namespace Llama.Pipeline.ContextRollers
 
             toReturn.Ensure();
 
+            _summarizer.Process(toReturn);
+
             return toReturn;
         }
 
@@ -96,5 +107,7 @@ namespace Llama.Pipeline.ContextRollers
             LlamaToken lastToken = tokens[^1];
             tokens.Append(context.GetToken(13, lastToken.Tag));
         }
+
+        public void TokensEvaluated(IContext context, LlamaTokenCollection evaluated) => _summarizer.Process(evaluated);
     }
 }

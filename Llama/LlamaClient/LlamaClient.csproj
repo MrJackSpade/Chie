@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Llama.Shared\Llama.Shared.csproj" />
-    <ProjectReference Include="..\LLamaSharp\LLamaSharp.csproj" />
+    <ProjectReference Include="..\LlamaSharp\LlamaSharp.csproj" />
   </ItemGroup>
 
 </Project>

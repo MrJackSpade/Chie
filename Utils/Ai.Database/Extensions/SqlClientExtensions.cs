@@ -7,6 +7,24 @@ namespace Loxifi.Database.Extensions
     {
         private static readonly SqlGenerator _sqlGenerator = new();
 
+        public static long Insert<T>(this SqlConnection connection, T toAdd) where T : class
+        {
+            string parsedQuery = _sqlGenerator.GenerateInsert(toAdd);
+
+            using SqlCommand cmd = new(parsedQuery, connection);
+
+            connection.Open();
+
+            int returnValue = (int)cmd.ExecuteScalar();
+
+            if (connection.State == System.Data.ConnectionState.Open)
+            {
+                connection.Close();
+            }
+
+            return returnValue;
+        }
+
         public static IEnumerable<T> Query<T>(this SqlConnection connection, string query) where T : new()
         {
             if (connection.State != System.Data.ConnectionState.Open)
@@ -15,7 +33,7 @@ namespace Loxifi.Database.Extensions
             }
 
             using SqlCommand command = new(query, connection);
-            
+
             using SqlDataReader reader = command.ExecuteReader();
 
             // Get column names from reader
@@ -45,24 +63,6 @@ namespace Loxifi.Database.Extensions
 
                 yield return item;
             }
-        }
-
-        public static long Insert<T>(this SqlConnection connection, T toAdd) where T : class
-        {
-            string parsedQuery = _sqlGenerator.GenerateInsert(toAdd);
-
-            using SqlCommand cmd = new(parsedQuery, connection);
-
-            connection.Open();
-
-            int returnValue = (int)cmd.ExecuteScalar();
-
-            if (connection.State == System.Data.ConnectionState.Open)
-            {
-                connection.Close();
-            }
-
-            return returnValue;
         }
     }
 }

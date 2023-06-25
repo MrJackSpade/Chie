@@ -21,26 +21,6 @@ namespace ChieApi.Pipelines
             this._characterFactory = characterFactory;
         }
 
-        public bool TryGetChatEntry(ChatEntry chatEntry, UserData userData, out ChatEntry ce)
-        {
-            if (userData == null)
-            {
-                ce = null;
-                return false;
-            }
-
-            ce = new ChatEntry()
-            {
-                SourceUser = _characterName,
-                Content = userData.UserPrompt,
-                IsVisible = false,
-                SourceChannel = chatEntry.SourceChannel,
-                Tag = LlamaTokenTags.TEMPORARY
-            };
-
-            return true;
-        }
-
         public async IAsyncEnumerable<ChatEntry> Process(ChatEntry chatEntry)
         {
             if (string.IsNullOrWhiteSpace(this._characterName))
@@ -55,9 +35,9 @@ namespace ChieApi.Pipelines
             {
                 UserData? userData = this._userDataService.GetUserData(chatEntry.SourceUser);
 
-                if(userData != null)
+                if (userData != null)
                 {
-                    if(userData.Blocked)
+                    if (userData.Blocked)
                     {
                         yield break;
                     }
@@ -77,6 +57,26 @@ namespace ChieApi.Pipelines
                     yield return ce2;
                 }
             }
+        }
+
+        public bool TryGetChatEntry(ChatEntry chatEntry, UserData userData, out ChatEntry ce)
+        {
+            if (userData == null)
+            {
+                ce = null;
+                return false;
+            }
+
+            ce = new ChatEntry()
+            {
+                SourceUser = _characterName,
+                Content = userData.UserPrompt,
+                IsVisible = false,
+                SourceChannel = chatEntry.SourceChannel,
+                Tag = LlamaTokenTags.TEMPORARY
+            };
+
+            return true;
         }
     }
 }

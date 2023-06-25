@@ -13,7 +13,7 @@ namespace Llama.Context.Samplers.Temperature
         public GreedySampler(TemperatureSamplerSettings temperatureSamplerSettings)
         {
             this._settings = temperatureSamplerSettings;
-            this._newLineId = NativeApi.llama_token_nl();
+            this._newLineId = NativeApi.TokenNl();
         }
 
         public int SampleNext(SampleContext sampleContext)

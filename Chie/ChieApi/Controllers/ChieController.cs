@@ -13,9 +13,9 @@ namespace ChieApi.Controllers
     [Route("[controller]")]
     public class ChieController : ControllerBase, IChieClient
     {
-        private readonly ILogger _logger;
-
         private readonly LlamaService _llamaService;
+
+        private readonly ILogger _logger;
 
         private readonly List<IRequestPipeline> _pipelines;
 
@@ -70,7 +70,7 @@ namespace ChieApi.Controllers
 
             List<ChatEntry> processedEntries = await this._pipelines.Process(chatEntries);
 
-            if(processedEntries.Count == 0) 
+            if (processedEntries.Count == 0)
             {
                 return new MessageSendResponse()
                 {

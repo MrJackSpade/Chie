@@ -18,7 +18,7 @@ namespace Llama.Data
             this.Value = Utils.PtrToStringUTF8(value);
         }
 
-        public static LlamaToken Bos => new(NativeApi.llama_token_bos(), IntPtr.Zero, LlamaTokenTags.CONTROL);
+        public static LlamaToken Bos => new(NativeApi.TokenBos(), IntPtr.Zero, LlamaTokenTags.CONTROL);
 
         public static LlamaToken Null => new(0, IntPtr.Zero, LlamaTokenTags.NULL);
 

@@ -3,7 +3,7 @@
 namespace Llama.Native.Data
 {
     [StructLayout(LayoutKind.Sequential)]
-    public struct LLamaTokenData
+    public struct LlamaTokenData
     {
         /// <summary>
         /// token id
@@ -20,7 +20,7 @@ namespace Llama.Native.Data
         /// </summary>
         public float p;
 
-        public LLamaTokenData(int id, float logit, float p)
+        public LlamaTokenData(int id, float logit, float p)
         {
             this.id = id;
             this.logit = logit;

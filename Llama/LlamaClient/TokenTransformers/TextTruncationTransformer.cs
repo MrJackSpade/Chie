@@ -10,31 +10,20 @@ namespace Llama.TokenTransformers
 {
     public class TextTruncationTransformer : ITokenTransformer
     {
-        private readonly int _max;
-        private readonly int _min;
         private readonly string _endChars;
+
+        private readonly int _max;
+
+        private readonly int _min;
+
+        private readonly Random _random = new();
+
         public TextTruncationTransformer(int max, int min, string endChars)
         {
             this._min = min;
             this._max = max;
             this._endChars = endChars;
         }
-
-        private bool GoodEndChar(string toTest)
-        {
-            string t = toTest.Trim();
-
-            foreach (char c in this._endChars)
-            {
-                if (t.EndsWith(c))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-        private readonly Random _random = new();
 
         public IEnumerable<LlamaToken> TransformToken(LlamaContextSettings settings, IContext context, IReadOnlyLlamaTokenCollection thisCall, IEnumerable<LlamaToken> selectedTokens)
         {
@@ -66,6 +55,21 @@ namespace Llama.TokenTransformers
             }
 
             yield return context.GetToken(13, LlamaTokenTags.RESPONSE);
+        }
+
+        private bool GoodEndChar(string toTest)
+        {
+            string t = toTest.Trim();
+
+            foreach (char c in this._endChars)
+            {
+                if (t.EndsWith(c))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

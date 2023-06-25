@@ -89,7 +89,7 @@ namespace Loxifi.Database
                     continue;
                 }
 
-                if(property.GetCustomAttribute<NotMappedAttribute>() != null)
+                if (property.GetCustomAttribute<NotMappedAttribute>() != null)
                 {
                     continue;
                 }

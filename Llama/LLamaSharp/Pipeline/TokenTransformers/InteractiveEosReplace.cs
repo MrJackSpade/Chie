@@ -17,7 +17,7 @@ namespace Llama.Pipeline.TokenTransformers
         {
             foreach (LlamaToken selectedToken in selectedTokens)
             {
-                bool isEos = selectedToken.Id == NativeApi.llama_token_eos();
+                bool isEos = selectedToken.Id == NativeApi.TokenEos();
 
                 // replace end of text token with newline token when in interactive mode
                 if (isEos && settings.Interactive && !settings.Instruct)

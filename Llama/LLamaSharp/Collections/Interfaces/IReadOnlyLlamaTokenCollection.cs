@@ -13,10 +13,8 @@ namespace Llama.Collections.Interfaces
 
         LlamaToken this[int index] { get; }
 
-        LlamaTokenCollection From(int startIndex, LlamaToken startToken);
-
-        LlamaTokenCollection Replace(LlamaTokenCollection toFind, LlamaTokenCollection toReplace);
-        LlamaTokenCollection Trim(int id = 0);
         void Ensure();
+
+        LlamaTokenCollection Trim(int id = 0);
     }
 }

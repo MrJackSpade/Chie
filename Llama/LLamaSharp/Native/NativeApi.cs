@@ -1,6 +1,5 @@
 ﻿using Llama.Exceptions;
 using Llama.Native.Data;
-using LLama.Native;
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -15,18 +14,18 @@ namespace Llama.Native
         {
             try
             {
-                llama_empty_call();
+                EmptyCall();
             }
             catch (DllNotFoundException)
             {
                 throw new RuntimeError("The native library cannot be found. It could be one of the following reasons: \n" +
-                    "1. No LLamaSharp backend was installed. Please search LLamaSharp.Backend and install one of them. \n" +
+                    "1. No LlamaSharp backend was installed. Please search LlamaSharp.Backend and install one of them. \n" +
                     "2. You are using a device with only CPU but installed cuda backend. Please install cpu backend instead. \n" +
                     "3. The backend is not compatible with your system cuda environment. Please check and fix it. If the environment is " +
-                    "expected not to be changed, then consider build llama.cpp from source or submit an issue to LLamaSharp.");
+                    "expected not to be changed, then consider build llama.cpp from source or submit an issue to LlamaSharp.");
             }
 
-            NativeApi.llama_init_backend();
+            InitBackend();
         }
 
         /// <summary>
@@ -41,11 +40,11 @@ namespace Llama.Native
         /// <param name="path_base_model"></param>
         /// <param name="n_threads"></param>
         /// <returns>Returns 0 on success</returns>
-        [DllImport(LIBRARY_NAME)]
-        public static extern int llama_apply_lora_from_file(SafeLLamaContextHandle ctx, string path_lora, string path_base_model, int n_threads);
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_apply_lora_from_file")]
+        public static extern int ApplyLoraFromFile(SafeLlamaContextHandle ctx, string path_lora, string path_base_model, int n_threads);
 
-        [DllImport(LIBRARY_NAME)]
-        public static extern LlamaContextParams llama_context_default_params();
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_context_default_params")]
+        public static extern LlamaContextParams ContextDefaultParams();
 
         /// <summary>
         /// Copies the state to the specified destination address.
@@ -55,11 +54,11 @@ namespace Llama.Native
         /// <param name="ctx"></param>
         /// <param name="dest"></param>
         /// <returns></returns>
-        [DllImport(LIBRARY_NAME)]
-        public static extern ulong llama_copy_state_data(SafeLLamaContextHandle ctx, byte[] dest);
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_copy_state_data")]
+        public static extern ulong CopyStateData(SafeLlamaContextHandle ctx, byte[] dest);
 
         [DllImport(LIBRARY_NAME, EntryPoint = "llama_mmap_supported")]
-        public static extern bool llama_empty_call();
+        public static extern bool EmptyCall();
 
         /// <summary>
         /// Run the llama inference to obtain the logits and probabilities for the next token.
@@ -70,15 +69,22 @@ namespace Llama.Native
         /// <param name="n_past">The number of tokens to use from previous eval calls</param>
         /// <param name="n_threads"></param>
         /// <returns>Returns 0 on success</returns>
-        [DllImport(LIBRARY_NAME)]
-        public static extern int llama_eval(SafeLLamaContextHandle ctx, int[] tokens, int n_tokens, int n_past, int n_threads);
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_eval")]
+        public static extern int Eval(SafeLlamaContextHandle ctx, int[] tokens, int n_tokens, int n_past, int n_threads);
 
         /// <summary>
         /// Frees all allocated memory
         /// </summary>
         /// <param name="ctx"></param>
-        [DllImport(LIBRARY_NAME)]
-        public static extern void llama_free(IntPtr ctx);
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_free")]
+        public static extern void FreeContext(IntPtr ctx);
+
+        /// <summary>
+        /// Frees all allocated memory
+        /// </summary>
+        /// <param name="ctx"></param>
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_free_model")]
+        public static extern void FreeModel(IntPtr ctx);
 
         /// <summary>
         /// Get the embeddings for the input
@@ -86,16 +92,16 @@ namespace Llama.Native
         /// </summary>
         /// <param name="ctx"></param>
         /// <returns></returns>
-        [DllImport(LIBRARY_NAME)]
-        public static extern float* llama_get_embeddings(SafeLLamaContextHandle ctx);
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_get_embeddings")]
+        public static extern float* GetEmbeddings(SafeLlamaContextHandle ctx);
 
         /// <summary>
         /// Returns the number of tokens in the KV cache
         /// </summary>
         /// <param name="ctx"></param>
         /// <returns></returns>
-        [DllImport(LIBRARY_NAME)]
-        public static extern int llama_get_kv_cache_token_count(SafeLLamaContextHandle ctx);
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_get_kv_cache_token_count")]
+        public static extern int GetKvCacheTokenCount(SafeLlamaContextHandle ctx);
 
         /// <summary>
         /// Token logits obtained from the last call to llama_eval()
@@ -106,8 +112,8 @@ namespace Llama.Native
         /// </summary>
         /// <param name="ctx"></param>
         /// <returns></returns>
-        [DllImport(LIBRARY_NAME)]
-        public static extern float* llama_get_logits(SafeLLamaContextHandle ctx);
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_get_logits")]
+        public static extern float* GetLogits(SafeLlamaContextHandle ctx);
 
         /// <summary>
         /// Returns the maximum size in bytes of the state (rng, logits, embedding
@@ -115,16 +121,16 @@ namespace Llama.Native
         /// </summary>
         /// <param name="ctx"></param>
         /// <returns></returns>
-        [DllImport(LIBRARY_NAME)]
-        public static extern ulong llama_get_state_size(SafeLLamaContextHandle ctx);
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_get_state_size")]
+        public static extern ulong GetStateSize(SafeLlamaContextHandle ctx);
 
         /// <summary>
         /// not great API - very likely to change.
         /// Initialize the llama + ggml backend
         /// Call once at the start of the program
         /// </summary>
-        [DllImport(LIBRARY_NAME)]
-        public static extern void llama_init_backend();
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_init_backend")]
+        public static extern void InitBackend();
 
         /// <summary>
         /// Various functions for loading a ggml llama model.
@@ -134,95 +140,8 @@ namespace Llama.Native
         /// <param name="path_model"></param>
         /// <param name="params_"></param>
         /// <returns></returns>
-        [DllImport(LIBRARY_NAME)]
-        public static extern IntPtr llama_init_from_file(string path_model, LlamaContextParams params_);
-
-        /// <summary>
-        /// Load session file
-        /// </summary>
-        /// <param name="ctx"></param>
-        /// <param name="path_session"></param>
-        /// <param name="tokens_out"></param>
-        /// <param name="n_token_capacity"></param>
-        /// <param name="n_token_count_out"></param>
-        /// <returns></returns>
-        [DllImport(LIBRARY_NAME)]
-        public static extern bool llama_load_session_file(SafeLLamaContextHandle ctx, string path_session, int[] tokens_out, ulong n_token_capacity, ulong* n_token_count_out);
-
-        [DllImport(LIBRARY_NAME)]
-        public static extern bool llama_mlock_supported();
-
-        [DllImport(LIBRARY_NAME)]
-        public static extern bool llama_mmap_supported();
-
-        [DllImport(LIBRARY_NAME)]
-        public static extern int llama_n_ctx(SafeLLamaContextHandle ctx);
-
-        [DllImport(LIBRARY_NAME)]
-        public static extern int llama_n_embd(SafeLLamaContextHandle ctx);
-
-        [DllImport(LIBRARY_NAME)]
-        public static extern int llama_n_vocab(SafeLLamaContextHandle ctx);
-
-        /// <summary>
-        /// Print system information
-        /// </summary>
-        /// <returns></returns>
-        [DllImport(LIBRARY_NAME)]
-        public static extern IntPtr llama_print_system_info();
-
-        [DllImport(LIBRARY_NAME)]
-        public static extern void llama_print_timings(SafeLLamaContextHandle ctx);
-
-        [DllImport(LIBRARY_NAME)]
-        public static extern void llama_reset_timings(SafeLLamaContextHandle ctx);
-
-        /// <summary>
-        /// Save session file
-        /// </summary>
-        /// <param name="ctx"></param>
-        /// <param name="path_session"></param>
-        /// <param name="tokens"></param>
-        /// <param name="n_token_count"></param>
-        /// <returns></returns>
-        [DllImport(LIBRARY_NAME)]
-        public static extern bool llama_save_session_file(SafeLLamaContextHandle ctx, string path_session, int[] tokens, ulong n_token_count);
-
-        /// <summary>
-        /// Sets the current rng seed.
-        /// </summary>
-        /// <param name="ctx"></param>
-        /// <param name="seed"></param>
-        [DllImport(LIBRARY_NAME)]
-        public static extern void llama_set_rng_seed(SafeLLamaContextHandle ctx, int seed);
-
-        /// <summary>
-        /// Set the state reading from the specified address
-        /// Returns the number of bytes read
-        /// </summary>
-        /// <param name="ctx"></param>
-        /// <param name="src"></param>
-        /// <returns></returns>
-        [DllImport(LIBRARY_NAME)]
-        public static extern ulong llama_set_state_data(SafeLLamaContextHandle ctx, byte[] src);
-
-        [DllImport(LIBRARY_NAME)]
-        public static extern int llama_token_bos();
-
-        [DllImport(LIBRARY_NAME)]
-        public static extern int llama_token_eos();
-
-        [DllImport(LIBRARY_NAME)]
-        public static extern int llama_token_nl();
-
-        /// <summary>
-        /// Token Id -> String. Uses the vocabulary in the provided context
-        /// </summary>
-        /// <param name="ctx"></param>
-        /// <param name="token"></param>
-        /// <returns>Pointer to a string.</returns>
-        [DllImport(LIBRARY_NAME)]
-        public static extern IntPtr llama_token_to_str(SafeLLamaContextHandle ctx, int token);
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_init_from_file")]
+        public static extern IntPtr InitFromFile(string path_model, LlamaContextParams params_);
 
         /// <summary>
         /// Convert the provided text into tokens.
@@ -236,27 +155,128 @@ namespace Llama.Native
         /// <param name="n_max_tokens"></param>
         /// <param name="add_bos"></param>
         /// <returns></returns>
-        public static int llama_tokenize(SafeLLamaContextHandle ctx, string text, Encoding encoding, int[] tokens, int n_max_tokens, bool add_bos)
+        public static int llamaTokenize(SafeLlamaContextHandle ctx, string text, Encoding encoding, int[] tokens, int n_max_tokens, bool add_bos)
         {
             byte[] bytes = encoding.GetBytes(text);
             sbyte[] data = new sbyte[bytes.Length];
             for (int i = 0; i < bytes.Length; i++)
             {
                 data[i] = (sbyte)bytes[i];
-                //if (bytes[i] < 128)
-                //{
-                //    data[i] = (sbyte)bytes[i];
-                //}
-                //else
-                //{
-                //    data[i] = (sbyte)(~((sbyte)(~bytes[i] + 1)) + 1);
-                //}
             }
 
-            return llama_tokenize_native(ctx, data, tokens, n_max_tokens, add_bos);
+            return TokenizeNative(ctx, data, tokens, n_max_tokens, add_bos);
         }
 
+        /// <summary>
+        /// Various functions for loading a ggml llama model.
+        /// Allocate (almost) all memory needed for the model.
+        /// Return NULL on failure
+        /// </summary>
+        /// <param name="path_model"></param>
+        /// <param name="params_"></param>
+        /// <returns></returns>
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_load_model_from_file")]
+        public static extern IntPtr LoadModelFromFile(string path_model, LlamaContextParams params_);
+
+        /// <summary>
+        /// Load session file
+        /// </summary>
+        /// <param name="ctx"></param>
+        /// <param name="path_session"></param>
+        /// <param name="tokens_out"></param>
+        /// <param name="n_token_capacity"></param>
+        /// <param name="n_token_count_out"></param>
+        /// <returns></returns>
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_load_session_file")]
+        public static extern bool LoadSessionFile(SafeLlamaContextHandle ctx, string path_session, int[] tokens_out, ulong n_token_capacity, ulong* n_token_count_out);
+
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_mlock_supported")]
+        public static extern bool MlockSupported();
+
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_mmap_supported")]
+        public static extern bool MmapSupported();
+
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_n_ctx")]
+        public static extern int NCtx(SafeLlamaContextHandle ctx);
+
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_n_embd")]
+        public static extern int NEmbd(SafeLlamaContextHandle ctx);
+
+        /// <summary>
+        /// Various functions for loading a ggml llama model.
+        /// Allocate (almost) all memory needed for the model.
+        /// Return NULL on failure
+        /// </summary>
+        /// <param name="path_model"></param>
+        /// <param name="params_"></param>
+        /// <returns></returns>
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_new_context_with_model")]
+        public static extern IntPtr NewContextWithModel(SafeLlamaModelHandle mdl, LlamaContextParams params_);
+
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_n_vocab")]
+        public static extern int NVocab(SafeLlamaContextHandle ctx);
+
+        /// <summary>
+        /// Print system information
+        /// </summary>
+        /// <returns></returns>
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_print_system_info")]
+        public static extern IntPtr PrintSystemInfo();
+
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_print_timings")]
+        public static extern void PrintTimings(SafeLlamaContextHandle ctx);
+
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_reset_timings")]
+        public static extern void ResetTimings(SafeLlamaContextHandle ctx);
+
+        /// <summary>
+        /// Save session file
+        /// </summary>
+        /// <param name="ctx"></param>
+        /// <param name="path_session"></param>
+        /// <param name="tokens"></param>
+        /// <param name="n_token_count"></param>
+        /// <returns></returns>
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_save_session_file")]
+        public static extern bool SaveSessionFile(SafeLlamaContextHandle ctx, string path_session, int[] tokens, ulong n_token_count);
+
+        /// <summary>
+        /// Sets the current rng seed.
+        /// </summary>
+        /// <param name="ctx"></param>
+        /// <param name="seed"></param>
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_set_rng_seed")]
+        public static extern void SetRngSeed(SafeLlamaContextHandle ctx, int seed);
+
+        /// <summary>
+        /// Set the state reading from the specified address
+        /// Returns the number of bytes read
+        /// </summary>
+        /// <param name="ctx"></param>
+        /// <param name="src"></param>
+        /// <returns></returns>
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_set_state_data")]
+        public static extern ulong SetStateData(SafeLlamaContextHandle ctx, byte[] src);
+
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_token_bos")]
+        public static extern int TokenBos();
+
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_token_eos")]
+        public static extern int TokenEos();
+
         [DllImport(LIBRARY_NAME, EntryPoint = "llama_tokenize")]
-        public static extern int llama_tokenize_native(SafeLLamaContextHandle ctx, sbyte[] text, int[] tokens, int n_max_tokens, bool add_bos);
+        public static extern int TokenizeNative(SafeLlamaContextHandle ctx, sbyte[] text, int[] tokens, int n_max_tokens, bool add_bos);
+
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_token_nl")]
+        public static extern int TokenNl();
+
+        /// <summary>
+        /// Token Id -> String. Uses the vocabulary in the provided context
+        /// </summary>
+        /// <param name="ctx"></param>
+        /// <param name="token"></param>
+        /// <returns>Pointer to a string.</returns>
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_token_to_str")]
+        public static extern IntPtr TokenToStr(SafeLlamaContextHandle ctx, int token);
     }
 }

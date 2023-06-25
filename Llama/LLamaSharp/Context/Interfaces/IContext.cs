@@ -1,7 +1,7 @@
 ﻿using Llama.Collections.Interfaces;
 using Llama.Data;
 using Llama.Events;
-using LLama.Native;
+using Llama.Native;
 using System;
 using System.Text;
 
@@ -19,7 +19,7 @@ namespace Llama.Context.Interfaces
 
         public IReadOnlyLlamaTokenCollection Evaluated { get; }
 
-        SafeLLamaContextHandle Handle { get; }
+        SafeLlamaContextHandle Handle { get; }
 
         int Size { get; }
 

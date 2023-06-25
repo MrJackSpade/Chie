@@ -24,7 +24,7 @@ namespace Llama.Utilities
                     $"to perform quantization.");
             }
 
-            return NativeApi.llama_model_quantize(srcFileName, dstFilename, ftype, nthread) == 0;
+            return NativeApi.ModelQuantize(srcFileName, dstFilename, ftype, nthread) == 0;
         }
 
         /// <summary>

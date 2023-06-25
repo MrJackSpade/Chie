@@ -1,13 +1,11 @@
 ﻿using Llama.Collections;
 using Llama.Constants;
-using Llama.Context;
 using Llama.Context.Extensions;
 using Llama.Context.Interfaces;
 using Llama.Data;
 using Llama.Events;
 using Llama.Exceptions;
 using Llama.Extensions;
-using Llama.Native;
 using Llama.Pipeline.Interfaces;
 using Llama.Utilities;
 using System;
@@ -17,9 +15,9 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace Llama.Model
+namespace Llama.Context
 {
-    public class LlamaModel : IDisposable
+    public class ContextEvaluator : IDisposable
     {
         private readonly IContext _context;
 
@@ -29,11 +27,11 @@ namespace Llama.Model
 
         private readonly AutoResetEvent _inferenceGate = new(true);
 
+        private readonly ITextSanitizer _textSanitizer;
+
         private Thread _cleanupThread;
 
         private LlamaTokenCollection _prompt;
-
-        private readonly ITextSanitizer _textSanitizer;
 
         /// <summary>
         /// Please refer `LlamaModelSettings` to find the meanings of each arg. Be sure to have set the `n_gpu_layers`, otherwise it will
@@ -44,7 +42,7 @@ namespace Llama.Model
         /// <param name="verbose">Whether to output the detailed info.</param>
         /// <param name="encoding"></param>
         /// <exception cref="RuntimeError"></exception>
-        public unsafe LlamaModel(IContext context, ITextSanitizer textSanitizer, LlamaModelSettings llamaModelSettings, LlamaContextSettings contextSettings, string name = "", bool verbose = false)
+        public unsafe ContextEvaluator(IContext context, ITextSanitizer textSanitizer, LlamaContextSettings contextSettings, string name = "", bool verbose = false)
         {
             if (contextSettings.Encoding == Encoding.Unicode)
             {
@@ -59,80 +57,33 @@ namespace Llama.Model
             this.Verbose = verbose;
             this._context = context;
 
-            context.OnContextModification += (s, o) => this.OnContextModification?.Invoke(o);
-
-            foreach (KeyValuePair<int, float> kvp in contextSettings.LogitBias)
-            {
-                string toLog = $"Logit Bias: {Utils.PtrToStringUTF8(NativeApi.llama_token_to_str(this._context.Handle, kvp.Key))} -> {kvp.Value}";
-                LlamaLogger.Default.Info(toLog);
-            }
+            context.OnContextModification += (s, o) => this.OnContextModification?.Invoke(this, o);
 
             this.TryLoad();
         }
+
+        public event EventHandler<ContextModificationEventArgs> OnContextModification;
 
         public bool IsNewSession { get; private set; } = true;
 
         public string Name { get; set; }
 
-        public Action<ContextModificationEventArgs> OnContextModification { get; set; }
-
         public bool Verbose { get; set; }
 
         public IEnumerable<LlamaToken> Call(params string[] inputText) => this.Call(inputText.Select(t => new InputText(t)).ToArray());
 
-        /// <summary>
-        /// Call the model to run inference.
-        /// </summary>
-        /// <param name="text"></param>
-        /// <param name="encoding"></param>
-        /// <returns></returns>
-        /// <exception cref="RuntimeError"></exception>
         public IEnumerable<LlamaToken> Call(params InputText[] text)
         {
             this._inferenceGate.WaitOne();
-
-            LlamaTokenCollection thisCall = new();
-
             this.ProcessInputText(text);
+            return this.Call();
+        }
 
-            this._evaluationQueue.Ensure();
-
-            bool breakAfterEval = false;
-
-            do
-            {
-                if (this._evaluationQueue.Count > 0)
-                {
-                    this._context.Write(this._evaluationQueue);
-                    Console.Title = $"{this._context.AvailableBuffer}";
-                    this._evaluationQueue.Clear();
-                }
-
-                this._context.Evaluate();
-
-                if (breakAfterEval)
-                {
-                    this.Cleanup();
-                    yield break;
-                }
-
-                if (this._evaluationQueue.Count == 0)
-                {
-                    SampleResult sample = this._context.SampleNext(thisCall);
-
-                    this._evaluationQueue.Append(sample.Tokens);
-                    thisCall.Append(sample.Tokens);
-
-                    Console.Write(sample.Tokens.ToString());
-
-                    foreach (LlamaToken token in sample.Tokens)
-                    {
-                        yield return token;
-                    }
-
-                    breakAfterEval = sample.IsFinal;
-                }
-            } while (true);
+        public IEnumerable<LlamaToken> Call(LlamaTokenCollection text)
+        {
+            this._inferenceGate.WaitOne();
+            this._evaluationQueue.Append(text);
+            return this.Call();
         }
 
         public void Dispose() => this._context.Dispose();
@@ -163,34 +114,19 @@ namespace Llama.Model
         public void Save(string fileName) => this._context.Save(fileName);
 
         /// <summary>
-        /// Tokenize a string.
-        /// </summary>
-        /// <param name="text">The utf-8 encoded string to tokenize.</param>
-        /// <returns>A list of tokens.</returns>
-        /// <exception cref="RuntimeError">If the tokenization failed.</exception>
-        public LlamaTokenCollection Tokenize(string text, string tag = null) => this._context.Tokenize(text, tag);
-
-        public bool TryGetLatest(out FileInfo? latest)
-        {
-            if (!Directory.Exists(this._contextSettings.SavePath))
-            {
-                latest = null;
-                return false;
-            }
-
-            latest = Directory.EnumerateFiles(this._contextSettings.SavePath, this._contextSettings.RootSaveName + ".*").Select(f => new FileInfo(f)).OrderByDescending(f => f.LastWriteTime).FirstOrDefault();
-            return latest != null;
-        }
-
-        /// <summary>
         /// Apply a prompt to the model.
         /// </summary>
         /// <param name="prompt"></param>
         /// <param name="encoding"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentException"></exception>
-        public LlamaModel WithPrompt(string prompt)
+        public void SetPrompt(string prompt)
         {
+            if(string.IsNullOrEmpty(prompt))
+            {
+                return;
+            }
+
             prompt = this._textSanitizer.Sanitize(prompt);
 
             if (!prompt.StartsWith(" ") && char.IsLetter(prompt[0]))
@@ -206,13 +142,79 @@ namespace Llama.Model
             {
                 throw new ArgumentException($"prompt is too long ({this._evaluationQueue.Count} tokens, max {this._context.Size - 4})");
             }
+        }
 
-            if (this._evaluationQueue.Count > this._context.Size - 4)
+        public bool TryGetLatest(out FileInfo? latest)
+        {
+            if (!Directory.Exists(this._contextSettings.SavePath))
             {
-                throw new ArgumentException($"prompt is too long ({this._evaluationQueue.Count} tokens, max {this._context.Size - 4})");
+                latest = null;
+                return false;
             }
 
-            return this;
+            latest = Directory.EnumerateFiles(this._contextSettings.SavePath, this._contextSettings.RootSaveName + ".*").Select(f => new FileInfo(f)).OrderByDescending(f => f.LastWriteTime).FirstOrDefault();
+            return latest != null;
+        }
+
+        public event EventHandler<LlamaTokenCollection> QueueWritten;
+
+        /// <summary>
+        /// Call the model to run inference.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <param name="encoding"></param>
+        /// <returns></returns>
+        /// <exception cref="RuntimeError"></exception>
+        private IEnumerable<LlamaToken> Call()
+        {
+            LlamaTokenCollection thisCall = new();
+
+            this._evaluationQueue.Ensure();
+
+            bool breakAfterEval = false;
+
+            do
+            {
+                LlamaTokenCollection queueWritten = new();
+
+                if (this._evaluationQueue.Count > 0)
+                {
+                    this._context.Write(this._evaluationQueue);
+                    queueWritten.Append(this._evaluationQueue);
+                    Console.Title = $"{this._context.AvailableBuffer}";
+                    this._evaluationQueue.Clear();
+                }
+
+                this._context.Evaluate();
+
+                if (queueWritten.Count > 0)
+                {
+                    this.QueueWritten?.Invoke(this, queueWritten);
+                }
+
+                if (breakAfterEval)
+                {
+                    this.Cleanup();
+                    yield break;
+                }
+
+                if (this._evaluationQueue.Count == 0)
+                {
+                    SampleResult sample = this._context.SampleNext(thisCall);
+
+                    this._evaluationQueue.Append(sample.Tokens);
+                    thisCall.Append(sample.Tokens);
+
+                    Console.Write(sample.Tokens.ToString());
+
+                    foreach (LlamaToken token in sample.Tokens)
+                    {
+                        yield return token;
+                    }
+
+                    breakAfterEval = sample.IsFinal;
+                }
+            } while (true);
         }
 
         private void Cleanup()
@@ -277,7 +279,7 @@ namespace Llama.Model
                 }
             }
 
-            this.WithPrompt(this._contextSettings.Prompt);
+            this.SetPrompt(this._contextSettings.Prompt);
         }
     }
 }

@@ -6,7 +6,7 @@ namespace Llama.Events
 {
     public class ContextModificationEventArgs : EventArgs
     {
-        public ContextModificationEventArgs(IReadOnlyLlamaTokenCollection evaluated, IReadOnlyLlamaTokenCollection buffer, int matchedCount, int evaluatingIndex, int evaluatingCount)
+        public ContextModificationEventArgs(IReadOnlyLlamaTokenCollection evaluated, IReadOnlyLlamaTokenCollection buffer,  int matchedCount, int evaluatingIndex, int evaluatingCount)
         {
             this.Evaluated = new LlamaTokenBuffer(evaluated, evaluated.Count);
             this.Buffer = new LlamaTokenBuffer(buffer, buffer.Count);

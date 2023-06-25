@@ -2,6 +2,7 @@
 using Discord;
 using Discord.Rest;
 using DiscordGpt.Constants;
+using System.Diagnostics;
 
 namespace DiscordGpt.Models
 {
@@ -115,18 +116,24 @@ namespace DiscordGpt.Models
 
         private async Task TearDown()
         {
-            await this.RemoveReact();
-            await this.AddReact(Emojis.GO);
+            try
+            {
+                await this.RemoveReact();
+                await this.AddReact(Emojis.GO);
 
-            if (this._contentProvided)
+                if (this._contentProvided)
+                {
+                    await this.SetContent(this._content, true);
+                    await this.RestUserMessage.ModifyAsync(m => m.Attachments = new Optional<IEnumerable<FileAttachment>>(new List<FileAttachment>()));
+                }
+                else
+                {
+                    await this.RestUserMessage.DeleteAsync();
+                    this.Deleted = true;
+                }
+            } catch(Exception ex)
             {
-                await this.SetContent(this._content, true);
-                await this.RestUserMessage.ModifyAsync(m => m.Attachments = new Optional<IEnumerable<FileAttachment>>(new List<FileAttachment>()));
-            }
-            else
-            {
-                await this.RestUserMessage.DeleteAsync();
-                this.Deleted = true;
+                Debugger.Break();
             }
         }
 

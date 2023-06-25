@@ -17,6 +17,9 @@
 
   <ItemGroup>
     <None Remove="Ai\Camel_13B\Prompt.bak" />
+    <None Remove="logits.log" />
+    <None Remove="TempFile.png" />
+    <None Remove="tempStart.txt" />
   </ItemGroup>
 
   <ItemGroup>
@@ -36,7 +39,7 @@
     <ProjectReference Include="..\..\Blip\BlipApiClient\BlipApiClient.csproj" />
     <ProjectReference Include="..\..\Llama\Llama.Shared\Llama.Shared.csproj" />
     <ProjectReference Include="..\..\Llama\LlamaClient\LlamaClient.csproj" />
-    <ProjectReference Include="..\..\Llama\LLamaSharp\LLamaSharp.csproj" />
+    <ProjectReference Include="..\..\Llama\LlamaSharp\LlamaSharp.csproj" />
     <ProjectReference Include="..\..\Logging\LoggingApiClient\LoggingApiClient.csproj" />
     <ProjectReference Include="..\..\Utils\Ai.Abstractions\Ai.Abstractions.csproj" />
     <ProjectReference Include="..\..\Utils\Ai.Database\Loxifi.Database.csproj" />

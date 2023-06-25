@@ -1,25 +1,9 @@
 ﻿using Llama.Collections;
 using Llama.Constants;
 using Llama.Context;
-using Llama.Context.Interfaces;
-using Llama.Context.Samplers.FrequencyAndPresence;
-using Llama.Context.Samplers.Interfaces;
-using Llama.Context.Samplers.Mirostat;
-using Llama.Context.Samplers.NewLineSampler;
-using Llama.Context.Samplers.Repetition;
-using Llama.Context.Samplers.Temperature;
 using Llama.Data;
 using Llama.Events;
-using Llama.Model;
-using Llama.Pipeline;
-using Llama.Pipeline.ContextRollers;
-using Llama.Pipeline.Interfaces;
-using Llama.Pipeline.PostResponseContextTransformers;
-using Llama.Pipeline.TokenTransformers;
 using Llama.Shared;
-using Llama.TokenTransformers;
-using Llama.Utilities;
-using Microsoft.Extensions.DependencyInjection;
 using System.Text;
 
 namespace Llama
@@ -30,7 +14,7 @@ namespace Llama
 
         private readonly Encoding _encoding = System.Text.Encoding.UTF8;
 
-        private readonly LlamaModel _model;
+        private readonly ContextEvaluator _chatEvaluator;
 
         private readonly StringBuilder _outBuilder;
 
@@ -47,50 +31,11 @@ namespace Llama
             this._settings = settings;
             this._outBuilder = new StringBuilder();
 
-            IServiceCollection serviceDescriptors = new ServiceCollection();
+            ContextEvaluatorBuilder builder = new(settings);
 
-            serviceDescriptors.AddSingleton<ITokenTransformer, NewlineEnsureTransformer>();
-            serviceDescriptors.AddTransient((s) =>
-            {
-                LlamaModelSettings modelSettings = s.GetRequiredService<LlamaModelSettings>();
-                LlamaContextSettings contextSettings = s.GetRequiredService<LlamaContextSettings>();
-                return Utils.InitContextFromParams(modelSettings, contextSettings);
-            });
+            this._chatEvaluator = builder.BuildChatEvaluator();
 
-            serviceDescriptors.AddTransient<IContext, LlamaContextWrapper>();
-
-            serviceDescriptors.AddTransient<LlamaModel>();
-
-            if (settings.MiroStat == MiroStatMode.Disabled)
-            {
-                this.RegisterTemp(serviceDescriptors, settings);
-            }
-            else
-            {
-                this.RegisterMirostat(serviceDescriptors, settings);
-            }
-
-            this.RegisterRepeat(serviceDescriptors, settings);
-            this.RegisterFrequency(serviceDescriptors, settings);
-            this.RegisterModelSettings(serviceDescriptors, settings);
-            this.RegisterContextSettings(serviceDescriptors, settings);
-
-            serviceDescriptors.AddSingleton<IPostResponseContextTransformer, RemoveTemporaryTokens>();
-            serviceDescriptors.AddSingleton<IPostResponseContextTransformer, StripNullTokens>();
-            serviceDescriptors.AddSingleton<IContextRoller, ChatContextRoller>();
-            serviceDescriptors.AddSingleton<ITokenTransformer>(new TextTruncationTransformer(250, 150, ".!?"));
-            serviceDescriptors.AddSingleton<ITokenTransformer, InteractiveEosReplace>();
-            serviceDescriptors.AddSingleton<ITokenTransformer, InvalidCharacterBlockingTransformer>();
-            serviceDescriptors.AddSingleton<ITokenTransformer, NewlineEnsureTransformer>();
-            serviceDescriptors.AddSingleton<ITextSanitizer, ChatTextSanitizer>();
-
-            //serviceDescriptors.AddSingleton<ITokenTransformer, LetterFrequencyTransformer>();
-
-            serviceDescriptors.AddTransient<ISimpleSampler, NewLineSampler>();
-
-            this._model = serviceDescriptors.BuildServiceProvider().GetRequiredService<LlamaModel>();
-
-            this._model.OnContextModification += this.LlamaContext_OnContextModification;
+            this._chatEvaluator.OnContextModification += this.LlamaContext_OnContextModification;
         }
 
         public event Action<ContextModificationEventArgs> OnContextModification;
@@ -109,19 +54,9 @@ namespace Llama
 
         public LlamaSettings Params { get; private set; }
 
-        public static string CreateMD5(string input)
-        {
-            // Use input string to calculate MD5 hash
-            using System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
-            byte[] inputBytes = System.Text.Encoding.ASCII.GetBytes(input);
-            byte[] hashBytes = md5.ComputeHash(inputBytes);
-
-            return Convert.ToHexString(hashBytes); // .NET 5 +
-        }
-
         public async Task Connect()
         {
-            if (this._model.IsNewSession)
+            if (this._chatEvaluator.IsNewSession)
             {
                 if (!string.IsNullOrWhiteSpace(this._settings.Start))
                 {
@@ -140,19 +75,6 @@ namespace Llama
                     this.Send(toSend, LlamaTokenTags.INPUT, false);
                 }
             }
-        }
-
-        /// <summary>
-        /// Kills the thread and flushes the current output
-        /// </summary>
-        /// <returns></returns>
-        public void Kill()
-        {
-            throw new NotImplementedException();
-            this._killSent = true;
-            string response = this._outBuilder.ToString();
-            _ = this._outBuilder.Clear();
-            this.ResponseReceived?.Invoke(this, response);
         }
 
         public void Send(string toSend, string tag, bool flush = true, bool validateReversal = true)
@@ -182,218 +104,7 @@ namespace Llama
             this._killSent = false;
         }
 
-        private void LlamaContext_OnContextModification(ContextModificationEventArgs obj) => this.OnContextModification?.Invoke(obj);
-
-        private void RegisterContextSettings(IServiceCollection serviceDescriptors, LlamaSettings settings)
-        {
-            LlamaContextSettings c = new()
-            {
-                Encoding = Encoding.UTF8
-            };
-
-            switch (settings.InteractiveMode)
-            {
-                case InteractiveMode.None:
-                    break;
-
-                case InteractiveMode.Interactive:
-                    c.Interactive = true;
-                    break;
-
-                case InteractiveMode.InteractiveFirst:
-                    c.Interactive = true;
-                    c.InteractiveFirst = true;
-                    break;
-
-                default: throw new NotImplementedException();
-            }
-
-            if (settings.UseSessionData)
-            {
-                string modelPathHash = CreateMD5(settings.ModelPath);
-                c.SessionPath = modelPathHash + ".session";
-            }
-
-            if (settings.NoPenalizeNewLine)
-            {
-                c.PenalizeNewlines = false;
-            }
-
-            c.Antiprompt = settings.AllReversePrompts.ToList();
-
-            if (!string.IsNullOrEmpty(settings.InSuffix))
-            {
-                c.InputSuffix = settings.InSuffix;
-            }
-
-            if (settings.ContextLength.HasValue)
-            {
-                c.ContextSize = settings.ContextLength.Value;
-            }
-
-            if (settings.TokensToPredict.HasValue)
-            {
-                c.PredictCount = settings.TokensToPredict.Value;
-            }
-
-            if (settings.KeepPromptTokens.HasValue)
-            {
-                c.KeepContextTokenCount = settings.KeepPromptTokens.Value;
-            }
-
-            if (!string.IsNullOrWhiteSpace(settings.Prompt))
-            {
-                if (File.Exists(settings.Prompt))
-                {
-                    c.Prompt = File.ReadAllText(settings.Prompt);
-                }
-                else
-                {
-                    c.Prompt = settings.Prompt;
-                }
-            }
-
-            foreach (KeyValuePair<int, string> bias in settings.LogitBias)
-            {
-                if (string.Equals(bias.Value, "-inf"))
-                {
-                    c.LogitBias!.Add(bias.Key, float.NegativeInfinity);
-                }
-                else if (string.Equals(bias.Value, "+inf"))
-                {
-                    c.LogitBias!.Add(bias.Key, float.PositiveInfinity);
-                }
-                else
-                {
-                    c.LogitBias!.Add(bias.Key, float.Parse(bias.Value));
-                }
-            }
-
-            serviceDescriptors.AddSingleton(c);
-        }
-
-        private void RegisterFrequency(IServiceCollection serviceDescriptors, LlamaSettings settings)
-        {
-            FrequencyAndPresenceSamplerSettings frequencyAndPresenceSamplerSettings = new();
-
-            if (settings.RepeatPenaltyWindow.HasValue)
-            {
-                frequencyAndPresenceSamplerSettings.RepeatTokenPenaltyWindow = settings.RepeatPenaltyWindow.Value;
-            }
-
-            serviceDescriptors.AddSingleton(frequencyAndPresenceSamplerSettings);
-
-            serviceDescriptors.AddSingleton<ISimpleSampler, FrequencyAndPresenceSampler>();
-        }
-
-        private void RegisterMirostat(IServiceCollection serviceDescriptors, LlamaSettings settings)
-        {
-            if (settings.MiroStat != MiroStatMode.Disabled)
-            {
-                MirostatSamplerSettings mirostatSamplerSettings = new();
-
-                if (settings.MiroStatEntropy.HasValue)
-                {
-                    mirostatSamplerSettings.Eta = settings.MiroStatEntropy.Value;
-                }
-
-                if (settings.Temp.HasValue)
-                {
-                    mirostatSamplerSettings.Temperature = settings.Temp.Value;
-                }
-
-                serviceDescriptors.AddSingleton<MirostatSamplerSettings>();
-
-                if (settings.MiroStat == MiroStatMode.MiroStat)
-                {
-                    serviceDescriptors.AddSingleton<IFinalSampler, MirostatOneSampler>();
-                    return;
-                }
-
-                if (settings.MiroStat == MiroStatMode.MiroStat2)
-                {
-                    serviceDescriptors.AddSingleton<IFinalSampler, MirostatTwoSampler>();
-                    return;
-                }
-
-                throw new NotImplementedException();
-            }
-        }
-
-        private void RegisterModelSettings(IServiceCollection serviceDescriptors, LlamaSettings settings)
-        {
-            LlamaModelSettings p = new();
-
-            if (settings.Threads.HasValue)
-            {
-                p.ThreadCount = settings.Threads.Value;
-            }
-
-            if (settings.NoMemoryMap)
-            {
-                p.UseMemoryMap = false;
-                p.UseMemoryLock = true;
-            }
-
-            switch (settings.MemoryMode)
-            {
-                case MemoryMode.Float16:
-                    break;
-
-                case MemoryMode.Float32:
-                    p.MemoryFloat16 = false;
-                    break;
-
-                default: throw new NotImplementedException();
-            }
-
-            if (settings.GpuLayers.HasValue)
-            {
-                p.GpuLayerCount = settings.GpuLayers.Value;
-            }
-
-            p.Model = settings.ModelPath;
-
-            serviceDescriptors.AddSingleton(p);
-        }
-
-        private void RegisterRepeat(IServiceCollection serviceDescriptors, LlamaSettings settings)
-        {
-            RepetitionSamplerSettings repetitionSamplerSettings = new();
-
-            if (settings.RepeatPenalty.HasValue)
-            {
-                repetitionSamplerSettings.RepeatPenalty = settings.RepeatPenalty.Value;
-            }
-
-            if (settings.RepeatPenaltyWindow.HasValue)
-            {
-                repetitionSamplerSettings.RepeatTokenPenaltyWindow = settings.RepeatPenaltyWindow.Value;
-            }
-
-            serviceDescriptors.AddSingleton(repetitionSamplerSettings);
-
-            serviceDescriptors.AddSingleton<ISimpleSampler, RepetitionSampler>();
-        }
-
-        private void RegisterTemp(IServiceCollection serviceDescriptors, LlamaSettings settings)
-        {
-            TemperatureSamplerSettings temperatureSamplerSettings = new();
-
-            if (settings.Temp.HasValue)
-            {
-                temperatureSamplerSettings.Temperature = settings.Temp.Value;
-            }
-
-            if (settings.Top_P.HasValue)
-            {
-                temperatureSamplerSettings.TopP = settings.Top_P.Value;
-            }
-
-            serviceDescriptors.AddSingleton(temperatureSamplerSettings);
-
-            serviceDescriptors.AddSingleton<IFinalSampler, TemperatureSampler>();
-        }
+        private void LlamaContext_OnContextModification(object sender, ContextModificationEventArgs obj) => this.OnContextModification?.Invoke(obj);
 
         private void StartInference(params InputText[] data)
         {
@@ -405,7 +116,7 @@ namespace Llama
 
                 int lastChunkCount = 0;
 
-                foreach (LlamaToken chunk in this._model.Call(data))
+                foreach (LlamaToken chunk in this._chatEvaluator.Call(data))
                 {
                     if (string.IsNullOrEmpty(chunk.Value))
                     {

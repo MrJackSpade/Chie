@@ -13,12 +13,12 @@ namespace Llama.Context.Samplers.Temperature
         public TemperatureSampler(TemperatureSamplerSettings temperatureSamplerSettings)
         {
             this._settings = temperatureSamplerSettings;
-            this._newLineId = NativeApi.llama_token_nl();
+            this._newLineId = NativeApi.TokenNl();
         }
 
         public int SampleNext(SampleContext sampleContext)
         {
-            int top_k = this._settings.TopK <= 0 ? NativeApi.llama_n_vocab(sampleContext.ContextHandle) : this._settings.TopK;
+            int top_k = this._settings.TopK <= 0 ? NativeApi.NVocab(sampleContext.ContextHandle) : this._settings.TopK;
 
             int id;
             do

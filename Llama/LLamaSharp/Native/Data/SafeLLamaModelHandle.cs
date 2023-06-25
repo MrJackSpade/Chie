@@ -1,0 +1,23 @@
+﻿using System;
+
+namespace Llama.Native
+{
+    public class SafeLlamaModelHandle : SafeLlamaHandleBase
+    {
+        public SafeLlamaModelHandle(IntPtr handle)
+            : base(handle)
+        {
+        }
+
+        protected SafeLlamaModelHandle()
+        {
+        }
+
+        protected override bool ReleaseHandle()
+        {
+            NativeApi.FreeModel(handle);
+            this.SetHandle(IntPtr.Zero);
+            return true;
+        }
+    }
+}

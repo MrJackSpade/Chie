@@ -1,8 +1,6 @@
 ﻿using ChieApi.Interfaces;
 using ChieApi.Models;
-using ChieApi.Services;
 using ChieApi.Shared.Entities;
-using Microsoft.Extensions.Logging;
 
 namespace ChieApi.Pipelines
 {

@@ -1,6 +1,5 @@
 ﻿using ChieApi.Interfaces;
 using ChieApi.Models;
-using ChieApi.Services;
 using ChieApi.Shared.Entities;
 
 namespace ChieApi.Pipelines

@@ -1,5 +1,4 @@
-﻿using ChieApi.Extensions;
-using ChieApi.Interfaces;
+﻿using ChieApi.Interfaces;
 using ChieApi.Shared.Entities;
 using Loxifi.Database.Extensions;
 using System.Data.SqlClient;

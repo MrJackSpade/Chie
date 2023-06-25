@@ -1,4 +1,4 @@
-﻿namespace Llama.Model
+﻿namespace Llama.Model.Interfaces
 {
     public interface ILlamaModelSettings
     {

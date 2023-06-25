@@ -1,9 +1,4 @@
 ﻿using Llama.Pipeline.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Llama.Pipeline
 {
@@ -11,7 +6,7 @@ namespace Llama.Pipeline
     {
         public string Sanitize(string text)
         {
-            while(text.Contains("\r\n"))
+            while (text.Contains("\r\n"))
             {
                 text = text.Replace("\r\n", "\n");
             }
@@ -21,7 +16,7 @@ namespace Llama.Pipeline
                 text = text.Replace("\r", "\n");
             }
 
-            while(text.Contains("\n\n"))
+            while (text.Contains("\n\n"))
             {
                 text = text.Replace("\n\n", "\n");
             }

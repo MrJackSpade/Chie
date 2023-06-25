@@ -14,11 +14,40 @@ namespace Llama.Context.Extensions
     {
         public static void Ensure(this IContext context)
         {
-            if (context.Buffer[0].Id != NativeApi.llama_token_bos())
+            if (context.Buffer[0].Id != NativeApi.TokenBos())
             {
                 throw new Exception("First buffer token is not BOS");
             }
         }
+
+        public static float[] GetEmbeddings(this IContext handler)
+        {
+            unsafe
+            {
+                int n_embed = NativeApi.NEmbd(handler.Handle);
+                float* embeddings = NativeApi.GetEmbeddings(handler.Handle);
+                if (embeddings == null)
+                {
+                    return Array.Empty<float>();
+                }
+
+                Span<float> span = new(embeddings, n_embed);
+                float[] res = new float[n_embed];
+                span.CopyTo(res.AsSpan());
+                return res;
+            }
+        }
+
+        public static Span<float> GetLogits(this IContext handler)
+        {
+            int n_vocab = handler.VocabCount();
+
+            Span<float> logits = Utils.GetLogits(handler.Handle, n_vocab);
+
+            return logits;
+        }
+
+        public static LlamaToken GetToken(this IContext handler, int id, string tag) => new(id, NativeApi.TokenToStr(handler.Handle, id), tag);
 
         /// <summary>
         /// Loads a context state from disk, does not evaluate
@@ -96,45 +125,6 @@ namespace Llama.Context.Extensions
             return tokens;
         }
 
-        public static void Write(this IContext context, IEnumerable<LlamaToken> tokens)
-        {
-            LlamaTokenCollection toWrite = new LlamaTokenCollection(tokens).Trim();
-
-            foreach (Data.LlamaToken token in toWrite)
-            {
-                context.Write(token);
-            }
-        }
-
-        public static float[] GetEmbeddings(this IContext handler)
-        {
-            unsafe
-            {
-                int n_embed = NativeApi.llama_n_embd(handler.Handle);
-                float* embeddings = NativeApi.llama_get_embeddings(handler.Handle);
-                if (embeddings == null)
-                {
-                    return Array.Empty<float>();
-                }
-
-                Span<float> span = new(embeddings, n_embed);
-                float[] res = new float[n_embed];
-                span.CopyTo(res.AsSpan());
-                return res;
-            }
-        }
-
-        public static Span<float> GetLogits(this IContext handler)
-        {
-            int n_vocab = handler.VocabCount();
-
-            Span<float> logits = Utils.GetLogits(handler.Handle, n_vocab);
-
-            return logits;
-        }
-
-        public static LlamaToken GetToken(this IContext handler, int id, string tag) => new(id, NativeApi.llama_token_to_str(handler.Handle, id), tag);
-
         public static LlamaTokenCollection Tokenize(this IContext context, IEnumerable<int> value, string tag)
         {
             LlamaTokenCollection tokens = new();
@@ -147,6 +137,16 @@ namespace Llama.Context.Extensions
             return tokens;
         }
 
-        public static int VocabCount(this IContext handler) => NativeApi.llama_n_vocab(handler.Handle);
+        public static int VocabCount(this IContext handler) => NativeApi.NVocab(handler.Handle);
+
+        public static void Write(this IContext context, IEnumerable<LlamaToken> tokens)
+        {
+            LlamaTokenCollection toWrite = new LlamaTokenCollection(tokens).Trim();
+
+            foreach (Data.LlamaToken token in toWrite)
+            {
+                context.Write(token);
+            }
+        }
     }
 }

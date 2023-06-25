@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using Llama.Scheduler;
+using System.Collections.Generic;
 using System.Text;
 
 namespace Llama.Context
 {
-    public class LlamaContextSettings
+    public record LlamaContextSettings
     {
         public List<string> Antiprompt { get; set; } = new();
 
@@ -14,6 +15,10 @@ namespace Llama.Context
         public int BatchSize { get; set; } = 512;
 
         public int ContextSize { get; set; }
+
+        public int Blocks { get; set; } = 4;
+
+        public ExecutionPriority ExecutionPriority { get; set; } = ExecutionPriority.Immediate;
 
         public Encoding Encoding { get; set; }
 
