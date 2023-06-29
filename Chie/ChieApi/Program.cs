@@ -64,6 +64,7 @@ namespace ChieApi
             _ = builder.Services.AddTransient<IRequestPipeline, TimePassagePipeline>();
             _ = builder.Services.AddTransient<IRequestPipeline, BoredomTask>();
             _ = builder.Services.AddSingleton<IRequestPipeline, MoodPipeline>();
+            _ = builder.Services.AddSingleton<IRequestPipeline, BootUpPipeline>();
             _ = builder.Services.AddScoped<IRequestPipeline, UserDataPipeline>();
             _ = builder.Services.AddTransient<IBackgroundTask, BoredomTask>();
             _ = builder.Services.AddSingleton<BoredomTaskData>();

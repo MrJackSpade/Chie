@@ -5,7 +5,7 @@ using System;
 
 namespace Llama.Context.Samplers
 {
-    public ref struct SampleContext
+    public struct SampleContext
     {
         public LlamaTokenDataArray Candidates { get; set; }
 
@@ -14,7 +14,5 @@ namespace Llama.Context.Samplers
         public IReadOnlyLlamaTokenCollection ContextTokens { get; set; }
 
         public IReadOnlyLlamaTokenCollection InferrenceTokens { get; set; }
-
-        public Span<float> Logits { get; set; }
     }
 }

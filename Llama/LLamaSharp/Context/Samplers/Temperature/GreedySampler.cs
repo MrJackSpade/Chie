@@ -8,11 +8,8 @@ namespace Llama.Context.Samplers.Temperature
     {
         private readonly int _newLineId;
 
-        private readonly TemperatureSamplerSettings _settings;
-
-        public GreedySampler(TemperatureSamplerSettings temperatureSamplerSettings)
+        public GreedySampler()
         {
-            this._settings = temperatureSamplerSettings;
             this._newLineId = NativeApi.TokenNl();
         }
 

@@ -1,5 +1,4 @@
 ﻿using Llama.Collections;
-using Llama.Collections.Interfaces;
 using Llama.Constants;
 using Llama.Context;
 using Llama.Context.Extensions;
@@ -15,9 +14,10 @@ namespace Llama.Pipeline.ContextRollers
 {
     public class ChatContextRoller : IContextRoller
     {
+        private readonly int _blocks;
+
         private readonly IBlockProcessor _summarizer;
 
-        private readonly int _blocks;
         public ChatContextRoller(IBlockProcessor summarizer, LlamaContextSettings contextSettings)
         {
             this._summarizer = summarizer;
@@ -92,6 +92,8 @@ namespace Llama.Pipeline.ContextRollers
             return toReturn;
         }
 
+        public void TokensEvaluated(IContext context, LlamaTokenCollection evaluated) => _summarizer.Process(evaluated);
+
         private void AppendNewline(IContext context, LlamaTokenCollection tokens)
         {
             if (tokens.Count == 0)
@@ -107,7 +109,5 @@ namespace Llama.Pipeline.ContextRollers
             LlamaToken lastToken = tokens[^1];
             tokens.Append(context.GetToken(13, lastToken.Tag));
         }
-
-        public void TokensEvaluated(IContext context, LlamaTokenCollection evaluated) => _summarizer.Process(evaluated);
     }
 }

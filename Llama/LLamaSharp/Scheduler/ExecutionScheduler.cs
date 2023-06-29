@@ -5,20 +5,20 @@ using System.Threading;
 
 namespace Llama.Scheduler
 {
-    public class ExecutionScheduler : IExecutionScheduler
+    public partial class ExecutionScheduler : IExecutionScheduler
     {
-        private readonly ManualResetEvent _executionGate = new(false);
-
         private readonly Thread _executionThread;
 
         private readonly object _lock = new();
 
         private readonly PriorityQueue<IQueuedExecution, ExecutionPriority> _priorityQueue = new();
 
+        private readonly PrioritySemaphoreCollection _priorityResetEvents = new();
+
         public ExecutionScheduler()
         {
-            _executionThread = new Thread(this.ExecutionLoop);
-            _executionThread.Start();
+            this._executionThread = new Thread(this.ExecutionLoop);
+            this._executionThread.Start();
         }
 
         public T Execute<T>(Func<T> action, ExecutionPriority priority)
@@ -32,14 +32,6 @@ namespace Llama.Scheduler
             return queuedExecution.Result;
         }
 
-        private void Enqueue(IQueuedExecution queuedExecution, ExecutionPriority priority)
-        {
-            lock(_lock)
-            {
-                _priorityQueue.Enqueue(queuedExecution, priority);
-                this._executionGate.Set();
-            }
-        }
         public void Execute(Action action, ExecutionPriority priority)
         {
             QueuedExecution queuedExecution = new(action);
@@ -49,23 +41,57 @@ namespace Llama.Scheduler
             queuedExecution.Wait();
         }
 
+        private void Enqueue(IQueuedExecution queuedExecution, ExecutionPriority priority)
+        {
+            lock (this._lock)
+            {
+                this._priorityQueue.Enqueue(queuedExecution, priority);
+                this._priorityResetEvents.Add(priority);
+                this._priorityResetEvents.Increment(priority);
+            }
+        }
+
         private void ExecutionLoop()
         {
+            ExecutionPriority lastPriority = ExecutionPriority.Background;
+
             do
             {
-                _executionGate.WaitOne();
+                //Wait forever if priority lowest
+                int ms = lastPriority == ExecutionPriority.Background ? -1 : 50;
 
+                //Try and get a wait handle
+                ExecutionPriority? opened = _priorityResetEvents.WaitAny(lastPriority, ms);
+
+                //No wait handle, nothing of greater or equal priority
+                if (opened is null)
+                {
+                    //Next wait is for anything
+                    lastPriority = ExecutionPriority.Background;
+                    continue;
+                }
+
+                //If we caught something, then we know greater or equal was available
                 IQueuedExecution toExecute;
 
-                lock (_lock)
+                lock (this._lock)
                 {
-                    if (!_priorityQueue.TryDequeue(out toExecute, out _))
+                    //Try and grab whatever
+                    if (!this._priorityQueue.TryDequeue(out toExecute, out lastPriority))
                     {
-                        _executionGate.Reset();
-                        continue;
+                        //How did we end up here if we knew something existed?
+                        throw new Exception();
+                    }
+
+                    //Correct if what we grabbed isn't what we thought we were grabbing
+                    if (lastPriority != opened.Value)
+                    {
+                        _priorityResetEvents.Decrement(lastPriority);
+                        _priorityResetEvents.Increment(opened.Value);
                     }
                 }
 
+                //execute it
                 toExecute.Execute();
             } while (true);
         }

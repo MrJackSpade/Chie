@@ -33,6 +33,8 @@ namespace Llama.Context
 
         private readonly LlamaTokenCollection _evaluated;
 
+        private readonly IExecutionScheduler _executionScheduler;
+
         private readonly IFinalSampler _finalSampler;
 
         private readonly IList<IPostResponseContextTransformer> _postResponseTransforms;
@@ -44,8 +46,6 @@ namespace Llama.Context
         private readonly IList<ISimpleSampler> _simpleSamplers;
 
         private readonly IList<ITokenTransformer> _tokenTransformers;
-
-        private readonly IExecutionScheduler _executionScheduler;
 
         private int _bufferPointer = 0;
 
@@ -137,15 +137,6 @@ namespace Llama.Context
         }
 
         public void Dispose() => this.Handle.Dispose();
-
-        private void NativeEval(int[] tokens)
-        {
-            if (NativeApi.Eval(this.Handle, tokens, tokens.Length, this._evalPointer, this._evalThreadCount) != 0)
-            {
-                LlamaLogger.Default.Error($"Failed to eval.");
-                throw new RuntimeError("Failed to eval.");
-            }
-        }
 
         public int Evaluate(int count = -1)
         {
@@ -244,30 +235,6 @@ namespace Llama.Context
 
         public SampleResult SampleNext(IReadOnlyLlamaTokenCollection thisCall) => this._executionScheduler.Execute(() => this.SampleNextInternal(thisCall), this._settings.ExecutionPriority);
 
-        private SampleResult SampleNextInternal(IReadOnlyLlamaTokenCollection thisCall)
-        {
-            LlamaTokenCollection selectedCollection;
-            List<LlamaToken> selectedTokens;
-
-            do
-            {
-                LlamaToken token = this.SampleTokenRaw(thisCall);
-
-                selectedTokens = this._tokenTransformers.Transform(this._settings, thisCall, this, token).ToList();
-
-                selectedCollection = new(selectedTokens);
-            } while (thisCall.IsNullOrWhiteSpace && selectedCollection.IsNullOrWhiteSpace || selectedCollection.IsNullOrEmpty);
-
-            LlamaTokenCollection appendedCall = new(thisCall);
-            appendedCall.Append(selectedCollection);
-
-            return new()
-            {
-                Tokens = selectedCollection,
-                IsFinal = this.ShouldBreak(appendedCall)
-            };
-        }
-
         public LlamaToken SampleTokenRaw(IReadOnlyLlamaTokenCollection thisCall)
         {
             Span<float> logits = this.GetLogits();
@@ -284,8 +251,7 @@ namespace Llama.Context
                 Candidates = candidates,
                 ContextHandle = Handle,
                 ContextTokens = Evaluated,
-                InferrenceTokens = thisCall,
-                Logits = logits
+                InferrenceTokens = thisCall
             };
 
             foreach (ISimpleSampler simpleSampler in this._simpleSamplers)
@@ -351,12 +317,21 @@ namespace Llama.Context
 
             string bufferString = this._buffer.Trim().ToString();
 
-            if(bufferString.Contains("USER:"))
+            if (bufferString.Contains("USER:"))
             {
                 //Debugger.Break();
             }
 
             this.TriggerModificationEvent();
+        }
+
+        private void NativeEval(int[] tokens)
+        {
+            if (NativeApi.Eval(this.Handle, tokens, tokens.Length, this._evalPointer, this._evalThreadCount) != 0)
+            {
+                LlamaLogger.Default.Error($"Failed to eval.");
+                throw new RuntimeError("Failed to eval.");
+            }
         }
 
         private LlamaTokenCollection NoPenalize()
@@ -366,6 +341,30 @@ namespace Llama.Context
             collection.Append(this.GetToken(334, LlamaTokenTags.UNMANAGED)); // *
             collection.Append(this.GetToken(29930, LlamaTokenTags.UNMANAGED)); //*
             return collection;
+        }
+
+        private SampleResult SampleNextInternal(IReadOnlyLlamaTokenCollection thisCall)
+        {
+            LlamaTokenCollection selectedCollection;
+            List<LlamaToken> selectedTokens;
+
+            do
+            {
+                LlamaToken token = this.SampleTokenRaw(thisCall);
+
+                selectedTokens = this._tokenTransformers.Transform(this._settings, thisCall, this, token).ToList();
+
+                selectedCollection = new(selectedTokens);
+            } while (thisCall.IsNullOrWhiteSpace && selectedCollection.IsNullOrWhiteSpace || selectedCollection.IsNullOrEmpty);
+
+            LlamaTokenCollection appendedCall = new(thisCall);
+            appendedCall.Append(selectedCollection);
+
+            return new()
+            {
+                Tokens = selectedCollection,
+                IsFinal = this.ShouldBreak(appendedCall)
+            };
         }
 
         private bool ShouldBreak(LlamaTokenCollection toTest)
@@ -404,7 +403,6 @@ namespace Llama.Context
                 }
                 catch (Exception e)
                 {
-
                 }
             } while (true);
         }

@@ -29,9 +29,9 @@ namespace Llama.Scheduler
 
     public class QueuedExecution : IQueuedExecution
     {
-        private readonly ManualResetEvent _completed;
-
         private readonly Action _action;
+
+        private readonly ManualResetEvent _completed;
 
         public QueuedExecution(Action action)
         {

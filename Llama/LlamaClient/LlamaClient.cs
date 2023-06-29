@@ -12,9 +12,9 @@ namespace Llama
     {
         private static Thread? _inferenceThread;
 
-        private readonly Encoding _encoding = System.Text.Encoding.UTF8;
-
         private readonly ContextEvaluator _chatEvaluator;
+
+        private readonly Encoding _encoding = System.Text.Encoding.UTF8;
 
         private readonly StringBuilder _outBuilder;
 
@@ -112,10 +112,6 @@ namespace Llama
             {
                 LlamaTokenCollection result = new();
 
-                LlamaToken? lastChunk = null;
-
-                int lastChunkCount = 0;
-
                 foreach (LlamaToken chunk in this._chatEvaluator.Call(data))
                 {
                     if (string.IsNullOrEmpty(chunk.Value))
@@ -130,21 +126,6 @@ namespace Llama
 
                     result.Append(chunk);
                     this._lastChar = chunk.Value[^1];
-
-                    if (lastChunk != chunk)
-                    {
-                        lastChunkCount = 0;
-                        lastChunk = chunk;
-                    }
-                    else
-                    {
-                        lastChunkCount++;
-                    }
-
-                    if (lastChunkCount >= 10)
-                    {
-                        break;
-                    }
                 }
 
                 string resultStr = result.ToString();

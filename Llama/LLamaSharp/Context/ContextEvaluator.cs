@@ -64,6 +64,8 @@ namespace Llama.Context
 
         public event EventHandler<ContextModificationEventArgs> OnContextModification;
 
+        public event EventHandler<LlamaTokenCollection> QueueWritten;
+
         public bool IsNewSession { get; private set; } = true;
 
         public string Name { get; set; }
@@ -122,7 +124,7 @@ namespace Llama.Context
         /// <exception cref="ArgumentException"></exception>
         public void SetPrompt(string prompt)
         {
-            if(string.IsNullOrEmpty(prompt))
+            if (string.IsNullOrEmpty(prompt))
             {
                 return;
             }
@@ -155,8 +157,6 @@ namespace Llama.Context
             latest = Directory.EnumerateFiles(this._contextSettings.SavePath, this._contextSettings.RootSaveName + ".*").Select(f => new FileInfo(f)).OrderByDescending(f => f.LastWriteTime).FirstOrDefault();
             return latest != null;
         }
-
-        public event EventHandler<LlamaTokenCollection> QueueWritten;
 
         /// <summary>
         /// Call the model to run inference.

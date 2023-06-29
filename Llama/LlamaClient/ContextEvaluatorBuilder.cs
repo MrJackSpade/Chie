@@ -24,25 +24,25 @@ namespace Llama
 {
     internal class ContextEvaluatorBuilder
     {
-        private LlamaContextSettings _contextSettings;
-        private LlamaModelSettings _modelSettings;
-        private IFinalSampler _finalSampler;
-        private readonly List<ISimpleSampler> _simpleSamplers = new();
-        private readonly ITextSanitizer _textSanitizer;
         private readonly IExecutionScheduler _executionScheduler;
-        private readonly IModelHandleFactory _llamaModelFactory;
-        private readonly IContextHandleFactory _llamaContextFactory;
-        private readonly List<ITokenTransformer> _tokensTransformers = new();
-        private readonly List<IPostResponseContextTransformer> _postResponseTransforms = new();
-        public static string CreateMD5(string input)
-        {
-            // Use input string to calculate MD5 hash
-            using System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
-            byte[] inputBytes = System.Text.Encoding.ASCII.GetBytes(input);
-            byte[] hashBytes = md5.ComputeHash(inputBytes);
 
-            return Convert.ToHexString(hashBytes); // .NET 5 +
-        }
+        private readonly IContextHandleFactory _llamaContextFactory;
+
+        private readonly IModelHandleFactory _llamaModelFactory;
+
+        private readonly List<IPostResponseContextTransformer> _postResponseTransforms = new();
+
+        private readonly List<ISimpleSampler> _simpleSamplers = new();
+
+        private readonly ITextSanitizer _textSanitizer;
+
+        private readonly List<ITokenTransformer> _tokensTransformers = new();
+
+        private LlamaContextSettings _contextSettings;
+
+        private IFinalSampler _finalSampler;
+
+        private LlamaModelSettings _modelSettings;
 
         public ContextEvaluatorBuilder(LlamaSettings settings)
         {
@@ -68,138 +68,65 @@ namespace Llama
                 new RemoveTemporaryTokens(),
                 new StripNullTokens(),
             };
+        }
 
+        public static string CreateMD5(string input)
+        {
+            // Use input string to calculate MD5 hash
+            using System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
+            byte[] inputBytes = System.Text.Encoding.ASCII.GetBytes(input);
+            byte[] hashBytes = md5.ComputeHash(inputBytes);
+
+            return Convert.ToHexString(hashBytes); // .NET 5 +
+        }
+
+        public ContextEvaluator BuildChatEvaluator()
+        {
+            List<ITokenTransformer> transformers = new() { new TextTruncationTransformer(250, 150, ".!?") };
+            transformers.AddRange(this._tokensTransformers);
+
+            (ContextEvaluator contextEvaluator, IContext summaryContext) = this.BuildSummaryEvaluator();
+
+            IBlockProcessor chatSummarizer = new ChatSummarizer(this._contextSettings, summaryContext, contextEvaluator);
+            IContextRoller contextRoller = new ChatContextRoller(chatSummarizer, this._contextSettings);
+
+            SafeLlamaContextHandle context = this._llamaContextFactory.Create();
+            LlamaContextWrapper wrapper = new(this._executionScheduler, this._textSanitizer, context, this._modelSettings, this._contextSettings, this._postResponseTransforms, this._tokensTransformers, this._simpleSamplers, this._finalSampler, contextRoller);
+
+            ContextEvaluator chatEvaluator = new(wrapper, this._textSanitizer, this._contextSettings);
+            chatEvaluator.QueueWritten += (s, e) => chatSummarizer.Process(e);
+
+            if (!chatEvaluator.IsNewSession)
+            {
+                chatSummarizer.Process(wrapper.Buffer.Trim());
+            }
+
+            return chatEvaluator;
         }
 
         private (ContextEvaluator, IContext) BuildSummaryEvaluator()
         {
-            LlamaContextSettings thisSettings = this._contextSettings with {
+            LlamaContextSettings thisSettings = this._contextSettings with
+            {
                 AutoLoad = false,
                 AutoSave = false,
                 ExecutionPriority = ExecutionPriority.Background,
                 BatchSize = 64,
-                Prompt = string.Empty
+                Prompt = string.Empty,
+                Antiprompt = new List<string>()
+                {
+                    "User:",
+                    "###"
+                }
             };
-
+            List<ITokenTransformer> transformers = new() { new TextTruncationTransformer(1000, 1000, ".!?\n") };
+            transformers.AddRange(this._tokensTransformers);
             SafeLlamaContextHandle context = this._llamaContextFactory.Create();
-            LlamaContextWrapper wrapper = new(this._executionScheduler, this._textSanitizer, context, this._modelSettings, thisSettings, new List<IPostResponseContextTransformer>(), this._tokensTransformers, this._simpleSamplers, this._finalSampler, new DefaultContextRoller());
+            LlamaContextWrapper wrapper = new(this._executionScheduler, this._textSanitizer, context, this._modelSettings, thisSettings, new List<IPostResponseContextTransformer>(), transformers, this._simpleSamplers, new GreedySampler(), new DefaultContextRoller());
             ContextEvaluator contextEvaluator = new(wrapper, this._textSanitizer, thisSettings);
             return (contextEvaluator, wrapper);
         }
 
-        private void Frequency(LlamaSettings settings)
-        {
-            FrequencyAndPresenceSamplerSettings frequencyAndPresenceSamplerSettings = new();
-
-            if (settings.RepeatPenaltyWindow.HasValue)
-            {
-                frequencyAndPresenceSamplerSettings.RepeatTokenPenaltyWindow = settings.RepeatPenaltyWindow.Value;
-            }
-
-            this._simpleSamplers.Add(new FrequencyAndPresenceSampler(frequencyAndPresenceSamplerSettings));
-        }
-
-        private void Repeat(LlamaSettings settings)
-        {
-            RepetitionSamplerSettings repetitionSamplerSettings = new();
-
-            if (settings.RepeatPenalty.HasValue)
-            {
-                repetitionSamplerSettings.RepeatPenalty = settings.RepeatPenalty.Value;
-            }
-
-            if (settings.RepeatPenaltyWindow.HasValue)
-            {
-                repetitionSamplerSettings.RepeatTokenPenaltyWindow = settings.RepeatPenaltyWindow.Value;
-            }
-
-            this._simpleSamplers.Add(new RepetitionSampler(repetitionSamplerSettings));
-        }
-
-        private void ModelSettings(LlamaSettings settings)
-        {
-            LlamaModelSettings p = new();
-
-            if (settings.Threads.HasValue)
-            {
-                p.ThreadCount = settings.Threads.Value;
-            }
-
-            if (settings.NoMemoryMap)
-            {
-                p.UseMemoryMap = false;
-                p.UseMemoryLock = true;
-            }
-
-            switch (settings.MemoryMode)
-            {
-                case MemoryMode.Float16:
-                    break;
-
-                case MemoryMode.Float32:
-                    p.MemoryFloat16 = false;
-                    break;
-
-                default: throw new NotImplementedException();
-            }
-
-            if (settings.GpuLayers.HasValue)
-            {
-                p.GpuLayerCount = settings.GpuLayers.Value;
-            }
-
-            p.Model = settings.ModelPath;
-
-            this._modelSettings = p;
-        }
-        private void FinalSampler(LlamaSettings settings)
-        {
-
-            if (settings.MiroStat != MiroStatMode.Disabled)
-            {
-                MirostatSamplerSettings mirostatSamplerSettings = new();
-
-                if (settings.MiroStatEntropy.HasValue)
-                {
-                    mirostatSamplerSettings.Eta = settings.MiroStatEntropy.Value;
-                }
-
-                if (settings.Temp.HasValue)
-                {
-                    mirostatSamplerSettings.Temperature = settings.Temp.Value;
-                }
-
-                if (settings.MiroStat == MiroStatMode.MiroStat)
-                {
-                    this._finalSampler = new MirostatOneSampler(mirostatSamplerSettings);
-                    return;
-                }
-
-                if (settings.MiroStat == MiroStatMode.MiroStat2)
-                {
-                    this._finalSampler = new MirostatTwoSampler(mirostatSamplerSettings);
-                    return;
-                }
-
-                throw new NotImplementedException();
-            }
-            else
-            {
-                TemperatureSamplerSettings temperatureSamplerSettings = new();
-
-                if (settings.Temp.HasValue)
-                {
-                    temperatureSamplerSettings.Temperature = settings.Temp.Value;
-                }
-
-                if (settings.Top_P.HasValue)
-                {
-                    temperatureSamplerSettings.TopP = settings.Top_P.Value;
-                }
-
-                this._finalSampler = new TemperatureSampler(temperatureSamplerSettings);
-            }
-        }
         private void ContextSettings(LlamaSettings settings)
         {
             LlamaContextSettings c = new()
@@ -287,29 +214,120 @@ namespace Llama
 
             this._contextSettings = c;
         }
-        public ContextEvaluator BuildChatEvaluator()
+
+        private void FinalSampler(LlamaSettings settings)
         {
-
-            List<ITokenTransformer> transformers = new() { new TextTruncationTransformer(250, 150, ".!?") };
-            transformers.AddRange(this._tokensTransformers);
-
-            (ContextEvaluator contextEvaluator, IContext summaryContext) = this.BuildSummaryEvaluator();
-
-            IBlockProcessor chatSummarizer = new ChatSummarizer(this._contextSettings, summaryContext, contextEvaluator);
-            IContextRoller contextRoller = new ChatContextRoller(chatSummarizer, this._contextSettings);
-
-            SafeLlamaContextHandle context = this._llamaContextFactory.Create();
-            LlamaContextWrapper wrapper = new(this._executionScheduler, this._textSanitizer, context, this._modelSettings, this._contextSettings, this._postResponseTransforms, this._tokensTransformers, this._simpleSamplers, this._finalSampler, contextRoller);
-
-            ContextEvaluator chatEvaluator = new(wrapper, this._textSanitizer, this._contextSettings);
-            chatEvaluator.QueueWritten += (s, e) => chatSummarizer.Process(e);
-
-            if (!chatEvaluator.IsNewSession)
+            if (settings.MiroStat != MiroStatMode.Disabled)
             {
-                chatSummarizer.Process(wrapper.Buffer.Trim());
+                MirostatSamplerSettings mirostatSamplerSettings = new();
+
+                if (settings.MiroStatEntropy.HasValue)
+                {
+                    mirostatSamplerSettings.Eta = settings.MiroStatEntropy.Value;
+                }
+
+                if (settings.Temp.HasValue)
+                {
+                    mirostatSamplerSettings.Temperature = settings.Temp.Value;
+                }
+
+                if (settings.MiroStat == MiroStatMode.MiroStat)
+                {
+                    this._finalSampler = new MirostatOneSampler(mirostatSamplerSettings);
+                    return;
+                }
+
+                if (settings.MiroStat == MiroStatMode.MiroStat2)
+                {
+                    this._finalSampler = new MirostatTwoSampler(mirostatSamplerSettings);
+                    return;
+                }
+
+                throw new NotImplementedException();
+            }
+            else
+            {
+                TemperatureSamplerSettings temperatureSamplerSettings = new();
+
+                if (settings.Temp.HasValue)
+                {
+                    temperatureSamplerSettings.Temperature = settings.Temp.Value;
+                }
+
+                if (settings.Top_P.HasValue)
+                {
+                    temperatureSamplerSettings.TopP = settings.Top_P.Value;
+                }
+
+                this._finalSampler = new TemperatureSampler(temperatureSamplerSettings);
+            }
+        }
+
+        private void Frequency(LlamaSettings settings)
+        {
+            FrequencyAndPresenceSamplerSettings frequencyAndPresenceSamplerSettings = new();
+
+            if (settings.RepeatPenaltyWindow.HasValue)
+            {
+                frequencyAndPresenceSamplerSettings.RepeatTokenPenaltyWindow = settings.RepeatPenaltyWindow.Value;
             }
 
-            return chatEvaluator;
+            this._simpleSamplers.Add(new FrequencyAndPresenceSampler(frequencyAndPresenceSamplerSettings));
+        }
+
+        private void ModelSettings(LlamaSettings settings)
+        {
+            LlamaModelSettings p = new();
+
+            if (settings.Threads.HasValue)
+            {
+                p.ThreadCount = settings.Threads.Value;
+            }
+
+            if (settings.NoMemoryMap)
+            {
+                p.UseMemoryMap = false;
+                p.UseMemoryLock = true;
+            }
+
+            switch (settings.MemoryMode)
+            {
+                case MemoryMode.Float16:
+                    break;
+
+                case MemoryMode.Float32:
+                    p.MemoryFloat16 = false;
+                    break;
+
+                default: throw new NotImplementedException();
+            }
+
+            if (settings.GpuLayers.HasValue)
+            {
+                p.GpuLayerCount = settings.GpuLayers.Value;
+            }
+
+            p.Model = settings.ModelPath;
+
+            this._modelSettings = p;
+        }
+
+        private void Repeat(LlamaSettings settings)
+        {
+            RepetitionSamplerSettings repetitionSamplerSettings = new();
+
+            if (settings.RepeatPenalty.HasValue)
+            {
+                repetitionSamplerSettings.RepeatPenalty = settings.RepeatPenalty.Value;
+            }
+
+            if (settings.RepeatPenaltyWindow.HasValue)
+            {
+                repetitionSamplerSettings.RepeatTokenPenaltyWindow = settings.RepeatPenaltyWindow.Value;
+            }
+
+            this._simpleSamplers.Add(new RepetitionSampler(repetitionSamplerSettings));
+            this._simpleSamplers.Add(new RepetitionCapSampler(5));
         }
     }
 }
