@@ -77,7 +77,7 @@ namespace ChieApi.Tasks.Boredom
                 Content = selectedAction.Text,
                 Tag = LlamaTokenTags.TEMPORARY,
                 IsVisible = false,
-                SourceUser = this._llamaService.CharacterName
+                DisplayName = this._llamaService.CharacterName
             });
         }
     }

@@ -15,7 +15,7 @@ namespace Llama.Native
 
         protected override bool ReleaseHandle()
         {
-            NativeApi.FreeModel(handle);
+            NativeApi.FreeModel(this.handle);
             this.SetHandle(IntPtr.Zero);
             return true;
         }

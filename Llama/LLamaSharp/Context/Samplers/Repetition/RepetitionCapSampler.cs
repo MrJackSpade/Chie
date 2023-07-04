@@ -17,14 +17,14 @@ namespace Llama.Context.Samplers.Repetition
 
         public void SampleNext(SampleContext sampleContext)
         {
-            if (sampleContext.InferrenceTokens.Count < _maxRepetitionCap)
+            if (sampleContext.InferrenceTokens.Count < this._maxRepetitionCap)
             {
                 return;
             }
 
             int tokenCount = sampleContext.InferrenceTokens.Count;
 
-            LlamaToken[] lastN = sampleContext.InferrenceTokens.Skip(tokenCount - _maxRepetitionCap).Distinct().ToArray();
+            LlamaToken[] lastN = sampleContext.InferrenceTokens.Skip(tokenCount - this._maxRepetitionCap).Distinct().ToArray();
 
             if (lastN.Length == 1)
             {

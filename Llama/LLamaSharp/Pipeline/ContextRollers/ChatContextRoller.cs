@@ -87,12 +87,12 @@ namespace Llama.Pipeline.ContextRollers
 
             toReturn.Ensure();
 
-            _summarizer.Process(toReturn);
+            this._summarizer.Process(toReturn);
 
             return toReturn;
         }
 
-        public void TokensEvaluated(IContext context, LlamaTokenCollection evaluated) => _summarizer.Process(evaluated);
+        public void TokensEvaluated(IContext context, LlamaTokenCollection evaluated) => this._summarizer.Process(evaluated);
 
         private void AppendNewline(IContext context, LlamaTokenCollection tokens)
         {

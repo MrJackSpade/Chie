@@ -1,6 +1,6 @@
 ﻿using ChieApi.Interfaces;
-using ChieApi.Services;
 using ChieApi.Shared.Entities;
+using ChieApi.Shared.Services;
 using Llama.Constants;
 
 namespace ChieApi.Pipelines
@@ -35,7 +35,7 @@ namespace ChieApi.Pipelines
 
                     yield return new ChatEntry()
                     {
-                        SourceUser = (await this._characterFactory.Build()).CharacterName,
+                        DisplayName = (await this._characterFactory.Build()).CharacterName,
                         Content = $"*Notices {timeSpan} {pos} passed*",
                         Tag = LlamaTokenTags.TEMPORARY
                     };

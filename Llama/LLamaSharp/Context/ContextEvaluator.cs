@@ -66,6 +66,10 @@ namespace Llama.Context
 
         public event EventHandler<LlamaTokenCollection> QueueWritten;
 
+        public int AvailableBuffer => this._context.AvailableBuffer;
+
+        public int ContextSize => this._contextSettings.ContextSize;
+
         public bool IsNewSession { get; private set; } = true;
 
         public string Name { get; set; }
@@ -87,6 +91,8 @@ namespace Llama.Context
             this._evaluationQueue.Append(text);
             return this.Call();
         }
+
+        public void Clear() => this._context.Clear();
 
         public void Dispose() => this._context.Dispose();
 
@@ -145,6 +151,10 @@ namespace Llama.Context
                 throw new ArgumentException($"prompt is too long ({this._evaluationQueue.Count} tokens, max {this._context.Size - 4})");
             }
         }
+
+        public LlamaTokenCollection Tokenize(string toTokenize, string tag) => this._context.Tokenize(toTokenize, tag);
+
+        public LlamaTokenCollection Tokenize(string toTokenize) => this._context.Tokenize(toTokenize, LlamaTokenTags.UNMANAGED);
 
         public bool TryGetLatest(out FileInfo? latest)
         {

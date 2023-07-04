@@ -15,7 +15,7 @@ namespace ChieApi.Pipelines
 
         public async IAsyncEnumerable<ChatEntry> Process(ChatEntry chatEntry)
         {
-            LlamaSafeString cleanedName = new(chatEntry.SourceUser);
+            LlamaSafeString cleanedName = new(chatEntry.DisplayName);
 
             if (cleanedName.InvalidCharacters.Length > 0)
             {
@@ -28,7 +28,7 @@ namespace ChieApi.Pipelines
                 yield break;
             }
 
-            chatEntry.SourceUser = cleanedName.Content;
+            chatEntry.DisplayName = cleanedName.Content;
 
             yield return chatEntry;
         }

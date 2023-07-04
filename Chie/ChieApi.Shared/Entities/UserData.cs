@@ -10,10 +10,14 @@ namespace ChieApi.Shared.Entities
 
         public bool Blocked { get; set; }
 
-        [Key]
-        public int Id { get; set; }
+        public string DisplayName { get; set; } = string.Empty;
 
-        public string UserName { get; set; } = string.Empty;
+        [Key]
+        public long Id { get; set; }
+
+        public long LastChatId { get; set; } = 0;
+
+        public string UserId { get; set; } = string.Empty;
 
         public string UserPrompt { get; set; } = string.Empty;
 

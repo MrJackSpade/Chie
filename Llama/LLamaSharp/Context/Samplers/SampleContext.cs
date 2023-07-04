@@ -1,7 +1,6 @@
 ﻿using Llama.Collections.Interfaces;
 using Llama.Native;
 using Llama.Native.Data;
-using System;
 
 namespace Llama.Context.Samplers
 {

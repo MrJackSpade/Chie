@@ -148,7 +148,8 @@ namespace DiscordGpt
 
             IncomingDiscordMessage message = new()
             {
-                Author = userCleaned,
+                DisplayName = userCleaned,
+                UserId = arg.Author.Username,
                 Channel = activeChannel.ChieName,
                 Content = messageContent,
                 Images = await arg.GetImages().ToListAsync(),
@@ -169,7 +170,8 @@ namespace DiscordGpt
                 {
                     if (string.Equals(k, "username", StringComparison.OrdinalIgnoreCase))
                     {
-                        message.Author = v;
+                        message.UserId = v;
+                        message.DisplayName = v;
                     }
                 }
             }

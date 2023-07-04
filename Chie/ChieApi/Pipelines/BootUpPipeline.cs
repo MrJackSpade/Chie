@@ -27,7 +27,7 @@ namespace ChieApi.Pipelines
             {
                 yield return new ChatEntry()
                 {
-                    SourceUser = _characterName,
+                    DisplayName = _characterName,
                     SourceChannel = chatEntry.SourceChannel,
                     IsVisible = false,
                     Content = "*abruptly regains consciousness*"

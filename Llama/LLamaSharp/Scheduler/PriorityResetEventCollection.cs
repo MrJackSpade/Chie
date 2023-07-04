@@ -15,8 +15,8 @@ namespace Llama.Scheduler
         {
             foreach (ExecutionPriority priority in Enum.GetValues(typeof(ExecutionPriority)))
             {
-                _executionPriorities.Add(priority);
-                _queue.Add(new PrioritySemaphore(priority));
+                this._executionPriorities.Add(priority);
+                this._queue.Add(new PrioritySemaphore(priority));
             }
         }
 

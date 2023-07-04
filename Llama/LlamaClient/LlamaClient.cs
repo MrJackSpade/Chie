@@ -4,7 +4,6 @@ using Llama.Context;
 using Llama.Data;
 using Llama.Events;
 using Llama.Shared;
-using System.Text;
 
 namespace Llama
 {
@@ -13,10 +12,6 @@ namespace Llama
         private static Thread? _inferenceThread;
 
         private readonly ContextEvaluator _chatEvaluator;
-
-        private readonly Encoding _encoding = System.Text.Encoding.UTF8;
-
-        private readonly StringBuilder _outBuilder;
 
         private readonly List<InputText> _queued = new();
 
@@ -29,7 +24,6 @@ namespace Llama
         public LlamaClient(Shared.LlamaSettings settings)
         {
             this._settings = settings;
-            this._outBuilder = new StringBuilder();
 
             ContextEvaluatorBuilder builder = new(settings);
 
@@ -42,7 +36,7 @@ namespace Llama
 
         public event EventHandler<DisconnectEventArgs> OnDisconnect;
 
-        public event EventHandler<string>? ResponseReceived;
+        public event EventHandler<LlamaTokenCollection>? ResponseReceived;
 
         public event EventHandler<LlameClientTokenGeneratedEventArgs>? TokenGenerated;
 
@@ -135,7 +129,7 @@ namespace Llama
                     Console.Write('\n');
                 }
 
-                this.ResponseReceived?.Invoke(this, resultStr);
+                this.ResponseReceived?.Invoke(this, result);
             });
 
             _inferenceThread.Start();

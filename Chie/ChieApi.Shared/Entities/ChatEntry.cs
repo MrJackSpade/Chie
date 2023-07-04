@@ -36,8 +36,25 @@ namespace ChieApi.Shared.Entities
         [JsonPropertyName("replyToId")]
         public long ReplyToId { get; set; }
 
-        [JsonPropertyName("sourceUser")]
-        public string? SourceUser { get; set; }
+        [JsonPropertyName("displayName")]
+        public string? DisplayName { get; set; }
+
+        private string _id;
+
+        [JsonPropertyName("userId")]
+        public string? UserId
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(this._id))
+                {
+                    return this.DisplayName;
+                }
+
+                return this._id;
+            }
+            set => this._id = value;
+        }
 
         [JsonPropertyName("tag")]
         public string? Tag { get; set; }

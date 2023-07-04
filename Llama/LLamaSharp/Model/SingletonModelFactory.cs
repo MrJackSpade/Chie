@@ -7,11 +7,13 @@ namespace Llama.Model
 {
     public class SingletonModelFactory : IModelHandleFactory
     {
+        private static readonly object _lock = new();
+
+        private static SafeLlamaModelHandle _handle;
+
         private readonly LlamaContextSettings _llamaContextSettings;
 
         private readonly LlamaModelSettings _modelSettings;
-
-        private SafeLlamaModelHandle _handle;
 
         public SingletonModelFactory(LlamaModelSettings modelSettings, LlamaContextSettings llamaContextSettings)
         {
@@ -21,9 +23,12 @@ namespace Llama.Model
 
         public SafeLlamaModelHandle Create()
         {
-            this._handle ??= Utils.InitModelFromParams(this._modelSettings, this._llamaContextSettings);
+            lock (_lock)
+            {
+                _handle ??= Utils.InitModelFromParams(this._modelSettings, this._llamaContextSettings);
 
-            return this._handle;
+                return _handle;
+            }
         }
     }
 }

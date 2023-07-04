@@ -1,6 +1,6 @@
 ﻿using ChieApi.Interfaces;
-using ChieApi.Services;
 using ChieApi.Shared.Entities;
+using ChieApi.Shared.Services;
 using Llama.Constants;
 
 namespace ChieApi.Pipelines
@@ -28,12 +28,12 @@ namespace ChieApi.Pipelines
                 this._characterName = (await this._characterFactory.Build()).CharacterName;
             }
 
-            if (chatEntry.SourceUser != this._characterName &&
-                !string.IsNullOrWhiteSpace(chatEntry.SourceUser) &&
+            if (chatEntry.DisplayName != this._characterName &&
+                !string.IsNullOrWhiteSpace(chatEntry.UserId) &&
                 //Gotta check to make sure we haven't already returned this request
-                this._returnedData.Add(chatEntry.SourceUser))
+                this._returnedData.Add(chatEntry.UserId))
             {
-                UserData? userData = this._userDataService.GetUserData(chatEntry.SourceUser);
+                UserData? userData = this._userDataService.GetOrDefault(chatEntry.UserId);
 
                 if (userData != null)
                 {
@@ -44,12 +44,14 @@ namespace ChieApi.Pipelines
                 }
 
                 //If prepend
-                if (this.TryGetChatEntry(chatEntry, userData, out ChatEntry ce1) && userData.BeforeMessage)
+                if (this.TryGetChatEntry(chatEntry, userData, out ChatEntry? ce1) && userData.BeforeMessage)
                 {
                     yield return ce1;
                 }
 
-                yield return chatEntry;
+                string overrideName = this.Coalesce(userData?.DisplayName, chatEntry.DisplayName, chatEntry.UserId);
+                    
+                yield return chatEntry with {  DisplayName = overrideName };
 
                 //If append
                 if (this.TryGetChatEntry(chatEntry, userData, out ChatEntry ce2) && !userData.BeforeMessage)
@@ -59,7 +61,20 @@ namespace ChieApi.Pipelines
             }
         }
 
-        public bool TryGetChatEntry(ChatEntry chatEntry, UserData userData, out ChatEntry ce)
+        private string Coalesce(params string[] args)
+        {
+            foreach(string arg in args)
+            {
+                if (!string.IsNullOrWhiteSpace(arg))
+                {
+                    return arg;
+                }
+            }
+
+            throw new NotImplementedException();
+        }
+
+        public bool TryGetChatEntry(ChatEntry chatEntry, UserData userData, out ChatEntry? ce)
         {
             if (userData == null)
             {
@@ -67,9 +82,15 @@ namespace ChieApi.Pipelines
                 return false;
             }
 
+            if(string.IsNullOrWhiteSpace(userData.UserPrompt))
+            {
+                ce = null;
+                return false;
+            }
+
             ce = new ChatEntry()
             {
-                SourceUser = _characterName,
+                DisplayName = _characterName,
                 Content = userData.UserPrompt,
                 IsVisible = false,
                 SourceChannel = chatEntry.SourceChannel,

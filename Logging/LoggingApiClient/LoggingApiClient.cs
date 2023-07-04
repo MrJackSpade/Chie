@@ -2,6 +2,7 @@
 using Logging.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net.Http.Json;
 
 namespace Logging
@@ -59,6 +60,8 @@ namespace Logging
                 Scope = string.Join(".", this._scopes.Select(s => s.State.ToString())),
                 ApplicationName = this._settings.ApplicationName
             };
+
+            Debug.WriteLine(logEntry.Content);
 
             this._toSend.Enqueue(logEntry);
 

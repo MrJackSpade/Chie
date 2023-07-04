@@ -9,9 +9,9 @@ namespace Llama.Context.Factories
 
         public StaticContextFactory(SafeLlamaContextHandle context)
         {
-            _context = context;
+            this._context = context;
         }
 
-        public SafeLlamaContextHandle Create() => _context;
+        public SafeLlamaContextHandle Create() => this._context;
     }
 }

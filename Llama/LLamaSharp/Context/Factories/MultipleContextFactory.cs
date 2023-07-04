@@ -15,11 +15,11 @@ namespace Llama.Context.Factories
 
         public MultipleContextFactory(SafeLlamaModelHandle modelHandle, LlamaModelSettings modelSettings, LlamaContextSettings llamaContextSettings)
         {
-            _modelHandle = modelHandle;
-            _modelSettings = modelSettings;
-            _llamaContextSettings = llamaContextSettings;
+            this._modelHandle = modelHandle;
+            this._modelSettings = modelSettings;
+            this._llamaContextSettings = llamaContextSettings;
         }
 
-        public SafeLlamaContextHandle Create() => Utils.InitContextFromParams(_modelHandle, _modelSettings, _llamaContextSettings);
+        public SafeLlamaContextHandle Create() => Utils.InitContextFromParams(this._modelHandle, this._modelSettings, this._llamaContextSettings);
     }
 }

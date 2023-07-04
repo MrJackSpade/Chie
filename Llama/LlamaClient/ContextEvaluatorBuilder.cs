@@ -22,7 +22,7 @@ using System.Text;
 
 namespace Llama
 {
-    internal class ContextEvaluatorBuilder
+    public class ContextEvaluatorBuilder
     {
         private readonly IExecutionScheduler _executionScheduler;
 
@@ -104,7 +104,7 @@ namespace Llama
             return chatEvaluator;
         }
 
-        private (ContextEvaluator, IContext) BuildSummaryEvaluator()
+        public ContextEvaluator BuildUserSummaryEvaluator()
         {
             LlamaContextSettings thisSettings = this._contextSettings with
             {
@@ -119,6 +119,31 @@ namespace Llama
                     "###"
                 }
             };
+
+            List<ITokenTransformer> transformers = new() { new TextTruncationTransformer(1000, 1000, ".!?\n") };
+            transformers.AddRange(this._tokensTransformers);
+            SafeLlamaContextHandle context = this._llamaContextFactory.Create();
+            LlamaContextWrapper wrapper = new(this._executionScheduler, this._textSanitizer, context, this._modelSettings, thisSettings, new List<IPostResponseContextTransformer>(), transformers, this._simpleSamplers, new GreedySampler(), new DefaultContextRoller());
+            ContextEvaluator contextEvaluator = new(wrapper, this._textSanitizer, thisSettings);
+            return contextEvaluator;
+        }
+
+        private (ContextEvaluator, IContext) BuildSummaryEvaluator()
+        {
+            LlamaContextSettings thisSettings = this._contextSettings with
+            {
+                AutoLoad = false,
+                AutoSave = false,
+                ExecutionPriority = ExecutionPriority.High,
+                BatchSize = 64,
+                Prompt = string.Empty,
+                Antiprompt = new List<string>()
+                {
+                    "User:",
+                    "###"
+                }
+            };
+
             List<ITokenTransformer> transformers = new() { new TextTruncationTransformer(1000, 1000, ".!?\n") };
             transformers.AddRange(this._tokensTransformers);
             SafeLlamaContextHandle context = this._llamaContextFactory.Create();

@@ -145,6 +145,7 @@ namespace Llama.Pipeline.Summarizers
                 if (ENABLED)
                 {
                     LlamaTokenCollection summarized = new();
+
                     summarized.Append(this._evaluationContext.Tokenize("|Chie> ", LlamaTokenTags.UNMANAGED));
 
                     LlamaTokenCollection toSummarize = new();
@@ -182,7 +183,7 @@ namespace Llama.Pipeline.Summarizers
                         {
                             if (i > 0)
                             {
-                                cleaned.Append(_evaluationContext.Tokenize(" ", LlamaTokenTags.INPUT));
+                                cleaned.Append(this._evaluationContext.Tokenize(" ", LlamaTokenTags.INPUT));
                             }
 
                             cleaned.Append(summaryArray[i]);

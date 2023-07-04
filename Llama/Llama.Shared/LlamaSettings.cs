@@ -61,8 +61,6 @@
 
         public Dictionary<int, string> LogitBias { get; set; } = new Dictionary<int, string>();
 
-        public string MainPath { get; set; }
-
         public MemoryMode MemoryMode { get; set; }
 
         public MiroStatMode MiroStat { get; set; }

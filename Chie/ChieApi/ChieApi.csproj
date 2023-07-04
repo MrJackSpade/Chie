@@ -8,7 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="SummarizationData\**" />
+    <Content Remove="SummarizationData\**" />
+    <EmbeddedResource Remove="SummarizationData\**" />
     <None Remove="Ai\**\*.txt" />
+    <None Remove="SummarizationData\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -27,6 +31,7 @@
   </ItemGroup>
 	
   <ItemGroup>
+    <PackageReference Include="Loxifi.Database" Version="0.9.1" />
     <PackageReference Include="Loxifi.JsonClient" Version="0.8.1" />
     <PackageReference Include="Loxifi.StringParsing" Version="0.2.1" />
     <PackageReference Include="Loxifi.TypeFactory" Version="0.9.11" />
@@ -42,7 +47,6 @@
     <ProjectReference Include="..\..\Llama\LlamaSharp\LlamaSharp.csproj" />
     <ProjectReference Include="..\..\Logging\LoggingApiClient\LoggingApiClient.csproj" />
     <ProjectReference Include="..\..\Utils\Ai.Abstractions\Ai.Abstractions.csproj" />
-    <ProjectReference Include="..\..\Utils\Ai.Database\Loxifi.Database.csproj" />
     <ProjectReference Include="..\..\Utils\Ai.Utils\Ai.Utils.csproj" />
     <ProjectReference Include="..\ChieApi.Shared\ChieApi.Shared.csproj" />
   </ItemGroup>
@@ -51,5 +55,9 @@
     <Content Update="Ai\**\*">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Processes\" />
   </ItemGroup>
 </Project>

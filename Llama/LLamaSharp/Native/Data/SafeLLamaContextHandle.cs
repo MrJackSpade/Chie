@@ -9,7 +9,7 @@ namespace Llama.Native
         public SafeLlamaContextHandle(IntPtr contextPtr, SafeLlamaModelHandle model)
             : base(contextPtr)
         {
-            _model = model;
+            this._model = model;
         }
 
         protected SafeLlamaContextHandle()
@@ -18,7 +18,7 @@ namespace Llama.Native
 
         protected override bool ReleaseHandle()
         {
-            NativeApi.FreeContext(handle);
+            NativeApi.FreeContext(this.handle);
             this.SetHandle(IntPtr.Zero);
             return true;
         }

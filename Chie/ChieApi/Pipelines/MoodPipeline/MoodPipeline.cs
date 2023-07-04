@@ -71,7 +71,7 @@ namespace ChieApi.Pipelines.MoodPipeline
                         Content = e.Text,
                         Image = Array.Empty<byte>(),
                         IsVisible = false,
-                        SourceUser = this._llamaService.CharacterName,
+                        DisplayName = this._llamaService.CharacterName,
                         Tag = LlamaTokenTags.TEMPORARY
                     };
 

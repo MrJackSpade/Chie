@@ -5,6 +5,7 @@ using ChieApi.Interfaces;
 using ChieApi.Pipelines;
 using ChieApi.Pipelines.MoodPipeline;
 using ChieApi.Services;
+using ChieApi.Shared.Services;
 using ChieApi.Tasks.Boredom;
 using Logging;
 using Microsoft.AspNetCore.Mvc;
@@ -54,6 +55,7 @@ namespace ChieApi
             _ = builder.Services.AddSingleton<ILogger, LoggingApiClient>();
 
             _ = builder.Services.AddSingleton<UserDataService>();
+            _ = builder.Services.AddSingleton<LogitService>();
             _ = builder.Services.AddSingleton<BlipApiClient>();
             _ = builder.Services.AddSingleton<LlamaService>();
             _ = builder.Services.AddSingleton<ICharacterFactory, CharacterService>();
@@ -64,6 +66,7 @@ namespace ChieApi
             _ = builder.Services.AddTransient<IRequestPipeline, TimePassagePipeline>();
             _ = builder.Services.AddTransient<IRequestPipeline, BoredomTask>();
             _ = builder.Services.AddSingleton<IRequestPipeline, MoodPipeline>();
+            //_ = builder.Services.AddSingleton<IBackgroundProcess, UserSummarizer>();
             _ = builder.Services.AddSingleton<IRequestPipeline, BootUpPipeline>();
             _ = builder.Services.AddScoped<IRequestPipeline, UserDataPipeline>();
             _ = builder.Services.AddTransient<IBackgroundTask, BoredomTask>();

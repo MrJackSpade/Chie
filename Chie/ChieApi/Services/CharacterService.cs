@@ -43,8 +43,6 @@ namespace ChieApi.Services
                 this._characterConfiguration ??= this.Load(this._characterNameFactory.GetName());
             }
 
-            this._characterConfiguration.MainPath = this._settings.LlamaMainExe;
-
             if (this._characterConfiguration.Threads <= 0)
             {
                 this._characterConfiguration.Threads = System.Environment.ProcessorCount / 2;
@@ -123,9 +121,10 @@ namespace ChieApi.Services
         private static async Task<string> GetTransformedPromptPath(string promptPath, string fName)
         {
             string transformedPrompt = await MacroService.TransformFile(promptPath);
+
             string transformedPromptDirectory = Path.Combine(AppContext.BaseDirectory, "Temp");
 
-            string tempPromptFile = Path.Combine(transformedPromptDirectory, fName);
+            string tempPromptFile = Path.Combine(transformedPromptDirectory, Guid.NewGuid().ToString() + "." + fName);
 
             if (!Directory.Exists(transformedPromptDirectory))
             {

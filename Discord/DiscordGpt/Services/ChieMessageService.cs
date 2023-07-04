@@ -146,7 +146,8 @@ namespace DiscordGpt.Services
                     ChatEntry = new ChatEntry()
                     {
                         Image = imageData,
-                        SourceUser = arg.Author,
+                        DisplayName = arg.DisplayName,
+                        UserId = arg.UserId,
                         SourceChannel = arg.Channel
                     }
                 };
@@ -160,7 +161,8 @@ namespace DiscordGpt.Services
                     ChatEntry = new ChatEntry()
                     {
                         Content = this.CleanContent(arg.Content),
-                        SourceUser = arg.Author,
+                        DisplayName = arg.DisplayName,
+                        UserId = arg.UserId,
                         SourceChannel = arg.Channel
                     }
                 };

@@ -61,7 +61,7 @@ namespace Llama.Scheduler
                 int ms = lastPriority == ExecutionPriority.Background ? -1 : 50;
 
                 //Try and get a wait handle
-                ExecutionPriority? opened = _priorityResetEvents.WaitAny(lastPriority, ms);
+                ExecutionPriority? opened = this._priorityResetEvents.WaitAny(lastPriority, ms);
 
                 //No wait handle, nothing of greater or equal priority
                 if (opened is null)
@@ -86,8 +86,8 @@ namespace Llama.Scheduler
                     //Correct if what we grabbed isn't what we thought we were grabbing
                     if (lastPriority != opened.Value)
                     {
-                        _priorityResetEvents.Decrement(lastPriority);
-                        _priorityResetEvents.Increment(opened.Value);
+                        this._priorityResetEvents.Decrement(lastPriority);
+                        this._priorityResetEvents.Increment(opened.Value);
                     }
                 }
 
