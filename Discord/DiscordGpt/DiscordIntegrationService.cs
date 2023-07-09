@@ -142,6 +142,12 @@ namespace DiscordGpt
         {
             string messageContent = this._chieMessageService.CleanContent(arg.Content);
 
+            foreach(SocketUser user in arg.MentionedUsers)
+            {
+                string placeholder = $"<@{user.Id}>";
+                messageContent = messageContent.Replace(placeholder, $"*at <@{user.Username}>*");
+            }
+
             string userCleaned = this._nameService.CleanUserName(arg.Author.GetDisplayName());
 
             ActiveChannel activeChannel = this._activeChannels.GetOrAdd(arg.Channel);

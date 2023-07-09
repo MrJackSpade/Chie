@@ -35,6 +35,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LoggingApiClient", "Logging
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Logging.Shared", "Logging\Logging.Shared\Logging.Shared.csproj", "{0BAC05D6-827B-4EB5-BE6B-0078FE4AB679}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Loxifi.Database", "Y:\Git\Loxifi.Database\Loxifi.Database.csproj", "{555FDF68-FCCE-43A0-AAAB-857BFDD6838C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -189,6 +191,18 @@ Global
 		{0BAC05D6-827B-4EB5-BE6B-0078FE4AB679}.Release|Any CPU.Build.0 = Release|Any CPU
 		{0BAC05D6-827B-4EB5-BE6B-0078FE4AB679}.Release|x64.ActiveCfg = Release|Any CPU
 		{0BAC05D6-827B-4EB5-BE6B-0078FE4AB679}.Release|x64.Build.0 = Release|Any CPU
+		{555FDF68-FCCE-43A0-AAAB-857BFDD6838C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{555FDF68-FCCE-43A0-AAAB-857BFDD6838C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{555FDF68-FCCE-43A0-AAAB-857BFDD6838C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{555FDF68-FCCE-43A0-AAAB-857BFDD6838C}.Debug|x64.Build.0 = Debug|Any CPU
+		{555FDF68-FCCE-43A0-AAAB-857BFDD6838C}.GPU|Any CPU.ActiveCfg = Debug|Any CPU
+		{555FDF68-FCCE-43A0-AAAB-857BFDD6838C}.GPU|Any CPU.Build.0 = Debug|Any CPU
+		{555FDF68-FCCE-43A0-AAAB-857BFDD6838C}.GPU|x64.ActiveCfg = Debug|Any CPU
+		{555FDF68-FCCE-43A0-AAAB-857BFDD6838C}.GPU|x64.Build.0 = Debug|Any CPU
+		{555FDF68-FCCE-43A0-AAAB-857BFDD6838C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{555FDF68-FCCE-43A0-AAAB-857BFDD6838C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{555FDF68-FCCE-43A0-AAAB-857BFDD6838C}.Release|x64.ActiveCfg = Release|Any CPU
+		{555FDF68-FCCE-43A0-AAAB-857BFDD6838C}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

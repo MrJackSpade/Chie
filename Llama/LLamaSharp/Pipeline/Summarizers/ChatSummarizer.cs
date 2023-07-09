@@ -15,8 +15,9 @@ using System.Threading;
 
 namespace Llama.Pipeline.Summarizers
 {
-    public class ChatSummarizer : IBlockProcessor
+    public partial class ChatSummarizer : IBlockProcessor
     {
+
         private const string DIR_SUMMARIZATION = "SummarizationData";
 
         private const bool ENABLED = true;
@@ -85,6 +86,21 @@ namespace Llama.Pipeline.Summarizers
             this._currentBlock = 0;
         }
 
+        private readonly BlockRestriction[] _blockRestrictions = new BlockRestriction[]
+        {
+            new BlockRestriction()
+            {
+                Index = 0,
+                BanTags =  new string[]
+                {
+                    LlamaTokenTags.STAGE_DIRECTION,
+                    LlamaTokenTags.PROMPT,
+                    LlamaTokenTags.CONTROL,
+                    LlamaTokenTags.TEMPORARY
+                }
+            }
+        };
+
         public void Process(ILlamaTokenCollection toSummarize)
         {
             if (toSummarize.Count == 0)
@@ -92,21 +108,18 @@ namespace Llama.Pipeline.Summarizers
                 return;
             }
 
+            BlockRestriction currentBlockRestriction = this._blockRestrictions.Where(b => b.Index == this._currentBlock).SingleOrDefault();
+
             foreach (LlamaToken token in toSummarize)
             {
-                if (token.Tag == LlamaTokenTags.PROMPT)
-                {
+                if(currentBlockRestriction is not null && currentBlockRestriction.BanTags.Contains(token.Tag)) 
+                { 
                     continue;
                 }
 
-                if (token.Tag == LlamaTokenTags.TEMPORARY)
+                if (this._currentTokens.Count > 1 && this._currentTokens.Last().Id != 13 && token.Value.Contains('|'))
                 {
-                    continue;
-                }
-
-                if (token.Tag == LlamaTokenTags.CONTROL)
-                {
-                    continue;
+                    this._currentTokens.Append(this._evaluationContext.Tokenize("\n", LlamaTokenTags.UNMANAGED));
                 }
 
                 this._currentTokens.Append(token);

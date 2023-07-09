@@ -21,7 +21,7 @@ using Llama.Shared;
 using Llama.TokenTransformers;
 using System.Text;
 
-namespace Llama
+namespace UserSummarizer
 {
     public class ContextEvaluatorBuilder
     {
@@ -68,7 +68,7 @@ namespace Llama
             {
                 new RemoveTemporaryTokens(),
                 new StripNullTokens()
-              
+
             };
         }
 
@@ -76,52 +76,19 @@ namespace Llama
         {
             // Use input string to calculate MD5 hash
             using System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
-            byte[] inputBytes = System.Text.Encoding.ASCII.GetBytes(input);
+            byte[] inputBytes = Encoding.ASCII.GetBytes(input);
             byte[] hashBytes = md5.ComputeHash(inputBytes);
 
             return Convert.ToHexString(hashBytes); // .NET 5 +
         }
-
-        public LlamaContextWrapper BuildChatContextWrapper(IContextRoller roller)
-        {
-            SafeLlamaContextHandle context = this._llamaContextFactory.Create();
-            LlamaContextWrapper wrapper = new(this._executionScheduler, this._textSanitizer, context, this._modelSettings, this._contextSettings, this._postResponseTransforms, this._tokensTransformers, this._simpleSamplers, this._finalSampler, roller);
-            return wrapper;
-        }
-
-        public ContextEvaluator BuildChatEvaluator()
-        {
-            List<ITokenTransformer> transformers = new() { new TextTruncationTransformer(250, 150, ".!?") };
-
-            transformers.AddRange(this._tokensTransformers);
-
-            (ContextEvaluator contextEvaluator, IContext summaryContext) = this.BuildSummaryEvaluator();
-
-            IBlockProcessor chatSummarizer = new ChatSummarizer(this._contextSettings, summaryContext, contextEvaluator);
-            IContextRoller contextRoller = new ChatContextRoller(chatSummarizer, this._contextSettings);
-
-            LlamaContextWrapper wrapper = this.BuildChatContextWrapper(contextRoller);
-
-            ContextEvaluator chatEvaluator = new(wrapper, this._textSanitizer, this._contextSettings);
-            chatEvaluator.QueueWritten += (s, e) => chatSummarizer.Process(e);
-
-            if (!chatEvaluator.IsNewSession)
-            {
-                chatSummarizer.Process(wrapper.Buffer.Trim());
-            }
-
-            return chatEvaluator;
-        }
-
-        private (ContextEvaluator, IContext) BuildSummaryEvaluator()
+        public ContextEvaluator BuildUserSummaryEvaluator()
         {
             LlamaContextSettings thisSettings = this._contextSettings with
             {
                 AutoLoad = false,
                 AutoSave = false,
-                ExecutionPriority = ExecutionPriority.High,
-                BatchSize = 64,
-                ContextSize = 1024,
+                ExecutionPriority = ExecutionPriority.Background,
+                BatchSize = 512,
                 Prompt = string.Empty,
                 Antiprompt = new List<string>()
                 {
@@ -135,7 +102,7 @@ namespace Llama
             SafeLlamaContextHandle context = this._llamaContextFactory.Create();
             LlamaContextWrapper wrapper = new(this._executionScheduler, this._textSanitizer, context, this._modelSettings, thisSettings, new List<IPostResponseContextTransformer>(), transformers, this._simpleSamplers, new GreedySampler(), new DefaultContextRoller());
             ContextEvaluator contextEvaluator = new(wrapper, this._textSanitizer, thisSettings);
-            return (contextEvaluator, wrapper);
+            return contextEvaluator;
         }
 
         private void ContextSettings(LlamaSettings settings)

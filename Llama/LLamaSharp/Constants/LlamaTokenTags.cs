@@ -10,6 +10,8 @@
 
         public const string PROMPT = "Prompt";
 
+        public const string STAGE_DIRECTION = "Stage Direction";
+
         public const string RESPONSE = "Response";
 
         public const string TEMPORARY = "Temporary";

@@ -1,17 +1,20 @@
 ﻿using Ai.Utils.Extensions;
 using ChieApi.Interfaces;
 using ChieApi.Shared.Services;
+using Llama;
+using Llama.Context.Interfaces;
+using Llama.Pipeline.ContextRollers;
 using Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace UserSummarizer
+namespace ChatVectorizer
 {
+
     internal class Program
     {
-
         private static async Task Main(string[] args)
         {
             ConfigurationBuilder builder = new();
@@ -21,29 +24,24 @@ namespace UserSummarizer
             ServiceCollection serviceCollection = new();
 
             serviceCollection.RegisterSecret<LoggingApiClientSettings>(configuration);
-            serviceCollection.RegisterSecret<UserSummarizerSettings>(configuration);
+            serviceCollection.RegisterSecret<ChatVectorizerSettings>(configuration);
 
             _ = serviceCollection.AddSingleton<ChatService>();
             _ = serviceCollection.AddSingleton<ILogger, LoggingApiClient>();
 
             _ = serviceCollection.AddSingleton<UserDataService>();
 
-            _ = serviceCollection.AddSingleton<IHasConnectionString>(s => s.GetService<IOptions<UserSummarizerSettings>>().Value);
+            _ = serviceCollection.AddSingleton<IHasConnectionString>(s => s.GetService<IOptions<ChatVectorizerSettings>>().Value);
 
-            _ = serviceCollection.AddSingleton<UserSummarizer>();
+            _ = serviceCollection.AddSingleton<IContext>((s) => new ContextEvaluatorBuilder(s.GetRequiredService<ChatVectorizerSettings>()).BuildChatContextWrapper(new DefaultContextRoller()));
+
+            _ = serviceCollection.AddSingleton<ChatVectorizer>();
 
             IServiceProvider provider = serviceCollection.BuildServiceProvider();
 
-            UserSummarizer summarizer = provider.GetService<UserSummarizer>();
+            ChatVectorizer summarizer = provider.GetService<ChatVectorizer>();
 
-            try
-            {
-                await summarizer.Execute();
-            } catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-                Console.ReadKey();
-            }
+            await summarizer.Execute();
         }
     }
 }

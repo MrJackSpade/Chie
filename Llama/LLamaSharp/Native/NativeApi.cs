@@ -155,7 +155,7 @@ namespace Llama.Native
         /// <param name="n_max_tokens"></param>
         /// <param name="add_bos"></param>
         /// <returns></returns>
-        public static int llamaTokenize(SafeLlamaContextHandle ctx, string text, Encoding encoding, int[] tokens, int n_max_tokens, bool add_bos)
+        public static int Tokenize(SafeLlamaContextHandle ctx, string text, Encoding encoding, int[] tokens, int n_max_tokens, bool add_bos)
         {
             byte[] bytes = encoding.GetBytes(text);
             sbyte[] data = new sbyte[bytes.Length];

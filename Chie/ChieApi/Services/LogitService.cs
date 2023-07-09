@@ -1,6 +1,6 @@
 ﻿using ChieApi.Interfaces;
 using ChieApi.Shared.Entities;
-using Loxifi.Database.Extensions;
+using Loxifi.Extensions;
 using System.Data.SqlClient;
 
 namespace ChieApi.Services
@@ -26,7 +26,7 @@ namespace ChieApi.Services
 
             if (this._cache.Length == 0)
             {
-                List<Logit> existing = this.GetLogits().ToList();
+                List<Logit> existing = this.GetLogits(true).ToList();
 
                 if (existing.Count > 0)
                 {

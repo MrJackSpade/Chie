@@ -19,7 +19,7 @@ namespace Llama.Context
 {
     public class ContextEvaluator : IDisposable
     {
-        private readonly IContext _context;
+        public IContext Context { get; private set; }
 
         private readonly LlamaContextSettings _contextSettings;
 
@@ -55,7 +55,7 @@ namespace Llama.Context
 
             this.Name = name;
             this.Verbose = verbose;
-            this._context = context;
+            this.Context = context;
 
             context.OnContextModification += (s, o) => this.OnContextModification?.Invoke(this, o);
 
@@ -65,10 +65,6 @@ namespace Llama.Context
         public event EventHandler<ContextModificationEventArgs> OnContextModification;
 
         public event EventHandler<LlamaTokenCollection> QueueWritten;
-
-        public int AvailableBuffer => this._context.AvailableBuffer;
-
-        public int ContextSize => this._contextSettings.ContextSize;
 
         public bool IsNewSession { get; private set; } = true;
 
@@ -92,14 +88,12 @@ namespace Llama.Context
             return this.Call();
         }
 
-        public void Clear() => this._context.Clear();
-
-        public void Dispose() => this._context.Dispose();
+        public void Dispose() => this.Context.Dispose();
 
         public void Load(string fileName)
         {
             this._evaluationQueue.Clear();
-            this._context.Load(fileName);
+            this.Context.Load(fileName);
             this.IsNewSession = false;
         }
 
@@ -119,7 +113,7 @@ namespace Llama.Context
             this.Save(fileName);
         }
 
-        public void Save(string fileName) => this._context.Save(fileName);
+        public void Save(string fileName) => this.Context.Save(fileName);
 
         /// <summary>
         /// Apply a prompt to the model.
@@ -142,19 +136,19 @@ namespace Llama.Context
                 LlamaLogger.Default.Warn("Input prompt does not start with space and may have issues as a result");
             }
 
-            this._evaluationQueue.Append(this._context.Tokenize(prompt, LlamaTokenTags.PROMPT, true));
+            this._evaluationQueue.Append(this.Context.Tokenize(prompt, LlamaTokenTags.PROMPT, true));
 
-            this._prompt = this._context.Tokenize(prompt, LlamaTokenTags.PROMPT);
+            this._prompt = this.Context.Tokenize(prompt, LlamaTokenTags.PROMPT);
 
-            if (this._evaluationQueue.Count > this._context.Size - 4)
+            if (this._evaluationQueue.Count > this.Context.Size - 4)
             {
-                throw new ArgumentException($"prompt is too long ({this._evaluationQueue.Count} tokens, max {this._context.Size - 4})");
+                throw new ArgumentException($"prompt is too long ({this._evaluationQueue.Count} tokens, max {this.Context.Size - 4})");
             }
         }
 
-        public LlamaTokenCollection Tokenize(string toTokenize, string tag) => this._context.Tokenize(toTokenize, tag);
+        public LlamaTokenCollection Tokenize(string toTokenize, string tag) => this.Context.Tokenize(toTokenize, tag);
 
-        public LlamaTokenCollection Tokenize(string toTokenize) => this._context.Tokenize(toTokenize, LlamaTokenTags.UNMANAGED);
+        public LlamaTokenCollection Tokenize(string toTokenize) => this.Context.Tokenize(toTokenize, LlamaTokenTags.UNMANAGED);
 
         public bool TryGetLatest(out FileInfo? latest)
         {
@@ -189,13 +183,13 @@ namespace Llama.Context
 
                 if (this._evaluationQueue.Count > 0)
                 {
-                    this._context.Write(this._evaluationQueue);
+                    this.Context.Write(this._evaluationQueue);
                     queueWritten.Append(this._evaluationQueue);
-                    Console.Title = $"{this._context.AvailableBuffer}";
+                    Console.Title = $"{this.Context.AvailableBuffer}";
                     this._evaluationQueue.Clear();
                 }
 
-                this._context.Evaluate();
+                this.Context.Evaluate();
 
                 if (queueWritten.Count > 0)
                 {
@@ -210,7 +204,7 @@ namespace Llama.Context
 
                 if (this._evaluationQueue.Count == 0)
                 {
-                    SampleResult sample = this._context.SampleNext(thisCall);
+                    SampleResult sample = this.Context.SampleNext(thisCall);
 
                     this._evaluationQueue.Append(sample.Tokens);
                     thisCall.Append(sample.Tokens);
@@ -229,17 +223,17 @@ namespace Llama.Context
 
         private void Cleanup()
         {
-            LlamaTokenCollection checkMe = new(this._context.Evaluated.Where(t => t.Id != 0));
+            LlamaTokenCollection checkMe = new(this.Context.Evaluated.Where(t => t.Id != 0));
 
             checkMe.Ensure();
 
             this._cleanupThread = new Thread(() =>
             {
-                this._context.PostProcess();
+                this.Context.PostProcess();
 
                 if (this._contextSettings.AutoSave)
                 {
-                    this._context.Evaluated.Ensure();
+                    this.Context.Evaluated.Ensure();
                     this.Save();
                 }
 
@@ -259,7 +253,7 @@ namespace Llama.Context
 
                 if (text.Length > 1)
                 {
-                    LlamaTokenCollection line_inp = this._context.Tokenize(text, inputText.Tag);
+                    LlamaTokenCollection line_inp = this.Context.Tokenize(text, inputText.Tag);
 
                     this._evaluationQueue.Append(line_inp);
                 }
@@ -275,11 +269,11 @@ namespace Llama.Context
                 if (this.TryGetLatest(out FileInfo latest))
                 {
                     Console.WriteLine("Context found: " + latest);
-                    this._context.Load(latest.FullName);
+                    this.Context.Load(latest.FullName);
                     this.IsNewSession = false;
                     string cleanedPrompt = this._textSanitizer.Sanitize(this._contextSettings.Prompt);
 
-                    this._prompt = this._context.Tokenize(cleanedPrompt, LlamaTokenTags.PROMPT);
+                    this._prompt = this.Context.Tokenize(cleanedPrompt, LlamaTokenTags.PROMPT);
                     this._prompt.Ensure();
                     return;
                 }

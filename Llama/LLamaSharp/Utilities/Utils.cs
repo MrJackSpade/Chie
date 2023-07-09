@@ -89,7 +89,7 @@ namespace Llama.Utilities
         {
             int cnt = encoding.GetByteCount(text);
             Llama_token[] res = new Llama_token[cnt + (add_bos ? 1 : 0)];
-            int n = NativeApi.llamaTokenize(ctx, text, encoding, res, res.Length, add_bos);
+            int n = NativeApi.Tokenize(ctx, text, encoding, res, res.Length, add_bos);
             if (n < 0)
             {
                 throw new RuntimeError("Error happened during tokenization. It's possibly caused by wrong encoding. Please try to specify the encoding.");

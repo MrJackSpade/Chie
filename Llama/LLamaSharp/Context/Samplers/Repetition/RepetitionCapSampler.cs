@@ -28,14 +28,7 @@ namespace Llama.Context.Samplers.Repetition
 
             if (lastN.Length == 1)
             {
-                Span<LlamaTokenData> span = sampleContext.Candidates.data.Span;
-                LlamaTokenData existing = span[lastN[0].Id];
-                span[lastN[0].Id] = new LlamaTokenData()
-                {
-                    id = existing.id,
-                    logit = float.NegativeInfinity,
-                    p = float.NegativeInfinity
-                };
+                sampleContext.SetProbability(lastN[0].Id, float.NegativeInfinity);
             }
         }
     }

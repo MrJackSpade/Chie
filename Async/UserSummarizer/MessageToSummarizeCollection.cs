@@ -7,7 +7,7 @@ namespace UserSummarizer
     public class MessageToSummarizeCollection
     {
         private readonly ContextEvaluator _context;
-        public int MaxSize => (int)(this._context.ContextSize * 0.8);
+        public int MaxSize => (int)(this._context.Context.Size * 0.8);
         public int CurrentSize => this.TokenizedMessages.Sum(t => t.Count);
         public int Count => this._tokenizedMessages.Count;
         public long LastMessageId { get; set; }

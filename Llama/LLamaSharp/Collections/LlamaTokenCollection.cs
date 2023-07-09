@@ -95,6 +95,14 @@ namespace Llama.Collections
                 Debugger.Break();
             }
 
+            if(token.Value == "|")
+            {
+                if(this.Count > 1 && this.Last().Id != 13)
+                {
+                    //Debugger.Break();
+                }
+            }
+
             this._tokens.Add(token);
         }
 

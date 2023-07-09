@@ -18,8 +18,6 @@ namespace DiscordGpt.Services
     {
         public List<QueuedMessage> _outgoingMessageQueue = new();
 
-        private readonly ActiveChannelCollection _activeChannels;
-
         private readonly ChieClient _chieClient;
 
         private readonly ILogger _logger;
@@ -30,9 +28,8 @@ namespace DiscordGpt.Services
 
         private string _lastError = string.Empty;
 
-        public ChieMessageService(ChieClient chieClient, ILogger logger, ActiveChannelCollection activeChannels, NameService nameService)
+        public ChieMessageService(ChieClient chieClient, ILogger logger, NameService nameService)
         {
-            this._activeChannels = activeChannels;
             this._nameService = nameService;
             this._logger = logger;
             this._chieClient = chieClient;

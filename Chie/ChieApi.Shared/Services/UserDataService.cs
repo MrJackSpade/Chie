@@ -1,7 +1,7 @@
 ﻿using ChieApi.Interfaces;
 using ChieApi.Shared.Entities;
-using Loxifi.Database.Extensions;
 using System.Data.SqlClient;
+using Loxifi.Extensions;
 
 namespace ChieApi.Shared.Services
 {
@@ -54,6 +54,15 @@ namespace ChieApi.Shared.Services
             }
 
             return userData;
+        }
+
+        public void Encounter(string userId)
+        {
+            using SqlConnection connection = new(this._connectionString);
+
+            string query = $"update UserData set LastEncountered = '{DateTime.Now:yyyy-MM-dd HH:mm:ss}' where UserId = '{userId}'";
+           
+            connection.Execute(query);
         }
 
         public async Task<long> Save(UserData userData)

@@ -1,14 +1,14 @@
 ﻿using ChieApi.Interfaces;
+using ChieApi.Shared.Services;
+using Llama.Context;
 using Llama.Shared;
+using Microsoft.Extensions.Logging;
 using System.Text.Json.Serialization;
 
-namespace UserSummarizer
+namespace ChatVectorizer
 {
-    public class UserSummarizerSettings : LlamaSettings, IHasConnectionString
+    public class ChatVectorizerSettings : LlamaSettings, IHasConnectionString
     {
-        [JsonPropertyName("characterName")]
-        public string CharacterName { get; set; }
-
         [JsonPropertyName("connectionString")]
         public string ConnectionString { get; set; }
 

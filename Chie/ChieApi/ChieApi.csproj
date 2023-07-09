@@ -49,6 +49,7 @@
     <ProjectReference Include="..\..\Utils\Ai.Abstractions\Ai.Abstractions.csproj" />
     <ProjectReference Include="..\..\Utils\Ai.Utils\Ai.Utils.csproj" />
     <ProjectReference Include="..\ChieApi.Shared\ChieApi.Shared.csproj" />
+    <ProjectReference Include="Y:\Git\Loxifi.Database\Loxifi.Database.csproj" />
   </ItemGroup>
 
   <ItemGroup>
