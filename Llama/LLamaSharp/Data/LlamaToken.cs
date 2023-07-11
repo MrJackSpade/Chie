@@ -1,5 +1,4 @@
 ﻿using Llama.Constants;
-using Llama.Native;
 using Llama.Utilities;
 using System;
 using System.Diagnostics;
@@ -18,7 +17,9 @@ namespace Llama.Data
             this.Value = Utils.PtrToStringUTF8(value);
         }
 
-        public static LlamaToken Bos => new(NativeApi.TokenBos(), IntPtr.Zero, LlamaTokenTags.CONTROL);
+        public static LlamaToken BOS => new(1, IntPtr.Zero, LlamaTokenTags.CONTROL);
+
+        public static LlamaToken EOS => new(2, IntPtr.Zero, LlamaTokenTags.CONTROL);
 
         public static LlamaToken Null => new(0, IntPtr.Zero, LlamaTokenTags.NULL);
 

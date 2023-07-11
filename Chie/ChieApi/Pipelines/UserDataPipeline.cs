@@ -38,7 +38,7 @@ namespace ChieApi.Pipelines
 
                 if (minutes > 60)
                 {
-                    return new TextResult($"*notices her friend {displayName} arrive. {userData.UserSummary}]", LlamaTokenTags.STAGE_DIRECTION);
+                    return new TextResult($"*notices her friend {displayName} arrive. {userData.UserSummary}*", LlamaTokenTags.STAGE_DIRECTION);
                 } else
                 {
                     return new TextResult($"*remembers that {userData.UserSummary.To(". ")}*", LlamaTokenTags.TEMPORARY);

@@ -34,7 +34,7 @@ namespace Llama.Pipeline.ContextRollers
 
             List<LlamaTokenCollection> new_history = chatBlocks.ToList();
 
-            toReturn.AppendControl(NativeApi.TokenBos());
+            //toReturn.Append(LlamaToken.Bos);
 
             List<LlamaTokenCollection> keepLines = new();
 

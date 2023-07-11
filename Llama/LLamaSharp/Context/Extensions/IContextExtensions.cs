@@ -14,10 +14,10 @@ namespace Llama.Context.Extensions
     {
         public static void Ensure(this IContext context)
         {
-            if (context.Buffer[0].Id != NativeApi.TokenBos())
-            {
-                throw new Exception("First buffer token is not BOS");
-            }
+            //if (context.Buffer[0].Id != LlamaToken.Bos)
+            //{
+            //    throw new Exception("First buffer token is not BOS");
+            //}
         }
 
         public static float[] GetEmbeddings(this IContext handler)

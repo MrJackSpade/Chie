@@ -163,7 +163,7 @@ namespace Llama.Pipeline.Summarizers
 
                     LlamaTokenCollection toSummarize = new();
 
-                    toSummarize.Append(LlamaToken.Bos);
+                    //toSummarize.Append(LlamaToken.Bos);
 
                     if (this._summarizePrefix.Count > 0)
                     {

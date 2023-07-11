@@ -82,10 +82,19 @@ namespace Llama
             return Convert.ToHexString(hashBytes); // .NET 5 +
         }
 
-        public LlamaContextWrapper BuildChatContextWrapper(IContextRoller roller)
+        public LlamaContextWrapper BuildChatContextWrapper(IContextRoller roller, IEnumerable<ITokenTransformer> additionalTransformers = null)
         {
+            List<ITokenTransformer> transformers = new();
+
+            transformers.AddRange(this._tokensTransformers);
+
+            if(additionalTransformers != null)
+            {
+                transformers.AddRange(additionalTransformers);
+            }
+
             SafeLlamaContextHandle context = this._llamaContextFactory.Create();
-            LlamaContextWrapper wrapper = new(this._executionScheduler, this._textSanitizer, context, this._modelSettings, this._contextSettings, this._postResponseTransforms, this._tokensTransformers, this._simpleSamplers, this._finalSampler, roller);
+            LlamaContextWrapper wrapper = new(this._executionScheduler, this._textSanitizer, context, this._modelSettings, this._contextSettings, this._postResponseTransforms, transformers, this._simpleSamplers, this._finalSampler, roller);
             return wrapper;
         }
 
@@ -100,7 +109,7 @@ namespace Llama
             IBlockProcessor chatSummarizer = new ChatSummarizer(this._contextSettings, summaryContext, contextEvaluator);
             IContextRoller contextRoller = new ChatContextRoller(chatSummarizer, this._contextSettings);
 
-            LlamaContextWrapper wrapper = this.BuildChatContextWrapper(contextRoller);
+            LlamaContextWrapper wrapper = this.BuildChatContextWrapper(contextRoller, transformers);
 
             ContextEvaluator chatEvaluator = new(wrapper, this._textSanitizer, this._contextSettings);
             chatEvaluator.QueueWritten += (s, e) => chatSummarizer.Process(e);

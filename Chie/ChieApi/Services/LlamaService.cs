@@ -117,13 +117,16 @@ namespace ChieApi.Services
 
                 LlamaSafeString[] cleanedMessages = chatEntries.Select(LlamaSafeString.Parse).ToArray();
 
-                for (int i = 0; i < chatEntries.Length; i++)
+                if (cleanedMessages.Length != 0)
                 {
-                    bool last = i == chatEntries.Length - 1;
+                    for (int i = 0; i < chatEntries.Length; i++)
+                    {
+                        bool last = i == chatEntries.Length - 1;
 
-                    LlamaSafeString cleanedMessage = cleanedMessages[i];
+                        LlamaSafeString cleanedMessage = cleanedMessages[i];
 
-                    await this.SendText(chatEntries[i], last);
+                        await this.SendText(chatEntries[i], last);
+                    }
                 }
 
                 this._logger.LogInformation($"Last Message Id: {this.LastMessageId}");
