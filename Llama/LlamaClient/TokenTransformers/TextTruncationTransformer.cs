@@ -44,7 +44,7 @@ namespace Llama.TokenTransformers
 
             bool truncate = this._random.NextDouble() < chance;
 
-            if (!truncate || !this.GoodEndChar(written) || !nextT.StartsWith(" "))
+            if (!truncate || !this.GoodEndChar(written) || !nextT.StartsWith(" ") || written.Contains('\n')) //if newline, then we're probably getting back some kind of large list
             {
                 foreach (LlamaToken token in selectedTokens)
                 {
@@ -54,7 +54,7 @@ namespace Llama.TokenTransformers
                 yield break;
             }
 
-            yield return context.GetToken(13, LlamaTokenTags.RESPONSE);
+            yield return LlamaToken.EOS;
         }
 
         private bool GoodEndChar(string toTest)

@@ -17,9 +17,7 @@ namespace Llama
 
         private readonly Shared.LlamaSettings _settings;
 
-        private bool _killSent;
-
-        private char _lastChar;
+        public char LastChar { get; private set; }
 
         public LlamaClient(Shared.LlamaSettings settings)
         {
@@ -42,7 +40,7 @@ namespace Llama
 
         public bool Connected { get; private set; }
 
-        public bool EndsWithReverse => this._lastChar == this._settings.PrimaryReversePrompt?.Last();
+        public bool EndsWithReverse => this.LastChar == this._settings.PrimaryReversePrompt?.Last();
 
         public bool HasQueuedMessages => this._queued.Count > 0;
 
@@ -71,16 +69,8 @@ namespace Llama
             }
         }
 
-        public void Send(string toSend, string tag, bool flush = true, bool validateReversal = true)
+        public void Send(string toSend, string tag, bool flush = true)
         {
-            //If the last message was a manual kill, then we're not going to have the
-            //expected turnaround token, so we need to make sure we append it to the beginning
-            //of the next message so that its available in the right place in the context
-            if (validateReversal && this._killSent && this._lastChar != this._settings.PrimaryReversePrompt.Last() && !toSend.StartsWith(this._settings.PrimaryReversePrompt.Last()))
-            {
-                toSend = $"{this._settings.PrimaryReversePrompt}{toSend}";
-            }
-
             if (!flush)
             {
                 toSend += "\n";
@@ -94,8 +84,6 @@ namespace Llama
 
                 this._queued.Clear();
             }
-
-            this._killSent = false;
         }
 
         private void LlamaContext_OnContextModification(object sender, ContextModificationEventArgs obj) => this.OnContextModification?.Invoke(obj);
@@ -119,7 +107,7 @@ namespace Llama
                     });
 
                     result.Append(chunk);
-                    this._lastChar = chunk.Value[^1];
+                    this.LastChar = chunk.Value[^1];
                 }
 
                 string resultStr = result.ToString();

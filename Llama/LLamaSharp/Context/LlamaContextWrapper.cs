@@ -99,7 +99,7 @@ namespace Llama.Context
             this._evalThreadCount = modelSettings.ThreadCount;
             this.Size = this._settings.ContextSize;
             this._buffer = new LlamaTokenBuffer(this.Size);
-            this._buffer[0] = LlamaToken.Bos;
+            //this._buffer[0] = LlamaToken.Bos;
             this._evaluated = new LlamaTokenBuffer(this.Size);
 
             this._prompt = this.Tokenize(textSanitizer.Sanitize(settings.Prompt), LlamaTokenTags.PROMPT);
@@ -279,15 +279,15 @@ namespace Llama.Context
                 this.SetBuffer(newContext);
             }
 
-            if (this._bufferPointer == 0 && token.Id != NativeApi.TokenBos())
-            {
-                throw new Exception("First token must be BOS");
-            }
+            //if (this._bufferPointer == 0 && token.Id != LlamaToken.Bos)
+            //{
+            //    throw new Exception("First token must be BOS");
+            //}
 
-            if (this._bufferPointer > 0 && token.Id == NativeApi.TokenBos())
-            {
-                Debugger.Break();
-            }
+            //if (this._bufferPointer > 0 && token.Id == LlamaToken.Bos)
+            //{
+            //    Debugger.Break();
+            //}
 
             this._buffer[this._bufferPointer] = token;
 

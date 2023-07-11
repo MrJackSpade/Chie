@@ -100,9 +100,7 @@ namespace Llama
 
         public ContextEvaluator BuildChatEvaluator()
         {
-            List<ITokenTransformer> transformers = new() { new TextTruncationTransformer(250, 150, ".!?") };
-
-            transformers.AddRange(this._tokensTransformers);
+            List<ITokenTransformer> transformers = new() { new TextTruncationTransformer(250, 150, ".!?"), new NewlineControlReturnTransformer() };
 
             (ContextEvaluator contextEvaluator, IContext summaryContext) = this.BuildSummaryEvaluator();
 

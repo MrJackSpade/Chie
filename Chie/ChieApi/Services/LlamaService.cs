@@ -87,6 +87,11 @@ namespace ChieApi.Services
                     return 0;
                 }
 
+                if (this._client.LastChar is not '\n' and not '\0')
+                {
+                    this._client.Send("\n", LlamaTokenTags.RESPONSE, false);
+                }
+
                 this._client.Send($"|{this.CharacterName}>", LlamaTokenTags.INPUT, true);
                 return this.LastMessageId;
             }
@@ -245,7 +250,7 @@ namespace ChieApi.Services
 
                 if (!string.IsNullOrWhiteSpace(this._characterConfiguration.FixedInstruction))
                 {
-                    this._client.Send(this._characterConfiguration.FixedInstruction, LlamaTokenTags.TEMPORARY, false, false);
+                    this._client.Send(this._characterConfiguration.FixedInstruction, LlamaTokenTags.TEMPORARY, false);
                 }
             }
         }

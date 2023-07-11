@@ -1,7 +1,7 @@
 {
   "ReturnOnNewLine": false,
   "VerbosePrompt": true,
-  "InteractiveMode": "InteractiveFirst",
+  "InteractiveMode": "None",
   "KeepPromptTokens": -1,
   "ContextLength": 2048,
   "CharacterName": "Chie",
@@ -12,7 +12,6 @@
   "MemoryMode": "Float16",
   "UseSessionData": false,
   "PrimaryReversePrompt": "\n",
-  "AdditionalReversePrompts": [ "|", "\r", "\r\n", " |" ],
   "NoPenalizeNewLine": true,
   "RepeatPenaltyWindow": -1,
   "RepeatPenalty": 1.185,

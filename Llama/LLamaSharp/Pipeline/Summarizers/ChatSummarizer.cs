@@ -90,6 +90,14 @@ namespace Llama.Pipeline.Summarizers
         {
             new BlockRestriction()
             {
+                Index = -1,
+                BanTags =  new string[]
+                {
+                    LlamaTokenTags.CONTROL,
+                }
+            },
+            new BlockRestriction()
+            {
                 Index = 0,
                 BanTags =  new string[]
                 {
@@ -108,11 +116,11 @@ namespace Llama.Pipeline.Summarizers
                 return;
             }
 
-            BlockRestriction currentBlockRestriction = this._blockRestrictions.Where(b => b.Index == this._currentBlock).SingleOrDefault();
+            BlockRestriction[] currentBlockRestrictions = this._blockRestrictions.Where(b => b.Index == this._currentBlock || b.Index == -1).ToArray();
 
             foreach (LlamaToken token in toSummarize)
             {
-                if(currentBlockRestriction is not null && currentBlockRestriction.BanTags.Contains(token.Tag)) 
+                if(currentBlockRestrictions.SelectMany(b => b.BanTags).Contains(token.Tag)) 
                 { 
                     continue;
                 }
