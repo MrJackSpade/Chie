@@ -159,7 +159,7 @@ namespace Llama.Pipeline.Summarizers
                 {
                     LlamaTokenCollection summarized = new();
 
-                    summarized.Append(this._evaluationContext.Tokenize("|Chie> ", LlamaTokenTags.UNMANAGED));
+                    summarized.Append(this._evaluationContext.Tokenize("|Chie: ", LlamaTokenTags.UNMANAGED));
 
                     LlamaTokenCollection toSummarize = new();
 

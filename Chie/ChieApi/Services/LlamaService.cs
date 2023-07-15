@@ -87,7 +87,7 @@ namespace ChieApi.Services
                     return 0;
                 }
 
-                this._client.Send($"|{this.CharacterName}>", LlamaTokenTags.INPUT, true);
+                this._client.Send($"|{this.CharacterName}:", LlamaTokenTags.INPUT, true);
                 return this.LastMessageId;
             }
             finally
@@ -187,7 +187,7 @@ namespace ChieApi.Services
             string responseContent = collection.ToString();
 
             string? userName = this.CharacterName;
-            string? content = responseContent.To("|").Trim();
+            string? content = responseContent.To("|")!.Trim();
             this.CurrentResponse = string.Empty;
 
             if (string.IsNullOrWhiteSpace(userName) && string.IsNullOrWhiteSpace(content))
@@ -230,11 +230,11 @@ namespace ChieApi.Services
 
             if (!string.IsNullOrWhiteSpace(chatEntry.DisplayName))
             {
-                toSend = $"|{chatEntry.DisplayName}> {chatEntry.Content}";
+                toSend = $"|{chatEntry.DisplayName}: {chatEntry.Content}";
             }
             else
             {
-                toSend = $"[{chatEntry.Content}]";
+                toSend = $"{chatEntry.Content}";
             }
 
             this._client.Send(toSend, chatEntry.Tag ?? LlamaTokenTags.INPUT, false);

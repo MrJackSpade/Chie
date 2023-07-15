@@ -38,10 +38,10 @@ namespace ChieApi.Pipelines
 
                 if (minutes > 60)
                 {
-                    return new TextResult($"*notices her friend {displayName} arrive. {userData.UserSummary}*", LlamaTokenTags.STAGE_DIRECTION);
+                    return new TextResult($"[Chies friend {displayName} arrives. {userData.UserSummary}]", LlamaTokenTags.STAGE_DIRECTION);
                 } else
                 {
-                    return new TextResult($"*remembers that {userData.UserSummary.To(". ")}*", LlamaTokenTags.TEMPORARY);
+                    return new TextResult($"[{userData.UserSummary.To(". ")}]", LlamaTokenTags.TEMPORARY);
                 }
             }
 
@@ -137,7 +137,7 @@ namespace ChieApi.Pipelines
 
             ce = new ChatEntry()
             {
-                DisplayName = _characterName,
+                DisplayName = null,
                 Content = displayText.Content,
                 IsVisible = false,
                 SourceChannel = chatEntry.SourceChannel,

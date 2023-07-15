@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>fb549c0d-2310-48a2-bc01-cc374031f7cb</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\OneDrive\Documents\GitHub\Loxifi.Database\Loxifi.Database.csproj" />
+    <ProjectReference Include="..\Llama.Core\Llama.Core.csproj" />
+    <ProjectReference Include="..\Llama.Data\Llama.Data.csproj" />
+    <ProjectReference Include="..\LlamaApi.Shared\LlamaApi.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

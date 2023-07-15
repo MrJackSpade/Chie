@@ -139,7 +139,7 @@ namespace Llama.Collections
 
                     if (tags.Count > 1 && tags.Contains(Llama.Constants.LlamaTokenTags.TEMPORARY))
                     {
-                        Debugger.Break();
+                        //Debugger.Break();
                     }
                 }
             }
