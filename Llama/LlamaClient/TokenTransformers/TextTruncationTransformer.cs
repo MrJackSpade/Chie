@@ -25,7 +25,7 @@ namespace Llama.TokenTransformers
             this._endChars = endChars;
         }
 
-        public IEnumerable<LlamaToken> TransformToken(LlamaContextSettings settings, IContext context, IReadOnlyLlamaTokenCollection thisCall, IEnumerable<LlamaToken> selectedTokens)
+        public IEnumerable<LlamaToken> TransformToken(Context.LlamaContextSettings settings, IContext context, IReadOnlyLlamaTokenCollection thisCall, IEnumerable<LlamaToken> selectedTokens)
         {
             List<LlamaToken> tokens = selectedTokens.ToList();
 

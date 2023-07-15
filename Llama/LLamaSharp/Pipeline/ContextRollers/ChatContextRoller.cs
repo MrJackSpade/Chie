@@ -14,14 +14,11 @@ namespace Llama.Pipeline.ContextRollers
 {
     public class ChatContextRoller : IContextRoller
     {
-        private readonly int _blocks;
-
         private readonly IBlockProcessor _summarizer;
 
-        public ChatContextRoller(IBlockProcessor summarizer, LlamaContextSettings contextSettings)
+        public ChatContextRoller(IBlockProcessor summarizer)
         {
             this._summarizer = summarizer;
-            this._blocks = contextSettings.Blocks;
         }
 
         public LlamaTokenCollection GenerateContext(IContext context, LlamaTokenCollection originalPrompt, int keepTokens)
@@ -91,8 +88,6 @@ namespace Llama.Pipeline.ContextRollers
 
             return toReturn;
         }
-
-        public void TokensEvaluated(IContext context, LlamaTokenCollection evaluated) => this._summarizer.Process(evaluated);
 
         private void AppendNewline(IContext context, LlamaTokenCollection tokens)
         {

@@ -13,7 +13,7 @@ namespace Llama.Pipeline.TokenTransformers
 {
     public class InteractiveEosReplace : ITokenTransformer
     {
-        public IEnumerable<LlamaToken> TransformToken(LlamaContextSettings settings, IContext context, IReadOnlyLlamaTokenCollection thisCall, IEnumerable<LlamaToken> selectedTokens)
+        public IEnumerable<LlamaToken> TransformToken(Context.LlamaContextSettings settings, IContext context, IReadOnlyLlamaTokenCollection thisCall, IEnumerable<LlamaToken> selectedTokens)
         {
             foreach (LlamaToken selectedToken in selectedTokens)
             {

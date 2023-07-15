@@ -17,11 +17,22 @@ namespace Llama.Data
             this.Value = Utils.PtrToStringUTF8(value);
         }
 
+        public LlamaToken(int id, string value, string tag)
+        {
+            this.Tag = tag;
+
+            this.Id = id;
+
+            this.Value = value;
+        }
+
         public static LlamaToken BOS => new(1, IntPtr.Zero, LlamaTokenTags.CONTROL);
 
         public static LlamaToken EOS => new(2, IntPtr.Zero, LlamaTokenTags.CONTROL);
 
         public static LlamaToken Null => new(0, IntPtr.Zero, LlamaTokenTags.NULL);
+
+        public static LlamaToken NewLine => new(13, IntPtr.Zero, LlamaTokenTags.NULL);
 
         public byte[] Bytes { get; private set; } = Array.Empty<byte>();
 

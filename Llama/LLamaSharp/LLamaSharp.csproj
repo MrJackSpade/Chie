@@ -39,4 +39,9 @@
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <ProjectReference Include="..\LlamaApi.Shared\LlamaApi.Shared.csproj" />
+	  <ProjectReference Include="..\LlamaApiClient\LlamaApiClient.csproj" />
+	</ItemGroup>
+
 </Project>

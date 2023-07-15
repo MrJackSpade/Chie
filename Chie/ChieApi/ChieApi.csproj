@@ -31,10 +31,10 @@
   </ItemGroup>
 	
   <ItemGroup>
-    <PackageReference Include="Loxifi.Database" Version="0.9.1" />
+    <PackageReference Include="Loxifi.Database" Version="0.9.5" />
     <PackageReference Include="Loxifi.JsonClient" Version="0.8.1" />
     <PackageReference Include="Loxifi.StringParsing" Version="0.2.1" />
-    <PackageReference Include="Loxifi.TypeFactory" Version="0.9.11" />
+    <PackageReference Include="Loxifi.TypeFactory" Version="0.9.15" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.5" />
   </ItemGroup>
@@ -49,7 +49,6 @@
     <ProjectReference Include="..\..\Utils\Ai.Abstractions\Ai.Abstractions.csproj" />
     <ProjectReference Include="..\..\Utils\Ai.Utils\Ai.Utils.csproj" />
     <ProjectReference Include="..\ChieApi.Shared\ChieApi.Shared.csproj" />
-    <ProjectReference Include="Y:\Git\Loxifi.Database\Loxifi.Database.csproj" />
   </ItemGroup>
 
   <ItemGroup>

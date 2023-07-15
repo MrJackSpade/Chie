@@ -51,7 +51,7 @@ namespace Llama.Context
 
         private int _evalPointer = 0;
 
-        public LlamaContextWrapper(IExecutionScheduler executionScheduler, ITextSanitizer textSanitizer, SafeLlamaContextHandle handle, LlamaModelSettings modelSettings, LlamaContextSettings settings, IEnumerable<IPostResponseContextTransformer> postResponseTransforms, IEnumerable<ITokenTransformer> tokenTransformers, IEnumerable<ISimpleSampler> simpleSamplers, IFinalSampler finalSampler, IContextRoller contextRoller)
+        public LlamaContextWrapper(IExecutionScheduler executionScheduler, ITextSanitizer textSanitizer, SafeLlamaContextHandle handle, Model.LlamaModelSettings modelSettings, LlamaContextSettings settings, IEnumerable<IPostResponseContextTransformer> postResponseTransforms, IEnumerable<ITokenTransformer> tokenTransformers, IEnumerable<ISimpleSampler> simpleSamplers, IFinalSampler finalSampler, IContextRoller contextRoller)
         {
             if (executionScheduler is null)
             {

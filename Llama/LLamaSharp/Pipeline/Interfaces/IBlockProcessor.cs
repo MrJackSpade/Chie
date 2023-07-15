@@ -1,6 +1,7 @@
 ﻿using Llama.Collections;
 using Llama.Collections.Interfaces;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Llama.Pipeline.Interfaces
 {
@@ -8,6 +9,6 @@ namespace Llama.Pipeline.Interfaces
     {
         IEnumerable<LlamaTokenCollection> Finalize();
 
-        void Process(ILlamaTokenCollection toSummarize);
+        Task Process(ILlamaTokenCollection toSummarize);
     }
 }

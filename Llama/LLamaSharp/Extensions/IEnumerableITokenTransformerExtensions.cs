@@ -9,7 +9,7 @@ namespace Llama.Extensions
 {
     public static class IEnumerableITokenTransformerExtensions
     {
-        public static IEnumerable<LlamaToken> Transform(this IEnumerable<ITokenTransformer> tokenTransformers, LlamaContextSettings settings, IReadOnlyLlamaTokenCollection thisGeneration, IContext context, IEnumerable<LlamaToken> selectedTokens)
+        public static IEnumerable<LlamaToken> Transform(this IEnumerable<ITokenTransformer> tokenTransformers, Context.LlamaContextSettings settings, IReadOnlyLlamaTokenCollection thisGeneration, IContext context, IEnumerable<LlamaToken> selectedTokens)
         {
             IEnumerable<LlamaToken> returnTokens = selectedTokens;
 
@@ -21,6 +21,6 @@ namespace Llama.Extensions
             return returnTokens;
         }
 
-        public static IEnumerable<LlamaToken> Transform(this IEnumerable<ITokenTransformer> tokenTransformers, LlamaContextSettings settings, IReadOnlyLlamaTokenCollection thisGeneration, IContext context, LlamaToken selectedToken) => tokenTransformers.Transform(settings, thisGeneration, context, new List<LlamaToken>() { selectedToken });
+        public static IEnumerable<LlamaToken> Transform(this IEnumerable<ITokenTransformer> tokenTransformers, Context.LlamaContextSettings settings, IReadOnlyLlamaTokenCollection thisGeneration, IContext context, LlamaToken selectedToken) => tokenTransformers.Transform(settings, thisGeneration, context, new List<LlamaToken>() { selectedToken });
     }
 }

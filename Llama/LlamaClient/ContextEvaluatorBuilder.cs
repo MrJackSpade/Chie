@@ -104,10 +104,8 @@ namespace Llama
 
             transformers.AddRange(this._tokensTransformers);
 
-            (ContextEvaluator contextEvaluator, IContext summaryContext) = this.BuildSummaryEvaluator();
-
-            IBlockProcessor chatSummarizer = new ChatSummarizer(this._contextSettings, summaryContext, contextEvaluator);
-            IContextRoller contextRoller = new ChatContextRoller(chatSummarizer, this._contextSettings);
+            IBlockProcessor chatSummarizer = new ChatSummarizer(this._contextSettings);
+            IContextRoller contextRoller = new ChatContextRoller(chatSummarizer);
 
             LlamaContextWrapper wrapper = this.BuildChatContextWrapper(contextRoller, transformers);
 
@@ -120,31 +118,6 @@ namespace Llama
             }
 
             return chatEvaluator;
-        }
-
-        private (ContextEvaluator, IContext) BuildSummaryEvaluator()
-        {
-            LlamaContextSettings thisSettings = this._contextSettings with
-            {
-                AutoLoad = false,
-                AutoSave = false,
-                ExecutionPriority = ExecutionPriority.High,
-                BatchSize = 64,
-                ContextSize = 1024,
-                Prompt = string.Empty,
-                Antiprompt = new List<string>()
-                {
-                    "User:",
-                    "###"
-                }
-            };
-
-            List<ITokenTransformer> transformers = new() { new TextTruncationTransformer(1000, 1000, ".!?\n") };
-            transformers.AddRange(this._tokensTransformers);
-            SafeLlamaContextHandle context = this._llamaContextFactory.Create();
-            LlamaContextWrapper wrapper = new(this._executionScheduler, this._textSanitizer, context, this._modelSettings, thisSettings, new List<IPostResponseContextTransformer>(), transformers, this._simpleSamplers, new GreedySampler(), new DefaultContextRoller());
-            ContextEvaluator contextEvaluator = new(wrapper, this._textSanitizer, thisSettings);
-            return (contextEvaluator, wrapper);
         }
 
         private void ContextSettings(LlamaSettings settings)

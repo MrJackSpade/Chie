@@ -10,7 +10,7 @@ namespace Llama.Pipeline.TokenTransformers
 {
     public class InvalidCharacterBlockingTransformer : ITokenTransformer
     {
-        public IEnumerable<LlamaToken> TransformToken(LlamaContextSettings settings, IContext context, IReadOnlyLlamaTokenCollection thisGeneration, IEnumerable<LlamaToken> selectedTokens)
+        public IEnumerable<LlamaToken> TransformToken(Context.LlamaContextSettings settings, IContext context, IReadOnlyLlamaTokenCollection thisGeneration, IEnumerable<LlamaToken> selectedTokens)
         {
             foreach (LlamaToken token in selectedTokens)
             {

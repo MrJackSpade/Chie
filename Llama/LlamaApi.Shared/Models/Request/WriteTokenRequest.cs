@@ -15,7 +15,7 @@ namespace LlamaApi.Models.Request
         public int StartIndex { get; set; } = -1;
 
         [JsonPropertyName("tokens")]
-        public RequestLlamaToken[] Tokens { get; set; } = Array.Empty<RequestLlamaToken>();
+        public List<RequestLlamaToken> Tokens { get; set; } = new ();
 
         [JsonPropertyName("writeTokenType")]
         public WriteTokenType WriteTokenType { get; set; } = WriteTokenType.Overwrite;

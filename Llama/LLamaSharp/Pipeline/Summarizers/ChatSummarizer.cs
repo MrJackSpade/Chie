@@ -1,17 +1,18 @@
 ﻿using Llama.Collections;
 using Llama.Collections.Interfaces;
 using Llama.Constants;
-using Llama.Context;
 using Llama.Context.Extensions;
-using Llama.Context.Interfaces;
 using Llama.Data;
 using Llama.Extensions;
 using Llama.Pipeline.Interfaces;
+using LlamaApiClient;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Llama.Pipeline.Summarizers
 {
@@ -28,15 +29,11 @@ namespace Llama.Pipeline.Summarizers
 
         private readonly int _contextSize;
 
-        private readonly IContext _evaluationContext;
-
-        private readonly ContextEvaluator _evaluator;
-
         private readonly AutoResetEvent _summarizationGate = new(false);
 
-        private readonly LlamaTokenCollection _summarizePrefix = new();
+        private readonly string _summarizePrefix = string.Empty;
 
-        private readonly LlamaTokenCollection _summarizeSuffix = new();
+        private readonly string _summarizeSuffix = string.Empty;
 
         private int _currentBlock = 0;
 
@@ -44,22 +41,47 @@ namespace Llama.Pipeline.Summarizers
 
         private LlamaTokenCollection[] _processedTokens;
 
-        public ChatSummarizer(LlamaContextSettings contextSettings, IContext evaluationContext, ContextEvaluator contextEvaluator)
+        private readonly LlamaClient _client = new(new LlamaClientSettings("http://192.168.0.93:5059"));
+
+        private Guid _contextId;
+
+        private bool _isSetup;
+
+        private async Task TrySetup()
+        {
+            if (!this._isSetup)
+            {
+                await this._client.LoadModel(new LlamaModelSettings()
+                {
+                    Model = "D:\\Chie\\Models\\airoboros-65b-gpt4-1.3.ggmlv3.q5_K_M.bin",
+                    ContextSize = 2048,
+                    BatchSize = 512
+                });
+
+                this._contextId = (await this._client.LoadContext(new LlamaContextSettings()
+                {
+                    BatchSize = 512,
+                    ContextSize = 2048,
+                    EvalThreadCount = 8
+                })).Id;
+
+                this._isSetup = true;
+            }
+        }
+        public ChatSummarizer(Context.LlamaContextSettings contextSettings)
         {
             if (!Directory.Exists(DIR_SUMMARIZATION))
             {
                 Directory.CreateDirectory(DIR_SUMMARIZATION);
             }
 
-            this._evaluationContext = evaluationContext;
-            this._evaluator = contextEvaluator;
+            this._summarizeSuffix = "\nHuman: Please summarize the above in a single paragraph\n\nAssistant:";
+
             this._blocks = contextSettings.Blocks;
             this._processedTokens = new LlamaTokenCollection[this._blocks];
             this._contextSize = contextSettings.ContextSize;
             this._blockSize = this._contextSize / this._blocks;
             this._currentTokens = new LlamaTokenCollection(); //Human: Please summarize the above in a single paragraph
-            this._summarizePrefix = this.TryTokenize("");
-            this._summarizeSuffix = this.TryTokenize("\nHuman: Please summarize the above in a single paragraph\n\nAssistant:");
         }
 
         public IEnumerable<LlamaTokenCollection> Finalize()
@@ -101,8 +123,10 @@ namespace Llama.Pipeline.Summarizers
             }
         };
 
-        public void Process(ILlamaTokenCollection toSummarize)
+        public async Task Process(ILlamaTokenCollection toSummarize)
         {
+            await this.TrySetup();
+
             if (toSummarize.Count == 0)
             {
                 return;
@@ -112,14 +136,14 @@ namespace Llama.Pipeline.Summarizers
 
             foreach (LlamaToken token in toSummarize)
             {
-                if(currentBlockRestriction is not null && currentBlockRestriction.BanTags.Contains(token.Tag)) 
-                { 
+                if (currentBlockRestriction is not null && currentBlockRestriction.BanTags.Contains(token.Tag))
+                {
                     continue;
                 }
 
                 if (this._currentTokens.Count > 1 && this._currentTokens.Last().Id != 13 && token.Value.Contains('|'))
                 {
-                    this._currentTokens.Append(this._evaluationContext.Tokenize("\n", LlamaTokenTags.UNMANAGED));
+                    this._currentTokens.Append(LlamaToken.NewLine);
                 }
 
                 this._currentTokens.Append(token);
@@ -147,7 +171,20 @@ namespace Llama.Pipeline.Summarizers
             File.WriteAllText(fullName, tokens.ToString());
         }
 
-        private void ProcessLastBlock(LlamaTokenCollection block)
+        private async Task<IReadOnlyLlamaTokenCollection> RemoteTokenize(string toTokenize)
+        {
+            int[] tokens = await this._client.Tokenize(this._contextId, toTokenize);
+
+            LlamaTokenCollection toReturn = new();
+
+            foreach (int t in tokens)
+            {
+                toReturn.Append(new LlamaToken(t, IntPtr.Zero, ""));
+            }
+
+            return toReturn;
+        }
+        private async void ProcessLastBlock(LlamaTokenCollection block)
         {
             int thisBlock = this._currentBlock;
 
@@ -159,44 +196,47 @@ namespace Llama.Pipeline.Summarizers
                 {
                     LlamaTokenCollection summarized = new();
 
-                    summarized.Append(this._evaluationContext.Tokenize("|Chie: ", LlamaTokenTags.UNMANAGED));
+                    summarized.Append(await this.RemoteTokenize("|Chie: "));
 
-                    LlamaTokenCollection toSummarize = new();
-
-                    //toSummarize.Append(LlamaToken.Bos);
-
-                    if (this._summarizePrefix.Count > 0)
-                    {
-                        toSummarize.Append(this._summarizePrefix);
-                    }
-
+                    StringBuilder toSummarize = new();
+        
+                    toSummarize.Append(this._summarizePrefix);
+                   
                     toSummarize.Append(block);
-
-                    if (this._summarizeSuffix.Count > 0)
+                 
+                    toSummarize.Append(this._summarizeSuffix);
+                    
+                    Thread t = new(async () =>
                     {
-                        toSummarize.Append(this._summarizeSuffix);
-                    }
-
-                    this.Log("ToSummarize", toSummarize);
-
-                    Thread t = new(() =>
-                    {
-                        foreach (LlamaToken token in this._evaluator.Call(toSummarize))
+                        await this._client.Write(this._contextId, new LlamaApi.Models.Request.RequestLlamaToken()
                         {
-                            summarized.Append(token);
-                        }
+                            TokenId = LlamaToken.BOS.Id
+                        }, startIndex: 0);
 
-                        this.Log("Summarized", summarized);
+                        await this._client.Write(this._contextId, toSummarize.ToString());
+
+                        await this._client.Eval(this._contextId);
+
+                        InferenceEnumerator enumerator = await this._client.Infer(this._contextId);
+
+                        while (await enumerator.MoveNextAsync())
+                        {
+                            summarized.Append(new LlamaToken(enumerator.Current.Id, enumerator.Current.Value, ""));
+                        }
 
                         LlamaTokenCollection[] summaryArray = summarized.Split(13).Where(s => s.Count > 0).ToArray();
 
                         LlamaTokenCollection cleaned = new();
 
+                        int space = (await this._client.Tokenize(this._contextId, " "))[0];
+
+                        LlamaToken spaceToken = new(space, " ", "");
+
                         for (int i = 0; i < summaryArray.Length - 1; i++)
                         {
                             if (i > 0)
                             {
-                                cleaned.Append(this._evaluationContext.Tokenize(" ", LlamaTokenTags.INPUT));
+                                cleaned.Append(spaceToken);
                             }
 
                             cleaned.Append(summaryArray[i]);
@@ -205,7 +245,6 @@ namespace Llama.Pipeline.Summarizers
                         this.Log("SummarizedCleaned", cleaned);
 
                         this._processedTokens[thisBlock] = cleaned;
-                        this._evaluationContext.Clear();
                         this._summarizationGate.Set();
                     });
 
@@ -220,16 +259,6 @@ namespace Llama.Pipeline.Summarizers
             {
                 this._processedTokens[thisBlock] = this._currentTokens;
             }
-        }
-
-        private LlamaTokenCollection TryTokenize(string toTokenize)
-        {
-            if (string.IsNullOrWhiteSpace(toTokenize))
-            {
-                return new LlamaTokenCollection();
-            }
-
-            return this._evaluationContext.Tokenize(toTokenize, LlamaTokenTags.UNMANAGED);
         }
     }
 }

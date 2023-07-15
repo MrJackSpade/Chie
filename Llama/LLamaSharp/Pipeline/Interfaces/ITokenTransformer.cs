@@ -8,6 +8,6 @@ namespace Llama.Pipeline.Interfaces
 {
     public interface ITokenTransformer
     {
-        IEnumerable<LlamaToken> TransformToken(LlamaContextSettings settings, IContext context, IReadOnlyLlamaTokenCollection thisCall, IEnumerable<LlamaToken> selectedTokens);
+        IEnumerable<LlamaToken> TransformToken(Context.LlamaContextSettings settings, IContext context, IReadOnlyLlamaTokenCollection thisCall, IEnumerable<LlamaToken> selectedTokens);
     }
 }
