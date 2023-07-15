@@ -174,6 +174,14 @@ namespace LlamaApi.Controllers
                 {
                     if (this._loadedModel.Instance != null)
                     {
+                        if(this._loadedModel.Id == request.ModelId && this._loadedModel.Settings.Model == request.Settings.Model)
+                        {
+                            return new ModelResponse()
+                            {
+                                Id = this._loadedModel.Id
+                            };
+                        }
+
                         throw new DuplicateModelLoadException();
                     }
 
