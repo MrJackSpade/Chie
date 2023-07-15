@@ -8,7 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\OneDrive\Documents\GitHub\Loxifi.Database\Loxifi.Database.csproj" />
+    <PackageReference Include="Loxifi.Database" Version="0.9.5" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Llama.Core\Llama.Core.csproj" />
     <ProjectReference Include="..\Llama.Data\Llama.Data.csproj" />
     <ProjectReference Include="..\LlamaApi.Shared\LlamaApi.Shared.csproj" />
