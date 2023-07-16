@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+https://go.microsoft.com/fwlink/?LinkID=208121.
+-->
+<Project>
+  <PropertyGroup>
+    <_PublishTargetUrl>C:\inetpub\wwwroot\LlamaApi</_PublishTargetUrl>
+    <History>True|2023-07-16T00:09:41.1313115Z;False|2023-07-15T17:09:19.8230681-07:00;True|2023-07-15T16:41:16.8484931-07:00;False|2023-07-15T16:40:30.4388768-07:00;</History>
+    <LastFailureDetails />
+  </PropertyGroup>
+</Project>

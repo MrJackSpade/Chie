@@ -9,6 +9,6 @@ namespace LlamaApi.Interfaces
 
         Job Enqueue(Action action, ExecutionPriority priority);
 
-        Job Get(long id);
+        Job? Get(long id);
     }
 }

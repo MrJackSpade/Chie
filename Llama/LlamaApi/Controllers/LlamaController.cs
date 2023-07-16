@@ -145,9 +145,20 @@ namespace LlamaApi.Controllers
         }
 
         [HttpGet("job/{id}")]
-        public JobResponse Job(long id)
+        public JobResponse? Job(long id)
         {
-            Job j = this._jobService.Get(id);
+            if(id == 0)
+            {
+                return null;
+            }
+
+            Job? j = this._jobService.Get(id);
+
+            if(j is null)
+            {
+                return null;
+            }
+
             JsonNode result = null;
 
             if (j.State == JobState.Success && !string.IsNullOrWhiteSpace(j.Result))
