@@ -73,6 +73,8 @@ namespace Llama.Pipeline.Summarizers
                 }
                 )).Id;
 
+                await this._client.Tokenize(this._contextId, " ");
+
                 this._isSetup = true;
             }
         }
