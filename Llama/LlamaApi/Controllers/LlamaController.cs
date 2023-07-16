@@ -256,7 +256,7 @@ namespace LlamaApi.Controllers
             {
                 ContextEvaluator context = this._loadedModel.GetContext(request.ContextId);
 
-                List<int> tokens = NativeApi.LlamaTokenize(context.Context.Handle, request.Content, false, System.Text.Encoding.UTF8);
+                List<int> tokens = NativeApi.LlamaTokenize(context.Context.Handle, request.Content!, false, System.Text.Encoding.UTF8);
 
                 return new TokenizeResponse()
                 {
