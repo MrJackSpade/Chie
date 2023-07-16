@@ -68,7 +68,7 @@ namespace LlamaApiClient
 
             do
             {
-                JobResponse<TOut> jobResponse = await this.Get<JobResponse<TOut>>($"/job/{j.Id}");
+                JobResponse<TOut> jobResponse = await this.Get<JobResponse<TOut>>($"/Llama/job/{j.Id}");
 
                 if (jobResponse.State == JobState.Success)
                 {

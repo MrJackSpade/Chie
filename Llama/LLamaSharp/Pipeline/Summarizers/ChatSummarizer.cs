@@ -41,7 +41,7 @@ namespace Llama.Pipeline.Summarizers
 
         private LlamaTokenCollection[] _processedTokens;
 
-        private readonly LlamaClient _client = new(new LlamaClientSettings("http://192.168.0.93:5059"));
+        private readonly LlamaClient _client = new(new LlamaClientSettings("http://192.168.0.93"));
 
         private Guid _contextId;
 
