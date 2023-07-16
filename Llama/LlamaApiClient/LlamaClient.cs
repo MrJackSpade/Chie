@@ -5,6 +5,7 @@ using LlamaApi.Models.Request;
 using LlamaApi.Models.Response;
 using LlamaApi.Shared.Models.Request;
 using System.Net.Http.Json;
+using System.Reflection;
 using System.Text.Json;
 
 namespace LlamaApiClient
@@ -23,19 +24,37 @@ namespace LlamaApiClient
         {
             HttpResponseMessage response = await this._httpClient.PostAsync(this._settings.Host + url, JsonContent.Create(data));
             string responseStr = await response.Content.ReadAsStringAsync();
+
+            if ((int)response.StatusCode >= 400)
+            {
+                throw new Exception(responseStr);
+            }
+
             return JsonSerializer.Deserialize<TValue>(responseStr);
         }
 
         private async Task Post(string url, object data)
         {
             HttpResponseMessage response = await this._httpClient.PostAsync(this._settings.Host + url, JsonContent.Create(data));
+
             string responseStr = await response.Content.ReadAsStringAsync();
+
+            if ((int)response.StatusCode >= 400)
+            {
+                throw new Exception(responseStr);
+            }
         }
 
         private async Task<TValue> Get<TValue>(string url)
         {
             HttpResponseMessage response = await this._httpClient.GetAsync(this._settings.Host + url);
             string responseStr = await response.Content.ReadAsStringAsync();
+
+            if ((int)response.StatusCode >= 400)
+            {
+                throw new Exception(responseStr);
+            }
+
             return JsonSerializer.Deserialize<TValue>(responseStr);
         }
 
@@ -45,7 +64,7 @@ namespace LlamaApiClient
 
             do
             {
-                JobResponse jobResponse = await this.Get<JobResponse>($"/job/{j.Id}");
+                JobResponse jobResponse = await this.Get<JobResponse>($"/Llama/job/{j.Id}");
 
                 if (jobResponse.State == JobState.Success)
                 {
@@ -94,13 +113,17 @@ namespace LlamaApiClient
             });
         }
 
-        public async Task<ContextState> LoadContext(LlamaContextSettings settings)
+        public async Task<ContextState> LoadContext(LlamaContextSettings settings, Action<ContextRequest> settingsAction)
         {
-            ContextResponse loadResponse = await this.WaitForResponse<ContextResponse>("/Llama/context", new ContextRequest()
+            ContextRequest cr = new()
             {
                 Settings = settings,
                 ModelId = this._modelGuid
-            });
+            };
+
+            settingsAction.Invoke(cr);
+
+            ContextResponse loadResponse = await this.WaitForResponse<ContextResponse>("/Llama/context", cr);
 
             return loadResponse.State;
         }

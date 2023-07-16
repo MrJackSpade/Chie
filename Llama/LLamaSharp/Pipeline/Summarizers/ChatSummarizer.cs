@@ -63,7 +63,15 @@ namespace Llama.Pipeline.Summarizers
                     BatchSize = 512,
                     ContextSize = 2048,
                     EvalThreadCount = 8
-                })).Id;
+                }, (cr) =>
+                {
+                    cr.MirostatSamplerSettings = new LlamaApi.Models.Request.MirostatSamplerSettings()
+                    {
+                        MirostatType = LlamaApi.Models.Response.MirostatType.One
+                    };
+                    cr.RepetitionSamplerSettings = new Core.Samplers.Repetition.RepetitionSamplerSettings();
+                }
+                )).Id;
 
                 this._isSetup = true;
             }
