@@ -2,11 +2,17 @@
 using Llama.Data.Models;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 
 namespace LlamaApi.Models.Response
 {
     public class ResponseLlamaToken
     {
+        [JsonConstructor]
+        public ResponseLlamaToken()
+        {
+        }
+
         public ResponseLlamaToken(LlamaToken t)
         {
             this.EscapedValue = t.EscapedValue;
