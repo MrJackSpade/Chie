@@ -28,11 +28,15 @@ namespace LlamaApi.Services
             this._cache = settings.Cache;
         }
 
+        private SqlConnection NewConnection => new(this._connectionString);
+
         public Job Enqueue<TResult>(Func<TResult> func, ExecutionPriority priority)
         {
+            using SqlConnection newConnect = this.NewConnection;
+
             Job job = new();
 
-            long id = new SqlConnection(this._connectionString).Insert(job)!.Value;
+            long id = newConnect.Insert(job)!.Value;
 
             job.Id = id;
 
@@ -64,7 +68,9 @@ namespace LlamaApi.Services
         {
             Job job = new();
 
-            long id = new SqlConnection(this._connectionString).Insert(job)!.Value;
+            using SqlConnection newConnect = this.NewConnection;
+
+            long id = newConnect.Insert(job)!.Value;
 
             job.Id = id;
 
@@ -110,12 +116,16 @@ namespace LlamaApi.Services
                 //just fall back on the DB
             }
 
-            return new SqlConnection(this._connectionString).Query<Job>($"Select top 1 * from job where id = '{id}'").First();
+            using SqlConnection newConnect = this.NewConnection;
+
+            return newConnect.Query<Job>($"Select top 1 * from job where id = '{id}'").First();
         }
 
         private void Cache(long id)
         {
-            Job job = new SqlConnection(this._connectionString).Query<Job>($"select top 1 * from job where id = {id}").First();
+            using SqlConnection newConnect = this.NewConnection;
+
+            Job job = newConnect.Query<Job>($"select top 1 * from job where id = {id}").First();
 
             this._cache.Enqueue(job);
 
@@ -146,9 +156,16 @@ namespace LlamaApi.Services
 
             string query = queryBuilder.ToString();
 
-            new SqlConnection(this._connectionString).Execute(query);
+            using SqlConnection newConnect = this.NewConnection;
+
+            newConnect.Execute(query);
         }
 
-        private void UpdateState(long id, JobState state) => new SqlConnection(this._connectionString).Execute($"update job set state = {(int)state} where id = {id}");
+        private void UpdateState(long id, JobState state)
+        {
+            using SqlConnection newConnect = this.NewConnection;
+
+            newConnect.Execute($"update job set state = {(int)state} where id = {id}");
+        }
     }
 }

@@ -78,6 +78,22 @@ namespace LlamaApi.Controllers
                         throw new ModelNotLoadedException();
                     }
 
+                    if(request.ContextId.HasValue && this._loadedModel.Evaluator.ContainsKey(request.ContextId.Value))
+                    {
+                        ContextEvaluator contextEvaluator = this._loadedModel.GetContext(request.ContextId.Value);
+
+                        return new ContextResponse()
+                        {
+                            State = new ContextState()
+                            {
+                                Id = request.ContextId ?? Guid.NewGuid(),
+                                AvailableBuffer = contextEvaluator.Context.AvailableBuffer,
+                                IsLoaded = true,
+                                Size = contextEvaluator.Context.Size
+                            }
+                        };
+                    }
+
                     SafeLlamaContextHandle safeLlamaContextHandle = NativeApi.LoadContext(this._loadedModel.Instance.Handle, this._loadedModel.Settings, request.Settings);
 
                     LlamaContextWrapper wrapper = new(this._contextExecutionScheduler,
