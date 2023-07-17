@@ -35,6 +35,19 @@ namespace Llama.Native
             return new Span<float>(logits, length);
         }
 
+        public static List<int> LlamaTokenize(SafeLlamaContextHandle ctx, string text, bool add_bos, Encoding encoding)
+        {
+            int cnt = encoding.GetByteCount(text);
+            int[] res = new int[cnt + (add_bos ? 1 : 0)];
+            int n = LlamaCppApi.Tokenize(ctx, text, encoding, res, res.Length, add_bos);
+            if (n < 0)
+            {
+                throw new LlamaCppRuntimeError("Error happened during tokenization. It's possibly caused by wrong encoding. Please try to specify the encoding.");
+            }
+
+            return res.Take(n).ToList();
+        }
+
         public static SafeLlamaContextHandle LoadContext(SafeLlamaModelHandle model, LlamaModelSettings modelSettings, LlamaContextSettings contextSettings)
         {
             LlamaContextParams lparams = LlamaCppApi.ContextDefaultParams();
@@ -97,19 +110,6 @@ namespace Llama.Native
             }
 
             return new(new(model_ptr, (p) => LlamaCppApi.FreeModel(p)));
-        }
-
-        public static List<int> LlamaTokenize(SafeLlamaContextHandle ctx, string text, bool add_bos, Encoding encoding)
-        {
-            int cnt = encoding.GetByteCount(text);
-            int[] res = new int[cnt + (add_bos ? 1 : 0)];
-            int n = LlamaCppApi.Tokenize(ctx, text, encoding, res, res.Length, add_bos);
-            if (n < 0)
-            {
-                throw new LlamaCppRuntimeError("Error happened during tokenization. It's possibly caused by wrong encoding. Please try to specify the encoding.");
-            }
-
-            return res.Take(n).ToList();
         }
 
         public static int NVocab(SafeLlamaContextHandle handle) => LlamaCppApi.NVocab(handle);

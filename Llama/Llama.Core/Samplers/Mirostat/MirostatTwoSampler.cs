@@ -4,7 +4,7 @@ using Llama.Native;
 
 namespace Llama.Core.Samplers.Mirostat
 {
-    public class MirostatTwoSampler : IFinalSampler
+    public class MirostatTwoSampler : ITokenSelector
     {
         private readonly MirostatSamplerSettings _settings;
 

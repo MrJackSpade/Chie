@@ -23,17 +23,17 @@ namespace Llama.Core
 
         private readonly IExecutionScheduler _executionScheduler;
 
-        private readonly IFinalSampler _finalSampler;
-
         private readonly LlamaContextSettings _settings;
 
         private readonly IList<ISimpleSampler> _simpleSamplers;
+
+        private readonly ITokenSelector _tokenSelector;
 
         private int _bufferPointer = 0;
 
         private int _evalPointer = 0;
 
-        public LlamaContextWrapper(IExecutionScheduler executionScheduler, SafeLlamaContextHandle handle, LlamaContextSettings settings, IEnumerable<ISimpleSampler> simpleSamplers, IFinalSampler finalSampler)
+        public LlamaContextWrapper(IExecutionScheduler executionScheduler, SafeLlamaContextHandle handle, LlamaContextSettings settings, IEnumerable<ISimpleSampler> simpleSamplers, ITokenSelector tokenSelector)
         {
             if (executionScheduler is null)
             {
@@ -54,7 +54,7 @@ namespace Llama.Core
             this._executionScheduler = executionScheduler;
             this.Handle = handle;
             this._simpleSamplers = simpleSamplers.ToList();
-            this._finalSampler = finalSampler ?? throw new ArgumentNullException(nameof(finalSampler));
+            this._tokenSelector = tokenSelector ?? throw new ArgumentNullException(nameof(tokenSelector));
             this._settings = settings ?? throw new ArgumentNullException(nameof(settings));
             this.Size = this._settings.ContextSize;
             this._buffer = new LlamaTokenBuffer(this.Size);
@@ -183,7 +183,7 @@ namespace Llama.Core
                 sampleContext.SetProbability(bias.Key, bias.Value);
             }
 
-            int tokenId = this._finalSampler.SampleNext(sampleContext);
+            int tokenId = this._tokenSelector.SampleNext(sampleContext);
 
             return this.GetToken(tokenId, LlamaTokenType.Response);
         }

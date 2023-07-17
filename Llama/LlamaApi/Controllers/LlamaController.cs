@@ -54,16 +54,6 @@ namespace LlamaApi.Controllers
             }, ExecutionPriority.Immediate);
         }
 
-        [HttpPost("context/dispose")]
-        public IActionResult ContextDispose(ContextDisposeRequest request)
-        {
-            ContextEvaluator context = this._loadedModel.GetContext(request.ContextId);
-
-            context.Dispose();
-
-            return this.Ok();
-        }
-
         [HttpPost("context")]
         public Job Context(ContextRequest request)
         {
@@ -78,7 +68,7 @@ namespace LlamaApi.Controllers
                         throw new ModelNotLoadedException();
                     }
 
-                    if(request.ContextId.HasValue && this._loadedModel.Evaluator.ContainsKey(request.ContextId.Value))
+                    if (request.ContextId.HasValue && this._loadedModel.Evaluator.ContainsKey(request.ContextId.Value))
                     {
                         ContextEvaluator contextEvaluator = this._loadedModel.GetContext(request.ContextId.Value);
 
@@ -127,6 +117,16 @@ namespace LlamaApi.Controllers
             }, request.Priority);
         }
 
+        [HttpPost("context/dispose")]
+        public IActionResult ContextDispose(ContextDisposeRequest request)
+        {
+            ContextEvaluator context = this._loadedModel.GetContext(request.ContextId);
+
+            context.Dispose();
+
+            return this.Ok();
+        }
+
         [HttpPost("eval")]
         public Job Eval(EvaluateRequest request)
         {
@@ -163,14 +163,14 @@ namespace LlamaApi.Controllers
         [HttpGet("job/{id}")]
         public JobResponse? Job(long id)
         {
-            if(id == 0)
+            if (id == 0)
             {
                 return null;
             }
 
             Job? j = this._jobService.Get(id);
 
-            if(j is null)
+            if (j is null)
             {
                 return null;
             }
@@ -201,7 +201,7 @@ namespace LlamaApi.Controllers
                 {
                     if (this._loadedModel.Instance != null)
                     {
-                        if(this._loadedModel.Id == request.ModelId && this._loadedModel.Settings.Model == request.Settings.Model)
+                        if (this._loadedModel.Id == request.ModelId && this._loadedModel.Settings.Model == request.Settings.Model)
                         {
                             return new ModelResponse()
                             {
@@ -307,7 +307,7 @@ namespace LlamaApi.Controllers
             }, request.Priority);
         }
 
-        private IFinalSampler GetFinalSampler(ContextRequest request)
+        private ITokenSelector GetFinalSampler(ContextRequest request)
         {
             if (request.TemperatureSamplerSettings != null)
             {

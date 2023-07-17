@@ -9,10 +9,10 @@ namespace LlamaApi.Models
         [JsonPropertyName("id")]
         public long Id { get; set; }
 
-        [JsonPropertyName("state")]
-        public JobState State { get; set; }
-
         [JsonPropertyName("result")]
         public string? Result { get; set; }
+
+        [JsonPropertyName("state")]
+        public JobState State { get; set; }
     }
 }

@@ -2,7 +2,7 @@
 
 namespace Llama.Data.Interfaces
 {
-    public interface IFinalSampler
+    public interface ITokenSelector
 
     {
         int SampleNext(SampleContext sampleContext);

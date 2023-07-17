@@ -4,7 +4,7 @@ using Llama.Native;
 
 namespace Llama.Core.Samplers.Temperature
 {
-    public class GreedySampler : IFinalSampler
+    public class GreedySampler : ITokenSelector
     {
         public GreedySampler()
         {

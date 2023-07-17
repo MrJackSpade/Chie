@@ -23,7 +23,9 @@ namespace Llama.Data.Interfaces
         int Evaluate(ExecutionPriority priority, int count = -1);
 
         LlamaToken SampleNext(Dictionary<int, float> logitBias, ExecutionPriority priority);
+
         void SetBufferPointer(int startIndex);
+
         void Write(LlamaToken token);
     }
 }

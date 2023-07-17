@@ -4,7 +4,7 @@ using Llama.Native;
 
 namespace Llama.Core.Samplers.Temperature
 {
-    public class TemperatureSampler : IFinalSampler
+    public class TemperatureSampler : ITokenSelector
     {
         private readonly TemperatureSamplerSettings _settings;
 

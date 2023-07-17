@@ -3,7 +3,9 @@
     public enum WriteTokenType
     {
         Undefined,
+
         Overwrite,
+
         Insert
     }
 }

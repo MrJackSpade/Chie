@@ -33,11 +33,11 @@ namespace LlamaApi.Models.Response
             }
         }
 
-        public JsonObject? TokenData { get; set; }
-
         public string EscapedValue { get; set; }
 
         public int Id { get; set; }
+
+        public JsonObject? TokenData { get; set; }
 
         public LlamaTokenType TokenType { get; set; }
 

@@ -1,6 +1,5 @@
 ﻿using Llama.Data.Scheduler;
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace LlamaApi.Models.Request

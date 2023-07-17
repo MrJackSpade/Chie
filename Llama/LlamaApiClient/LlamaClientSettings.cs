@@ -3,8 +3,7 @@
     public class LlamaClientSettings
     {
         public LlamaClientSettings()
-        { 
-        
+        {
         }
 
         public LlamaClientSettings(string host)

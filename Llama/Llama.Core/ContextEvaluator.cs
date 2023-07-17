@@ -1,5 +1,6 @@
 ﻿using Llama.Data.Collections;
 using Llama.Data.Enums;
+using Llama.Data.Extensions;
 using Llama.Data.Interfaces;
 using Llama.Data.Models;
 using Llama.Data.Scheduler;
@@ -10,18 +11,6 @@ namespace Llama.Core
     public class ContextEvaluator : IDisposable
     {
         private readonly Dictionary<int, float> _logitBias = new();
-        public void SetBias(int token, float bias)
-        {
-            if (!this._logitBias.ContainsKey(token))
-            {
-                this._logitBias.Add(token, bias);
-            }
-            else
-            {
-                this._logitBias[token] = bias;
-            }
-        }
-        public void ClearBias() => this._logitBias.Clear();
 
         /// <summary>
         /// Please refer `LlamaModelSettings` to find the meanings of each arg. Be sure to have set the `n_gpu_layers`, otherwise it will
@@ -45,6 +34,8 @@ namespace Llama.Core
 
         public bool Verbose { get; set; }
 
+        public void ClearBias() => this._logitBias.Clear();
+
         public void Dispose() => this.Context.Dispose();
 
         public int Evaluate(ExecutionPriority priority) => this.Context.Evaluate(priority);
@@ -60,26 +51,26 @@ namespace Llama.Core
         {
             this.Context.Evaluate(priority);
 
-            Dictionary<int, float> bias = new();
-
-            foreach (KeyValuePair<int, float> gBias in this._logitBias)
+            Dictionary<int, float> bias = new()
             {
-                bias.Add(gBias.Key, gBias.Value);
-            }
+                this._logitBias
+            };
 
-            foreach (KeyValuePair<int, float> lBias in logitBias)
-            {
-                if (bias.ContainsKey(lBias.Key))
-                {
-                    bias[lBias.Key] = lBias.Value;
-                }
-                else
-                {
-                    bias.Add(lBias.Key, lBias.Value);
-                }
-            }
+            bias.AddOrUpdate(logitBias);
 
             return this.Context.SampleNext(bias, priority);
+        }
+
+        public void SetBias(int token, float bias)
+        {
+            if (!this._logitBias.ContainsKey(token))
+            {
+                this._logitBias.Add(token, bias);
+            }
+            else
+            {
+                this._logitBias[token] = bias;
+            }
         }
 
         public LlamaTokenCollection Tokenize(string toTokenize, LlamaTokenType tokenType) => this.Context.Tokenize(toTokenize, tokenType);
