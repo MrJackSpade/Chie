@@ -27,8 +27,6 @@ namespace Llama.Context
     {
         private readonly LlamaTokenCollection _buffer;
 
-        private readonly IContextRoller _contextRoller;
-
         private readonly int _evalThreadCount;
 
         private readonly LlamaTokenCollection _evaluated;
@@ -38,8 +36,6 @@ namespace Llama.Context
         private readonly IFinalSampler _finalSampler;
 
         private readonly IList<IPostResponseContextTransformer> _postResponseTransforms;
-
-        private readonly LlamaTokenCollection _prompt;
 
         private readonly LlamaContextSettings _settings;
 
@@ -51,7 +47,7 @@ namespace Llama.Context
 
         private int _evalPointer = 0;
 
-        public LlamaContextWrapper(IExecutionScheduler executionScheduler, ITextSanitizer textSanitizer, SafeLlamaContextHandle handle, Model.LlamaModelSettings modelSettings, LlamaContextSettings settings, IEnumerable<IPostResponseContextTransformer> postResponseTransforms, IEnumerable<ITokenTransformer> tokenTransformers, IEnumerable<ISimpleSampler> simpleSamplers, IFinalSampler finalSampler, IContextRoller contextRoller)
+        public LlamaContextWrapper(IExecutionScheduler executionScheduler, ITextSanitizer textSanitizer, SafeLlamaContextHandle handle, Model.LlamaModelSettings modelSettings, LlamaContextSettings settings, IEnumerable<IPostResponseContextTransformer> postResponseTransforms, IEnumerable<ITokenTransformer> tokenTransformers, IEnumerable<ISimpleSampler> simpleSamplers, IFinalSampler finalSampler)
         {
             if (executionScheduler is null)
             {
@@ -83,13 +79,7 @@ namespace Llama.Context
                 throw new ArgumentNullException(nameof(simpleSamplers));
             }
 
-            if (contextRoller is null)
-            {
-                throw new ArgumentNullException(nameof(contextRoller));
-            }
-
             this._executionScheduler = executionScheduler;
-            this._contextRoller = contextRoller;
             this.Handle = handle;
             this._tokenTransformers = tokenTransformers.ToList();
             this._postResponseTransforms = postResponseTransforms.ToList();
@@ -101,8 +91,6 @@ namespace Llama.Context
             this._buffer = new LlamaTokenBuffer(this.Size);
             this._buffer[0] = LlamaToken.BOS;
             this._evaluated = new LlamaTokenBuffer(this.Size);
-
-            this._prompt = this.Tokenize(textSanitizer.Sanitize(settings.Prompt), LlamaTokenTags.PROMPT);
         }
 
         protected LlamaContextWrapper()
@@ -274,9 +262,7 @@ namespace Llama.Context
             // - take half of the last (n_ctx - n_keep) tokens and recompute the logits in batches
             if (this.AvailableBuffer == 0)
             {
-                LlamaTokenCollection newContext = this._contextRoller.GenerateContext(this, this._prompt, this._settings.KeepContextTokenCount);
-
-                this.SetBuffer(newContext);
+                throw new ArgumentException("Out of buffer");
             }
 
             if (this._bufferPointer > 0 && token.Id == NativeApi.TokenBos())

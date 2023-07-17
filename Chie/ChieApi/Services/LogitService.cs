@@ -30,7 +30,7 @@ namespace ChieApi.Services
 
                 if (existing.Count > 0)
                 {
-                    int maxId = existing.Max(l => l.Id);
+                    long maxId = existing.Max(l => l.Id);
 
                     this._cache = new double?[maxId + 1];
 

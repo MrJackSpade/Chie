@@ -94,7 +94,7 @@ namespace Llama
             }
 
             SafeLlamaContextHandle context = this._llamaContextFactory.Create();
-            LlamaContextWrapper wrapper = new(this._executionScheduler, this._textSanitizer, context, this._modelSettings, this._contextSettings, this._postResponseTransforms, transformers, this._simpleSamplers, this._finalSampler, roller);
+            LlamaContextWrapper wrapper = new(this._executionScheduler, this._textSanitizer, context, this._modelSettings, this._contextSettings, this._postResponseTransforms, transformers, this._simpleSamplers, this._finalSampler);
             return wrapper;
         }
 
@@ -109,7 +109,7 @@ namespace Llama
 
             LlamaContextWrapper wrapper = this.BuildChatContextWrapper(contextRoller, transformers);
 
-            ContextEvaluator chatEvaluator = new(wrapper, this._textSanitizer, this._contextSettings);
+            ContextEvaluator chatEvaluator = new(wrapper, this._textSanitizer, contextRoller, this._contextSettings);
             chatEvaluator.QueueWritten += (s, e) => chatSummarizer.Process(e);
 
             if (!chatEvaluator.IsNewSession)

@@ -4,6 +4,7 @@ using LlamaApi.Models;
 using LlamaApi.Models.Request;
 using LlamaApi.Models.Response;
 using LlamaApi.Shared.Models.Request;
+using System;
 using System.Net.Http.Json;
 using System.Reflection;
 using System.Text.Json;
@@ -20,40 +21,42 @@ namespace LlamaApiClient
             this._settings = settings;
         }
 
+        private async Task<string> Request(Func<Task<HttpResponseMessage>> toInvoke)
+        {
+            do
+            {
+                HttpResponseMessage r = await toInvoke.Invoke();
+
+                string responseStr = await r.Content.ReadAsStringAsync();
+
+                if ((int)r.StatusCode >= 400)
+                {
+                    throw new Exception(responseStr);
+                }
+
+                if(r.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+                {
+                    await Task.Delay(1000);
+                    continue;
+                }
+
+                return responseStr;
+
+            } while (true);
+        }
+
         private async Task<TValue> Post<TValue>(string url, object data)
         {
-            HttpResponseMessage response = await this._httpClient.PostAsync(this._settings.Host + url, JsonContent.Create(data));
-            string responseStr = await response.Content.ReadAsStringAsync();
-
-            if ((int)response.StatusCode >= 400)
-            {
-                throw new Exception(responseStr);
-            }
+            string responseStr = await this.Request(() => this._httpClient.PostAsync(this._settings.Host + url, JsonContent.Create(data)));
 
             return JsonSerializer.Deserialize<TValue>(responseStr);
         }
 
-        private async Task Post(string url, object data)
-        {
-            HttpResponseMessage response = await this._httpClient.PostAsync(this._settings.Host + url, JsonContent.Create(data));
-
-            string responseStr = await response.Content.ReadAsStringAsync();
-
-            if ((int)response.StatusCode >= 400)
-            {
-                throw new Exception(responseStr);
-            }
-        }
+        private async Task Post(string url, object data) => await this.Request(() => this._httpClient.PostAsync(this._settings.Host + url, JsonContent.Create(data)));
 
         private async Task<TValue> Get<TValue>(string url)
         {
-            HttpResponseMessage response = await this._httpClient.GetAsync(this._settings.Host + url);
-            string responseStr = await response.Content.ReadAsStringAsync();
-
-            if ((int)response.StatusCode >= 400)
-            {
-                throw new Exception(responseStr);
-            }
+            string responseStr = await this.Request(() => this._httpClient.GetAsync(this._settings.Host + url));
 
             return JsonSerializer.Deserialize<TValue>(responseStr);
         }
@@ -139,17 +142,24 @@ namespace LlamaApiClient
         public async Task<InferenceEnumerator> Infer(Guid contextId)
         {
             return new InferenceEnumerator(
-                () => this.Predict(contextId),
+                (b) => this.Predict(contextId, b),
                 (t) => this.Write(contextId,t)
             );
         }
 
-        public async Task<ResponseLlamaToken> Predict(Guid contextId)
+        public async Task<ResponseLlamaToken> Predict(Guid contextId, Dictionary<int, float>? bias = null)
         {
-            PredictResponse response = await this.WaitForResponse<PredictResponse>("/Llama/predict", new PredictRequest()
+            PredictRequest request = new()
             {
                 ContextId = contextId
-            });
+            };
+
+            if(bias != null)
+            {
+                request.LogitBias = bias;
+            }
+
+            PredictResponse response = await this.WaitForResponse<PredictResponse>("/Llama/predict", request);
 
             return response.Predicted;
         }

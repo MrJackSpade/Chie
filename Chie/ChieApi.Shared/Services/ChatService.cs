@@ -155,7 +155,9 @@ namespace ChieApi.Shared.Services
 
             using SqlConnection connection = new(this._connectionString);
 
-            return connection.Insert(chatEntry).Value;
+            connection.Insert(chatEntry);
+
+            return chatEntry.Id;
         }
 
         public bool TryGetOriginal(long originalMessageId, out ChatEntry? chatEntry)

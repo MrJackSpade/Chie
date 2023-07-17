@@ -29,6 +29,8 @@ namespace Llama.Context
 
         private readonly ITextSanitizer _textSanitizer;
 
+        private readonly IContextRoller _contextRoller;
+
         private Thread _cleanupThread;
 
         private LlamaTokenCollection _prompt;
@@ -42,15 +44,20 @@ namespace Llama.Context
         /// <param name="verbose">Whether to output the detailed info.</param>
         /// <param name="encoding"></param>
         /// <exception cref="RuntimeError"></exception>
-        public unsafe ContextEvaluator(IContext context, ITextSanitizer textSanitizer, LlamaContextSettings contextSettings, string name = "", bool verbose = false)
+        public unsafe ContextEvaluator(IContext context, ITextSanitizer textSanitizer, IContextRoller contextRoller, LlamaContextSettings contextSettings, string name = "", bool verbose = false)
         {
+            if (contextRoller is null)
+            {
+                throw new ArgumentNullException(nameof(contextRoller));
+            }
+
             if (contextSettings.Encoding == Encoding.Unicode)
             {
                 throw new ArgumentException("Unicode not supported. Did you mean UTF8?");
             }
 
             this._textSanitizer = textSanitizer;
-
+            this._contextRoller = contextRoller;
             this._contextSettings = contextSettings;
 
             this.Name = name;
@@ -183,6 +190,13 @@ namespace Llama.Context
 
                 if (this._evaluationQueue.Count > 0)
                 {
+                    while(this.Context.AvailableBuffer <  this._evaluationQueue.Count + 1)
+                    {
+                        LlamaTokenCollection newContext = this._contextRoller.GenerateContext(this.Context, this.Tokenize(_textSanitizer.Sanitize(this._contextSettings.Prompt), LlamaTokenTags.PROMPT), this._contextSettings.KeepContextTokenCount);
+
+                        this.Context.SetBuffer(newContext);
+                    }
+
                     this.Context.Write(this._evaluationQueue);
                     queueWritten.Append(this._evaluationQueue);
                     Console.Title = $"{this.Context.AvailableBuffer}";

@@ -72,12 +72,13 @@ namespace ChieApi.Shared.Services
             if (userData.Id != 0)
             {
                 connection.Update(userData);
-                return userData.Id;
             }
             else
             {
-                return connection.Insert(userData).Value;
+                connection.Insert(userData);
             }
+
+            return userData.Id;
         }
     }
 }
