@@ -2,5 +2,8 @@
 {
     public class ModelNotLoadedException : Exception
     {
+        public ModelNotLoadedException()
+        {
+        }
     }
 }
