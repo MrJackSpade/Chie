@@ -65,10 +65,11 @@ namespace Llama.Pipeline.Summarizers
                 }, (cr) =>
                 {
                     cr.ContextId = this._contextId;
-                    cr.MirostatSamplerSettings = new LlamaApi.Models.Request.MirostatSamplerSettings()
+                    cr.TemperatureSamplerSettings = new Core.Samplers.Temperature.TemperatureSamplerSettings()
                     {
-                        MirostatType = LlamaApi.Models.Response.MirostatType.One
+                        Temperature = -1
                     };
+
                     cr.RepetitionSamplerSettings = new Core.Samplers.Repetition.RepetitionSamplerSettings();
                 }
                 )).Id;
@@ -226,10 +227,29 @@ namespace Llama.Pipeline.Summarizers
 
                         enumerator.SetLogit(2, 0, LogitBiasLifeTime.Temporary);
 
+                        Queue<int> tokenIds = new();
+
                         while (await enumerator.MoveNextAsync())
                         {
-                            summarized.Append(new LlamaToken(enumerator.Current.Id, enumerator.Current.Value, ""));
-                            Console.Write(enumerator.Current.Value);
+                            tokenIds.Enqueue(enumerator.Current.Id);
+
+                            List<int> distinctTokens = tokenIds.Distinct().ToList();
+
+                            if (tokenIds.Count > 2 && distinctTokens.Count == 1)
+                            {
+                                enumerator.MoveBack();
+                                enumerator.SetLogit(distinctTokens.Single(), 0, LogitBiasLifeTime.Temporary);
+                            }
+                            else
+                            {
+                                summarized.Append(new LlamaToken(enumerator.Current.Id, enumerator.Current.Value, ""));
+                                Console.Write(enumerator.Current.Value);
+                            }
+
+                            if(tokenIds.Count > 3)
+                            {
+                                tokenIds.Dequeue();
+                            }
                         }
 
                         summarized.Append(await this.RemoteTokenize("]"));

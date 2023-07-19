@@ -237,6 +237,14 @@ namespace ChieApi.Services
                 toSend = $"{chatEntry.Content}";
             }
 
+            //string? contextString = this._client.ContextBuffer.ToString();
+
+            //if (contextString.Length > 0 &&  !contextString.EndsWith("\n"))
+            //{
+            //    LlamaToken lastToken = this._client.ContextBuffer.Where(t => t.Id != 0).Last();
+            //    this._client.Send("\n", lastToken.Tag);
+            //}
+
             this._client.Send(toSend, chatEntry.Tag ?? LlamaTokenTags.INPUT, false);
 
             if (flush)

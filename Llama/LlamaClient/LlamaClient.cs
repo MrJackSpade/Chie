@@ -1,4 +1,5 @@
 ﻿using Llama.Collections;
+using Llama.Collections.Interfaces;
 using Llama.Constants;
 using Llama.Context;
 using Llama.Data;
@@ -21,6 +22,8 @@ namespace Llama
 
         private char _lastChar;
 
+        public IReadOnlyLlamaTokenCollection ContextBuffer => _chatEvaluator.Context.Buffer;
+
         public LlamaClient(Shared.LlamaSettings settings)
         {
             this._settings = settings;
@@ -39,12 +42,6 @@ namespace Llama
         public event EventHandler<LlamaTokenCollection>? ResponseReceived;
 
         public event EventHandler<LlameClientTokenGeneratedEventArgs>? TokenGenerated;
-
-        public bool Connected { get; private set; }
-
-        public bool EndsWithReverse => this._lastChar == this._settings.PrimaryReversePrompt?.Last();
-
-        public bool HasQueuedMessages => this._queued.Count > 0;
 
         public LlamaSettings Params { get; private set; }
 

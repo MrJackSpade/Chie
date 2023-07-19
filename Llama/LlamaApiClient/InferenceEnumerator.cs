@@ -70,6 +70,7 @@ namespace LlamaApiClient
             //rebuilding the list here allows new tokens to be appended from the temporary
             //collection in case adjustments were made after the last "Move Back"
             this._lastTemporaryBias = this.GetCurrentBias();
+            this._temporaryBias.Clear();
 
             //apply the lastTemporaryBias and invoke
             this.Current = await this._moveNext.Invoke(this._lastTemporaryBias);

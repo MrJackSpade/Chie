@@ -35,12 +35,17 @@ namespace Llama.Pipeline.ContextRollers
 
             List<LlamaTokenCollection> keepLines = new();
 
+            bool endsWithNl = false;
+
             foreach (LlamaTokenCollection line in new_history.SelectMany(l => l.Split(splitNewLine.Id)))
             {
                 if (line.Count == 0)
                 {
+                    endsWithNl = true;
                     continue;
                 }
+
+                endsWithNl = false;
 
                 if (line.IsSingleLlamaTokenTag && line.LlamaTokenTags.Single() == LlamaTokenTags.PROMPT)
                 {
@@ -59,6 +64,8 @@ namespace Llama.Pipeline.ContextRollers
             }
             else
             {
+                LlamaToken lastToken = null;
+                
                 for (int i = 0; i < keepLines.Count; i++)
                 {
                     int remaining = keepLines.Count - i;
@@ -79,6 +86,13 @@ namespace Llama.Pipeline.ContextRollers
                     }
 
                     toReturn.Append(keepLines[i]);
+
+                    lastToken = keepLines[i].Last();
+                }
+
+                if (endsWithNl)
+                {
+                    toReturn.Append(new LlamaToken(LlamaToken.NewLine.Id,"\n" ,lastToken.Tag));
                 }
             }
 
