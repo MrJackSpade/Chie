@@ -1,7 +1,7 @@
 ﻿using ChieApi.Interfaces;
+using ChieApi.Models;
 using ChieApi.Shared.Entities;
 using ChieApi.Shared.Services;
-using Llama.Constants;
 
 namespace ChieApi.Pipelines
 {
@@ -37,7 +37,7 @@ namespace ChieApi.Pipelines
                     {
                         DisplayName = (await this._characterFactory.Build()).CharacterName,
                         Content = $"*Notices {timeSpan} {pos} passed*",
-                        Tag = LlamaTokenTags.TEMPORARY
+                        Type = LlamaTokenType.Temporary
                     };
                 }
             }

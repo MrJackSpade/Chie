@@ -1,7 +1,9 @@
-﻿namespace LlamaApi.Models.Response
+﻿using Llama.Data.Models;
+
+namespace LlamaApi.Models.Response
 {
     public class TokenizeResponse
     {
-        public int[] Tokens { get; set; }
+        public LlamaToken[] Tokens { get; set; }
     }
 }

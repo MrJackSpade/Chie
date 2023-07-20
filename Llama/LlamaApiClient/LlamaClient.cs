@@ -1,5 +1,7 @@
 ﻿using Llama.Data;
+using Llama.Data.Collections;
 using Llama.Data.Enums;
+using Llama.Data.Models;
 using LlamaApi.Models;
 using LlamaApi.Models.Request;
 using LlamaApi.Models.Response;
@@ -46,7 +48,7 @@ namespace LlamaApiClient
             );
         }
 
-        public async Task<ContextState> LoadContext(LlamaContextSettings settings, Action<ContextRequest> settingsAction)
+        public virtual async Task<ContextState> LoadContext(LlamaContextSettings settings, Action<ContextRequest> settingsAction)
         {
             ContextRequest cr = new()
             {
@@ -87,11 +89,11 @@ namespace LlamaApiClient
             return response.Predicted;
         }
 
-        public async Task<int[]> Tokenize(Guid contextId, string s)
+        public async Task<LlamaTokenCollection> Tokenize(Guid contextId, string s)
         {
             if (s.Length == 0)
             {
-                return Array.Empty<int>();
+                return new LlamaTokenCollection();
             }
 
             TokenizeResponse response = await this.WaitForResponse<TokenizeResponse>("/Llama/tokenize", new TokenizeRequest()
@@ -100,7 +102,7 @@ namespace LlamaApiClient
                 ContextId = contextId
             });
 
-            return response.Tokens;
+            return new LlamaTokenCollection(response.Tokens);
         }
 
         public async Task<ContextState> Write(Guid contextId, RequestLlamaToken requestLlamaToken, int startIndex = -1)
@@ -117,9 +119,23 @@ namespace LlamaApiClient
             return response.State;
         }
 
-        public async Task<ContextState> Write(Guid contextId, string s, LlamaTokenType llamaTokenType = LlamaTokenType.Input, int startIndex = -1)
+        public async Task<ContextState> Write(Guid contextId, IEnumerable<RequestLlamaToken> requestLlamaTokens, int startIndex = -1)
         {
-            int[] tokens = await this.Tokenize(contextId, s);
+            WriteTokenRequest request = new()
+            {
+                ContextId = contextId,
+                Tokens = requestLlamaTokens.ToList(),
+                StartIndex = startIndex
+            };
+
+            WriteTokenResponse response = await this.WaitForResponse<WriteTokenResponse>("/Llama/write", request);
+
+            return response.State;
+        }
+
+        public async Task<ContextState> Write(Guid contextId, string s, int startIndex = -1)
+        {
+            LlamaTokenCollection tokens = await this.Tokenize(contextId, s);
 
             WriteTokenRequest request = new()
             {
@@ -127,12 +143,11 @@ namespace LlamaApiClient
                 StartIndex = startIndex,
             };
 
-            foreach (int token in tokens)
+            foreach (LlamaToken token in tokens)
             {
                 request.Tokens.Add(new RequestLlamaToken()
                 {
-                    TokenId = token,
-                    TokenType = llamaTokenType
+                    TokenId = token.Id
                 });
             }
 

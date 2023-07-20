@@ -53,8 +53,7 @@ namespace LlamaApiClient
                 {
                     await this._accept(new RequestLlamaToken()
                     {
-                        TokenId = this.Current.Id,
-                        TokenType = Llama.Data.Enums.LlamaTokenType.Response
+                        TokenId = this.Current.Id
                     });
                 }
 

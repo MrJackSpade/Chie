@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using ChieApi.Models;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
@@ -56,7 +57,7 @@ namespace ChieApi.Shared.Entities
             set => this._id = value;
         }
 
-        [JsonPropertyName("tag")]
-        public string? Tag { get; set; }
+        [JsonPropertyName("type")]
+        public LlamaTokenType Type { get; set; }
     }
 }

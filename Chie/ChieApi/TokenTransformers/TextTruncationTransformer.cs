@@ -1,12 +1,10 @@
-﻿using Llama.Collections.Interfaces;
-using Llama.Constants;
-using Llama.Context;
-using Llama.Context.Extensions;
-using Llama.Context.Interfaces;
-using Llama.Data;
-using Llama.Pipeline.Interfaces;
+﻿using ChieApi.Interfaces;
+using ChieApi.Models;
+using Llama.Data.Extensions;
+using Llama.Data.Interfaces;
+using Llama.Data.Models;
 
-namespace Llama.TokenTransformers
+namespace ChieApi.TokenTransformers
 {
     public class TextTruncationTransformer : ITokenTransformer
     {
@@ -18,16 +16,19 @@ namespace Llama.TokenTransformers
 
         private readonly Random _random = new();
 
-        public TextTruncationTransformer(int max, int min, string endChars)
+        readonly LlamaTokenCache _cache;
+
+        public TextTruncationTransformer(int max, int min, string endChars, LlamaTokenCache cache)
         {
             this._min = min;
             this._max = max;
             this._endChars = endChars;
+            this._cache = cache;
         }
 
-        public IEnumerable<LlamaToken> TransformToken(Context.LlamaContextSettings settings, IContext context, IReadOnlyLlamaTokenCollection thisCall, IEnumerable<LlamaToken> selectedTokens)
+        public async IAsyncEnumerable<LlamaToken> TransformToken(IReadOnlyLlamaTokenCollection thisCall, IAsyncEnumerable<LlamaToken> selectedTokens)
         {
-            List<LlamaToken> tokens = selectedTokens.ToList();
+            List<LlamaToken> tokens = await selectedTokens.ToList();
 
             string written = thisCall.ToString();
 
@@ -46,7 +47,7 @@ namespace Llama.TokenTransformers
 
             if (!truncate || !this.GoodEndChar(written) || !nextT.StartsWith(" "))
             {
-                foreach (LlamaToken token in selectedTokens)
+                await foreach (LlamaToken token in selectedTokens)
                 {
                     yield return token;
                 }
@@ -54,7 +55,7 @@ namespace Llama.TokenTransformers
                 yield break;
             }
 
-            yield return context.GetToken(13, LlamaTokenTags.RESPONSE);
+            yield return (await this._cache.Get("\n")).Single();
         }
 
         private bool GoodEndChar(string toTest)

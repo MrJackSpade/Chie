@@ -33,6 +33,7 @@
   <ItemGroup>
     <PackageReference Include="Loxifi.Database" Version="0.9.6" />
     <PackageReference Include="Loxifi.JsonClient" Version="0.8.1" />
+    <PackageReference Include="Loxifi.StringConvert" Version="0.8.0" />
     <PackageReference Include="Loxifi.StringParsing" Version="0.2.1" />
     <PackageReference Include="Loxifi.TypeFactory" Version="0.9.15" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
@@ -42,9 +43,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Blip\Blip.Shared\Blip.Shared.csproj" />
     <ProjectReference Include="..\..\Blip\BlipApiClient\BlipApiClient.csproj" />
-    <ProjectReference Include="..\..\Llama\Llama.Shared\Llama.Shared.csproj" />
-    <ProjectReference Include="..\..\Llama\LlamaClient\LlamaClient.csproj" />
-    <ProjectReference Include="..\..\Llama\LlamaSharp\LlamaSharp.csproj" />
+    <ProjectReference Include="..\..\Llama\LlamaApiClient\LlamaApiClient.csproj" />
     <ProjectReference Include="..\..\Logging\LoggingApiClient\LoggingApiClient.csproj" />
     <ProjectReference Include="..\..\Utils\Ai.Abstractions\Ai.Abstractions.csproj" />
     <ProjectReference Include="..\..\Utils\Ai.Utils\Ai.Utils.csproj" />

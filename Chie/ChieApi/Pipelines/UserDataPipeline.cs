@@ -1,7 +1,7 @@
 ﻿using ChieApi.Interfaces;
+using ChieApi.Models;
 using ChieApi.Shared.Entities;
 using ChieApi.Shared.Services;
-using Llama.Constants;
 using Loxifi;
 using System.Text.RegularExpressions;
 
@@ -27,7 +27,7 @@ namespace ChieApi.Pipelines
         {
             if (!string.IsNullOrWhiteSpace(userData.UserPrompt))
             {
-                return new TextResult(userData.UserPrompt, LlamaTokenTags.TEMPORARY);
+                return new TextResult(userData.UserPrompt, LlamaTokenType.Temporary);
             }
 
             if (!string.IsNullOrWhiteSpace(userData.UserSummary) && userData.LastEncountered.HasValue)
@@ -38,10 +38,11 @@ namespace ChieApi.Pipelines
 
                 if (minutes > 60)
                 {
-                    return new TextResult($"[Chies friend {displayName} arrives. {userData.UserSummary}]", LlamaTokenTags.STAGE_DIRECTION);
-                } else
+                    return new TextResult($"[Chies friend {displayName} arrives. {userData.UserSummary}]", LlamaTokenType.Input);
+                }
+                else
                 {
-                    return new TextResult($"[{userData.UserSummary.To(". ")}]", LlamaTokenTags.TEMPORARY);
+                    return new TextResult($"[{userData.UserSummary.To(". ")}]", LlamaTokenType.Temporary);
                 }
             }
 
@@ -141,7 +142,7 @@ namespace ChieApi.Pipelines
                 Content = displayText.Content,
                 IsVisible = false,
                 SourceChannel = chatEntry.SourceChannel,
-                Tag = displayText.Tag
+                Type = displayText.Type
             };
 
             return true;

@@ -15,9 +15,8 @@ namespace LlamaApi.Models.Response
 
         public ResponseLlamaToken(LlamaToken t)
         {
-            this.EscapedValue = t.EscapedValue;
+            this.EscapedValue = t.GetEscapedValue();
             this.Id = t.Id;
-            this.TokenType = t.TokenType;
             this.Value = t.Value;
 
             if (t.Data != null)
@@ -38,8 +37,6 @@ namespace LlamaApi.Models.Response
         public int Id { get; set; }
 
         public JsonObject? TokenData { get; set; }
-
-        public LlamaTokenType TokenType { get; set; }
 
         public string Value { get; set; }
     }

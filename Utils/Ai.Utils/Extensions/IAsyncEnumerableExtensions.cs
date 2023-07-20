@@ -13,5 +13,17 @@
 
             return list.ToArray();
         }
+
+        public static async Task<T> Single<T>(this IAsyncEnumerable<T> source)
+        {
+            List<T> list = new();
+
+            await foreach (T item in source)
+            {
+                list.Add(item);
+            }
+
+            return list.Single();
+        }
     }
 }

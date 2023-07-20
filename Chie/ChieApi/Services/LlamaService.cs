@@ -1,14 +1,17 @@
 ﻿using Ai.Abstractions;
 using Ai.Utils.Extensions;
+using ChieApi.Extensions;
+using ChieApi.Extensions.Llama.Extensions;
 using ChieApi.Interfaces;
 using ChieApi.Models;
+using ChieApi.Samplers;
 using ChieApi.Shared.Entities;
 using ChieApi.Shared.Services;
-using Llama;
-using Llama.Collections;
-using Llama.Constants;
+using ChieApi.TokenTransformers;
 using Llama.Data;
-using Llama.Events;
+using Llama.Data.Collections;
+using Llama.Data.Models;
+using LlamaApiClient;
 using Loxifi;
 using System.Text.Json.Serialization;
 
@@ -28,18 +31,35 @@ namespace ChieApi.Services
 
         private CharacterConfiguration _characterConfiguration;
 
-        private LlamaClient _client;
+        private readonly LlamaContextModel _contextModel;
 
-        public LlamaService(ICharacterFactory characterFactory, ILogger logger, ChatService chatService, LogitService logitService)
+        private readonly LlamaTokenCache _tokenCache;
+
+        private readonly LlamaContextClient _client = new(new LlamaClientSettings("http://127.0.0.1:10030"));
+
+        private readonly List<ITokenTransformer> _transformers;
+        private readonly List<ISimpleSampler> _simpleSamplers;
+        public LlamaService(ICharacterFactory characterFactory, LlamaContextModel contextModel, LlamaTokenCache llamaTokenCache, ILogger logger, ChatService chatService, LogitService logitService)
         {
             this._characterFactory = characterFactory;
             this._logitService = logitService;
             this._logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this._chatService = chatService ?? throw new ArgumentNullException(nameof(chatService));
-
+            this._contextModel = contextModel;
+            this._tokenCache = llamaTokenCache;
             logger.LogInformation("Constructing Llama Service");
 
             _ = this.SetState(AiState.Initializing);
+
+            this._simpleSamplers = new List<ISimpleSampler>()
+            {
+                new NewlineEnsureSampler(llamaTokenCache)
+            };
+
+            this._transformers = new List<ITokenTransformer>()
+            {
+                new TextTruncationTransformer(250, 150, ".!?", llamaTokenCache)
+            };
 
             this.Initialization = Task.Run(this.Init);
         }
@@ -51,8 +71,6 @@ namespace ChieApi.Services
         public string CurrentResponse { get; private set; }
 
         public Task Initialization { get; private set; }
-
-        public ContextModificationEventArgs LastContextModification { get; private set; }
 
         private string LastChannel { get; set; }
 
@@ -75,28 +93,78 @@ namespace ChieApi.Services
 
         public ChatEntry[] GetResponses(string channelId, long after) => this._chatService.GetMessages(channelId, after, this.CharacterName);
 
+        private async Task LoopProcess()
+        {
+            do
+            {
+                this._acceptingInput.Set();
+                this._processingInput.WaitOne();
+
+                LlamaTokenCollection contextState = new();
+
+                await foreach (LlamaToken token in this._contextModel)
+                {
+                    await this.SetState(AiState.Responding);
+                    contextState.Append(token);
+                }
+
+                await this._client.Write(contextState, 0);
+
+                await this._client.Eval();
+
+                LlamaTokenCollection thisInference = await this.Infer();
+
+                await this.RecieveResponse(thisInference);
+
+            } while (true);
+        }
+
+        private async Task<LlamaTokenCollection> Infer()
+        {
+            InferenceEnumerator enumerator = await this._client.Infer();
+
+            LlamaTokenCollection thisInference = new();
+
+            enumerator.SetLogit(LlamaToken.EOS.Id, 0, LogitBiasLifeTime.Temporary);
+
+            while (await enumerator.MoveNextAsync())
+            {
+
+                await foreach (LlamaToken llamaToken in this._transformers.Transform(thisInference, new LlamaToken(enumerator.Current.Id, enumerator.Current.Value)))
+                {
+                    if (llamaToken.Id == 13)
+                    {
+                        return thisInference;
+                    }
+
+                    thisInference.Append(llamaToken);
+                }
+            }
+
+            return thisInference;
+        }
+
+        private readonly AutoResetEvent _acceptingInput = new(false);
+        private readonly AutoResetEvent _processingInput = new(false);
+
         public long ReturnControl(bool force, string? channelId = null)
         {
-            try
-            {
-                bool clearToProceed = force || this.TryLock();
-                bool channelAllowed = channelId == null || this.LastChannel == channelId;
 
-                if (!clearToProceed || !channelAllowed)
-                {
-                    return 0;
-                }
+            bool channelAllowed = channelId == null || this.LastChannel == channelId;
+            bool clearToProceed = channelAllowed && (force || this._acceptingInput.WaitOne(100));
 
-                this._client.Send($"|{this.CharacterName}:", LlamaTokenTags.INPUT, true);
-                return this.LastMessageId;
-            }
-            finally
+            long lastMessageId = this.LastMessageId;
+
+            if (!clearToProceed)
             {
-                if (force)
-                {
-                    this.Unlock();
-                }
+                this._acceptingInput.Set();
             }
+            else
+            {
+                this._processingInput.Set();
+            }
+
+            return lastMessageId;
         }
 
         public async Task<long> Send(ChatEntry chatEntry) => await this.Send(new ChatEntry[] { chatEntry });
@@ -147,18 +215,26 @@ namespace ChieApi.Services
             this._characterConfiguration ??= await this._characterFactory.Build();
             this.CharacterName = this._characterConfiguration.CharacterName;
 
-            this._client = new LlamaClient(this._characterConfiguration);
-            this._logger.LogDebug(System.Text.Json.JsonSerializer.Serialize(this._client.Params, new System.Text.Json.JsonSerializerOptions()
+            this._logger.LogDebug(System.Text.Json.JsonSerializer.Serialize(this._characterConfiguration, new System.Text.Json.JsonSerializerOptions()
             {
                 WriteIndented = true,
                 NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
             }));
 
-            this._client.ResponseReceived += new EventHandler<LlamaTokenCollection>(async (s, e) => await this.LlamaClient_ResponseReceived(s, e));
-            this._client.TokenGenerated += new EventHandler<LlameClientTokenGeneratedEventArgs>(async (s, e) => await this.LlamaClient_IsTyping(s, e));
-            this._client.OnContextModification += (c) => this.LastContextModification = c;
             this._logger.LogInformation("Connecting to client...");
-            await this._client.Connect();
+
+            await this._client.LoadModel(new LlamaModelSettings()
+            {
+                BatchSize = this._characterConfiguration.BatchSize,
+                ContextSize = this._characterConfiguration.ContextLength,
+                GpuLayerCount = this._characterConfiguration.GpuLayers,
+                MemoryMode = this._characterConfiguration.MemoryMode,
+                Model = this._characterConfiguration.ModelPath,
+                ThreadCount = this._characterConfiguration.Threads ?? System.Environment.ProcessorCount / 2,
+                UseMemoryMap = !this._characterConfiguration.NoMemoryMap,
+                UseMemoryLock = true
+            });
+
             this._logger.LogInformation("Connected to client.");
 
             if (this.AiState == AiState.Initializing)
@@ -167,23 +243,13 @@ namespace ChieApi.Services
             }
         }
 
-        private async Task LlamaClient_IsTyping(object? s, LlameClientTokenGeneratedEventArgs e)
-        {
-            if (this.AiState == AiState.Processing)
-            {
-                _ = await this.SetState(AiState.Responding);
-            }
-
-            this.CurrentResponse += e.Token.Value;
-        }
-
-        private async Task LlamaClient_ResponseReceived(object? sender, LlamaTokenCollection collection)
+        private async Task RecieveResponse(LlamaTokenCollection collection)
         {
             foreach (LlamaToken token in collection)
             {
-                this._logitService.Identify(token.Id, token.Value, token.EscapedValue);
+                this._logitService.Identify(token.Id, token.Value, token.GetEscapedValue());
             }
-            
+
             string responseContent = collection.ToString();
 
             string? userName = this.CharacterName;
@@ -203,10 +269,10 @@ namespace ChieApi.Services
 
             ChatEntry chatEntry = new()
             {
-                ReplyToId = this.LastMessageId,
+                ReplyToId = LastMessageId,
                 Content = content,
                 DisplayName = userName,
-                SourceChannel = this.LastChannel
+                SourceChannel = LastChannel
             };
 
             _ = await this.SetState(AiState.Idle);
@@ -230,31 +296,16 @@ namespace ChieApi.Services
 
             if (!string.IsNullOrWhiteSpace(chatEntry.DisplayName))
             {
-                toSend = $"|{chatEntry.DisplayName}: {chatEntry.Content}";
+                this._contextModel.Messages.Enqueue(new LlamaMessage(chatEntry.DisplayName, chatEntry.Content, LlamaTokenType.Input, this._tokenCache));
             }
             else
             {
-                toSend = $"{chatEntry.Content}";
+                this._contextModel.Messages.Enqueue(new LlamaTokenBlock(chatEntry.Content, LlamaTokenType.Input, this._tokenCache));
             }
-
-            //string? contextString = this._client.ContextBuffer.ToString();
-
-            //if (contextString.Length > 0 &&  !contextString.EndsWith("\n"))
-            //{
-            //    LlamaToken lastToken = this._client.ContextBuffer.Where(t => t.Id != 0).Last();
-            //    this._client.Send("\n", lastToken.Tag);
-            //}
-
-            this._client.Send(toSend, chatEntry.Tag ?? LlamaTokenTags.INPUT, false);
 
             if (flush)
             {
                 this.ReturnControl(true);
-
-                if (!string.IsNullOrWhiteSpace(this._characterConfiguration.FixedInstruction))
-                {
-                    this._client.Send(this._characterConfiguration.FixedInstruction, LlamaTokenTags.TEMPORARY, false, false);
-                }
             }
         }
 

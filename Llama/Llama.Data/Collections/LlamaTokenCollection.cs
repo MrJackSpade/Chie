@@ -29,10 +29,6 @@ namespace Llama.Data.Collections
 
         public bool IsNullOrWhiteSpace => string.IsNullOrWhiteSpace(this.ToString());
 
-        public bool IsSingleLlamaTokenTag => this.LlamaTokenType.Count() == 1;
-
-        public IEnumerable<LlamaTokenType> LlamaTokenType => this._tokens.Select(t => t.TokenType).Distinct();
-
         public LlamaToken this[int index]
         {
             get => this._tokens[index];
@@ -81,7 +77,7 @@ namespace Llama.Data.Collections
             this._tokens.Add(token);
         }
 
-        public string ToEscapedString() => string.Join("", this._tokens.Select(t => t.EscapedValue));
+        public string ToEscapedString() => string.Join("", this._tokens.Select(t => t.GetEscapedValue()));
 
         public override string ToString() => string.Join("", this._tokens.Select(t => t.Value));
 

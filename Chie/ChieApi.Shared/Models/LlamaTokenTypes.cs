@@ -1,4 +1,4 @@
-﻿namespace Llama.Data.Enums
+﻿namespace ChieApi.Models
 {
     public enum LlamaTokenType
     {

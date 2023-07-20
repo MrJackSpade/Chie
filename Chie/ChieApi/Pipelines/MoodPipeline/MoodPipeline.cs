@@ -1,7 +1,8 @@
 ﻿using ChieApi.Interfaces;
+using ChieApi.Models;
 using ChieApi.Services;
 using ChieApi.Shared.Entities;
-using Llama.Constants;
+using Llama.Data.Models;
 
 namespace ChieApi.Pipelines.MoodPipeline
 {
@@ -72,7 +73,7 @@ namespace ChieApi.Pipelines.MoodPipeline
                         Image = Array.Empty<byte>(),
                         IsVisible = false,
                         DisplayName = this._llamaService.CharacterName,
-                        Tag = LlamaTokenTags.TEMPORARY
+                        Type = LlamaTokenType.Temporary
                     };
 
                     this._lastMoodSent = DateTime.Now;
