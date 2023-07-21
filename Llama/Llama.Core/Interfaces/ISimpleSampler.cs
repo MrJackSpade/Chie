@@ -1,6 +1,6 @@
 ﻿using Llama.Data.Models;
 
-namespace Llama.Data.Interfaces
+namespace Llama.Core.Interfaces
 {
     public interface ISimpleSampler
     {

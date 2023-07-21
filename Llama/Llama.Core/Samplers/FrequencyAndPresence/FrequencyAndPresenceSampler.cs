@@ -1,6 +1,6 @@
-﻿using Llama.Core.Utils;
+﻿using Llama.Core.Interfaces;
+using Llama.Core.Utils;
 using Llama.Data.Collections;
-using Llama.Data.Interfaces;
 using Llama.Data.Models;
 using Llama.Data.Models.Settings;
 using Llama.Native;

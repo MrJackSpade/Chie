@@ -1,4 +1,5 @@
 using Llama.Core;
+using Llama.Core.Interfaces;
 using Llama.Core.Samplers.FrequencyAndPresence;
 using Llama.Core.Samplers.Mirostat;
 using Llama.Core.Samplers.Repetition;
