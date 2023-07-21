@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
-namespace LlamaApi.Models.Response
+namespace LlamaApi.Shared.Models.Response
 {
     public class ResponseLlamaToken
     {
@@ -32,12 +32,16 @@ namespace LlamaApi.Models.Response
             }
         }
 
+        [JsonPropertyName("escapedValue")]
         public string EscapedValue { get; set; }
 
+        [JsonPropertyName("id")]
         public int Id { get; set; }
 
+        [JsonPropertyName("tokenData")]
         public JsonObject? TokenData { get; set; }
 
+        [JsonPropertyName("value")]
         public string Value { get; set; }
     }
 }

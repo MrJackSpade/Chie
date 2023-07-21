@@ -1,5 +1,6 @@
 ﻿using Llama.Data.Enums;
 using LlamaApi.Models.Response;
+using LlamaApi.Shared.Models.Response;
 
 namespace ChieApi.Services
 {

@@ -6,6 +6,8 @@ using LlamaApi.Models;
 using LlamaApi.Models.Request;
 using LlamaApi.Models.Response;
 using LlamaApi.Shared.Models.Request;
+using LlamaApi.Shared.Models.Response;
+using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -34,10 +36,12 @@ namespace LlamaApiClient
 
         public async Task Eval(Guid contextId)
         {
-            await this.WaitForResponse("/Llama/eval", new EvaluateRequest()
+            EvaluationResponse response = await this.WaitForResponse<EvaluationResponse>("/Llama/eval", new EvaluateRequest()
             {
                 ContextId = contextId
             });
+
+            Debug.WriteLine("Evaluated: " + response.Evaluated);
         }
 
         public async Task<InferenceEnumerator> Infer(Guid contextId)

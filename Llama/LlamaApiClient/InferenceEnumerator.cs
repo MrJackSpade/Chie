@@ -1,6 +1,6 @@
 ﻿using Llama.Data.Extensions;
 using LlamaApi.Models.Request;
-using LlamaApi.Models.Response;
+using LlamaApi.Shared.Models.Response;
 
 namespace LlamaApiClient
 {

@@ -25,8 +25,6 @@ namespace ChieApi.Services
     {
         private const string DIR_SUMMARIZATION = "SummarizationData";
 
-        private readonly int _contextSize;
-
         private readonly string _summarizePrefix = string.Empty;
 
         private readonly string _summarizeSuffix = string.Empty;
@@ -68,7 +66,7 @@ namespace ChieApi.Services
                 this._isSetup = true;
             }
         }
-        public SummarizationService(LlamaContextSettings contextSettings)
+        public SummarizationService()
         {
             if (!Directory.Exists(DIR_SUMMARIZATION))
             {
@@ -76,8 +74,6 @@ namespace ChieApi.Services
             }
 
             this._summarizeSuffix = "\nHuman: Please summarize the above in a single paragraph\n\nAssistant:";
-
-            this._contextSize = contextSettings.ContextSize;
         }
 
         private async Task<IReadOnlyLlamaTokenCollection> RemoteTokenize(string toTokenize) => await this._client.Tokenize(this._contextId, toTokenize);

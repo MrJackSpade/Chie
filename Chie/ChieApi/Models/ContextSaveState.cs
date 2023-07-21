@@ -77,7 +77,8 @@ namespace ChieApi.Models
                         toReturn.Messages.Add(new LlamaMessage(
                             message.UserName.ToCollection(),
                             message.Content.ToCollection(),
-                            message.Type));
+                            message.Type,
+                            cache));
                         break;
                     case TokenBlockType.Block:
                         toReturn.Messages.Add(new LlamaTokenBlock(

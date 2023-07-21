@@ -2,6 +2,7 @@
 using Llama.Data.Interfaces;
 using LlamaApi.Models.Request;
 using LlamaApi.Models.Response;
+using LlamaApi.Shared.Models.Response;
 using LlamaApiClient;
 using System.Runtime.CompilerServices;
 

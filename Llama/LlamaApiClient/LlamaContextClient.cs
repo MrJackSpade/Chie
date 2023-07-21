@@ -2,7 +2,7 @@
 using Llama.Data.Collections;
 using LlamaApi.Models;
 using LlamaApi.Models.Request;
-using LlamaApi.Models.Response;
+using LlamaApi.Shared.Models.Response;
 using System.Net.Http.Json;
 using System.Text.Json;
 

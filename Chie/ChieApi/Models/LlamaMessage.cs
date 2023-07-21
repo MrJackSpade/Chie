@@ -27,8 +27,9 @@ namespace ChieApi.Models
             }
 
             this.UserName = new(userName, cache, true);
-            this.Content = new(content, cache, false);
+            this.Content = new(" " + content.Trim(), cache, false);
             this.Type = type;
+            this._cache = cache;
         }
 
         public LlamaMessage(string? userName, LlamaTokenCollection content, LlamaTokenType type, LlamaTokenCache cache)
@@ -48,12 +49,19 @@ namespace ChieApi.Models
                 throw new ArgumentNullException(nameof(cache));
             }
 
+            if(!content.ToString().StartsWith(" "))
+            {
+                throw new ArgumentException($"{nameof(LlamaMessage)} content must start with space to properly tokenize");
+            }
+
             this.UserName = new(userName, cache, true);
             this.Content = new(content);
             this.Type = type;
+            this._cache = cache;
+
         }
 
-        public LlamaMessage(LlamaTokenCollection userName, LlamaTokenCollection content, LlamaTokenType type)
+        public LlamaMessage(LlamaTokenCollection userName, LlamaTokenCollection content, LlamaTokenType type, LlamaTokenCache cache)
         {
             if (userName is null)
             {
@@ -68,8 +76,11 @@ namespace ChieApi.Models
             this.UserName = new(userName);
             this.Content = new(content);
             this.Type = type;
+            this._cache = cache;
+
         }
 
+        private readonly LlamaTokenCache _cache;    
         public CachedTokenCollection Content { get; }
 
         public LlamaTokenType Type { get; }
@@ -91,8 +102,9 @@ namespace ChieApi.Models
             if (this._tokens == null)
             {
                 LlamaTokenCollection tokens = new();
-
+                await tokens.Append(_cache.Get("|", true));
                 await tokens.Append(this.UserName);
+                await tokens.Append(_cache.Get(":", true));
                 await tokens.Append(this.Content);
 
                 this._tokens = tokens;

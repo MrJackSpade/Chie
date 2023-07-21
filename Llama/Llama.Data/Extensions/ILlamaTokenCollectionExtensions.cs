@@ -14,6 +14,8 @@ namespace Llama.Data.Extensions
             }
         }
 
+        public static async Task Append(this ILlamaTokenCollection target, Task<LlamaToken> token) => target.Append(await token);
+
         public static async Task Append(this ILlamaTokenCollection target, IAsyncEnumerable<LlamaToken> tokens)
         {
             await foreach (LlamaToken token in tokens)
@@ -23,6 +25,14 @@ namespace Llama.Data.Extensions
         }
 
         public static async Task Append(this ILlamaTokenCollection target, Task<IReadOnlyLlamaTokenCollection> tokens)
+        {
+            foreach (LlamaToken token in await tokens)
+            {
+                target.Append(token);
+            }
+        }
+
+        public static async Task Append(this ILlamaTokenCollection target, Task<LlamaTokenCollection> tokens)
         {
             foreach (LlamaToken token in await tokens)
             {

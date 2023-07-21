@@ -16,6 +16,7 @@ using LlamaApi.Models;
 using LlamaApi.Models.Request;
 using LlamaApi.Models.Response;
 using LlamaApi.Shared.Models.Request;
+using LlamaApi.Shared.Models.Response;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json.Nodes;
 
@@ -135,15 +136,16 @@ namespace LlamaApi.Controllers
             {
                 ContextEvaluator context = this._loadedModel.GetContext(request.ContextId);
 
-                context.Evaluate(request.Priority);
+                int evaluated = context.Evaluate(request.Priority);
 
-                return new ContextState()
+                return new EvaluationResponse()
                 {
-                    Size = context.Context.Size,
                     AvailableBuffer = context.Context.AvailableBuffer,
                     Id = request.ContextId,
-                    IsLoaded = true
+                    IsLoaded = true,
+                    Evaluated = evaluated
                 };
+
             }, request.Priority);
         }
 

@@ -16,6 +16,7 @@ using Llama.Data.Models;
 using Llama.Data.Models.Settings;
 using LlamaApi.Models.Request;
 using LlamaApi.Models.Response;
+using LlamaApi.Shared.Models.Response;
 using LlamaApiClient;
 using Loxifi;
 using System.Text.Json.Serialization;
