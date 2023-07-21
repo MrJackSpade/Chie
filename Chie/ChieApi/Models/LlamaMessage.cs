@@ -7,40 +7,80 @@ namespace ChieApi.Models
 {
     public class LlamaMessage : ITokenCollection
     {
-        private readonly LlamaTokenCache _cache;
+        private LlamaTokenCollection? _tokens;
 
-        private LlamaTokenCollection? _cachedContent;
-
-        private LlamaTokenCollection _tokens;
-
-        public LlamaMessage(string userName, string content, LlamaTokenType type, LlamaTokenCache cache)
+        public LlamaMessage(string? userName, string? content, LlamaTokenType type, LlamaTokenCache cache)
         {
-            this.UserName = userName;
-            this.Content = content;
+            if (string.IsNullOrEmpty(userName))
+            {
+                throw new ArgumentException($"'{nameof(userName)}' cannot be null or empty.", nameof(userName));
+            }
+
+            if (string.IsNullOrEmpty(content))
+            {
+                throw new ArgumentException($"'{nameof(content)}' cannot be null or empty.", nameof(content));
+            }
+
+            if (cache is null)
+            {
+                throw new ArgumentNullException(nameof(cache));
+            }
+
+            this.UserName = new(userName, cache, true);
+            this.Content = new(content, cache, false);
             this.Type = type;
-            this._cache = cache;
         }
 
-        public LlamaMessage(string userName, LlamaTokenCollection content, LlamaTokenType type, LlamaTokenCache cache)
+        public LlamaMessage(string? userName, LlamaTokenCollection content, LlamaTokenType type, LlamaTokenCache cache)
         {
-            this.UserName = userName;
-            this.Content = content.ToString();
-            this._cachedContent = content;
+            if (string.IsNullOrEmpty(userName))
+            {
+                throw new ArgumentException($"'{nameof(userName)}' cannot be null or empty.", nameof(userName));
+            }
+
+            if (content is null)
+            {
+                throw new ArgumentNullException(nameof(content));
+            }
+
+            if (cache is null)
+            {
+                throw new ArgumentNullException(nameof(cache));
+            }
+
+            this.UserName = new(userName, cache, true);
+            this.Content = new(content);
             this.Type = type;
-            this._cache = cache;
         }
 
-        public string Content { get; }
+        public LlamaMessage(LlamaTokenCollection userName, LlamaTokenCollection content, LlamaTokenType type)
+        {
+            if (userName is null)
+            {
+                throw new ArgumentNullException(nameof(userName));
+            }
+
+            if (content is null)
+            {
+                throw new ArgumentNullException(nameof(content));
+            }
+
+            this.UserName = new(userName);
+            this.Content = new(content);
+            this.Type = type;
+        }
+
+        public CachedTokenCollection Content { get; }
 
         public LlamaTokenType Type { get; }
 
-        public string UserName { get; }
+        public CachedTokenCollection UserName { get; }
 
         public async IAsyncEnumerator<LlamaToken> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
             await this.EnsureTokens();
 
-            foreach (LlamaToken token in this._tokens)
+            foreach (LlamaToken token in this._tokens!)
             {
                 yield return token;
             }
@@ -52,11 +92,8 @@ namespace ChieApi.Models
             {
                 LlamaTokenCollection tokens = new();
 
-                LlamaTokenCollection userTokens = await this._cache.Get($"|{this.UserName}:");
-                this._cachedContent ??= await this._cache.Get(" " + this.Content, false);
-
-                tokens.Append(userTokens);
-                tokens.Append(this._cachedContent);
+                await tokens.Append(this.UserName);
+                await tokens.Append(this.Content);
 
                 this._tokens = tokens;
             }

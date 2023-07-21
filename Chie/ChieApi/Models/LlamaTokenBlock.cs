@@ -1,38 +1,32 @@
 ﻿using ChieApi.Interfaces;
 using Llama.Data.Collections;
+using Llama.Data.Extensions;
 using Llama.Data.Models;
 
 namespace ChieApi.Models
 {
     public class LlamaTokenBlock : ITokenCollection
     {
-        private readonly LlamaTokenCache _cache;
-
-        private LlamaTokenCollection _cachedContent;
-
         private LlamaTokenCollection _tokens;
 
         public LlamaTokenBlock()
         {
-            this.Content = null;
-            this._cache = null;
             this.Type = LlamaTokenType.Undefined;
         }
 
         public LlamaTokenBlock(string content, LlamaTokenType type, LlamaTokenCache cache)
         {
-            this.Content = content;
-            this._cache = cache;
+            this.Content = new CachedTokenCollection(content, cache, true);
             this.Type = type;
         }
 
-        public LlamaTokenBlock(LlamaTokenCollection content)
+        public LlamaTokenBlock(LlamaTokenCollection content, LlamaTokenType type)
         {
-            this.Content = content.ToString();
-            this._cachedContent = content;
+            this.Content = new CachedTokenCollection(content);
+            this.Type = type;
         }
 
-        public string Content { get; private set; }
+        public CachedTokenCollection Content { get; private set; }
 
         public LlamaTokenType Type { get; private set; }
 
@@ -48,16 +42,14 @@ namespace ChieApi.Models
 
         private async Task EnsureTokens()
         {
-            if (this._tokens == null) 
+            if (this._tokens == null)
             {
-                if (!string.IsNullOrEmpty(this.Content))
-                {
-                    this._cachedContent ??= await this._cache.Get(this.Content, false);
 
-                    this._tokens = this._cachedContent;
-                } else
+                this._tokens = new LlamaTokenCollection();
+
+                if (this.Content != null)
                 {
-                    this._tokens = new LlamaTokenCollection();
+                    await this._tokens.Append(this.Content);
                 }
             }
         }
