@@ -1,5 +1,6 @@
 ﻿using Llama.Data.Interfaces;
 using Llama.Data.Models;
+using Llama.Data.Models.Settings;
 using Llama.Native;
 
 namespace Llama.Core.Samplers.Temperature

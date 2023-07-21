@@ -20,7 +20,7 @@ namespace ChieApi.Models
 
         public ITokenCollection Summary { get; set; } = new LlamaTokenBlock();
 
-        public Queue<ITokenCollection> Messages { get; } = new Queue<ITokenCollection>();
+        public List<ITokenCollection> Messages { get; } = new List<ITokenCollection>();
 
         private async IAsyncEnumerable<LlamaToken> AndNewLine(IAsyncEnumerable<LlamaToken> toReturn)
         {
@@ -38,6 +38,18 @@ namespace ChieApi.Models
                     yield return token;
                 }
             }
+        }
+
+        public async Task<LlamaTokenCollection> GetState()
+        {
+            LlamaTokenCollection contextState = new();
+
+            await foreach (LlamaToken token in this)
+            {
+                contextState.Append(token);
+            }
+
+            return contextState;
         }
 
         public async IAsyncEnumerator<LlamaToken> GetAsyncEnumerator(CancellationToken cancellationToken = default)

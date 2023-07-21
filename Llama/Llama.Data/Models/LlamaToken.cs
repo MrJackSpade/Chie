@@ -2,7 +2,7 @@
 
 namespace Llama.Data.Models
 {
-    [DebuggerDisplay("[{Tag}] {Value}")]
+    [DebuggerDisplay("{Value}")]
     public class LlamaToken
     {
         public LlamaToken(int id, string? value)

@@ -36,7 +36,7 @@ namespace ChieApi.Services
 
         public MemoryMode MemoryMode { get; set; }
 
-        public int BatchSize { get; set; }
+        public int BatchSize { get; set; } = 512;
 
         public MirostatType MiroStat { get; set; }
 

@@ -1,4 +1,5 @@
 ﻿using Llama.Core.Exceptions;
+using Llama.Core.Interfaces;
 using Llama.Data;
 using Llama.Data.Collections;
 using Llama.Data.Enums;
@@ -185,7 +186,7 @@ namespace Llama.Core
 
             int tokenId = this._tokenSelector.SampleNext(sampleContext);
 
-            return this.GetToken(tokenId, LlamaTokenType.Response);
+            return this.GetToken(tokenId);
         }
 
         public void SetBufferPointer(int startIndex)
@@ -262,9 +263,9 @@ namespace Llama.Core
         private LlamaTokenCollection NoPenalize()
         {
             LlamaTokenCollection collection = new();
-            collection.Append(this.GetToken(13, LlamaTokenType.Undefined)); //NL
-            collection.Append(this.GetToken(334, LlamaTokenType.Undefined)); // *
-            collection.Append(this.GetToken(29930, LlamaTokenType.Undefined)); //*
+            collection.Append(this.GetToken(13)); //NL
+            collection.Append(this.GetToken(334)); // *
+            collection.Append(this.GetToken(29930)); //*
             return collection;
         }
     }

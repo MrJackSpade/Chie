@@ -1,10 +1,11 @@
-﻿@using Llama.Data.Models;
+﻿@using Llama.Data.Interfaces;
+@using Llama.Data.Models;
 
-@model IAsyncEnumerable<LlamaToken>
+@model IReadOnlyLlamaTokenCollection
 
 @if (Model != null)
 {
-    await foreach (LlamaToken token in Model)
+    foreach (LlamaToken token in Model)
     {
         if (token.Id == 13)
         {

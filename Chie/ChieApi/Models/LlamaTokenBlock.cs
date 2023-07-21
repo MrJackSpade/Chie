@@ -52,7 +52,7 @@ namespace ChieApi.Models
             {
                 if (!string.IsNullOrEmpty(this.Content))
                 {
-                    this._cachedContent ??= await this._cache.Get(" " + this.Content, false);
+                    this._cachedContent ??= await this._cache.Get(this.Content, false);
 
                     this._tokens = this._cachedContent;
                 } else

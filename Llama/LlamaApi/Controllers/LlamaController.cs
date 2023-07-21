@@ -1,4 +1,5 @@
 using Llama.Core;
+using Llama.Core.Interfaces;
 using Llama.Core.Samplers.FrequencyAndPresence;
 using Llama.Core.Samplers.Mirostat;
 using Llama.Core.Samplers.Repetition;
@@ -258,9 +259,16 @@ namespace LlamaApi.Controllers
 
                 List<int> tokens = NativeApi.LlamaTokenize(context.Context.Handle, request.Content!, false, System.Text.Encoding.UTF8);
 
+                List<LlamaToken> toReturn = new();
+
+                foreach (int token in tokens)
+                {
+                    toReturn.Add(new LlamaToken(token, NativeApi.TokenToStr(context.Context.Handle, token)));
+                }
+
                 return new TokenizeResponse()
                 {
-                    Tokens = tokens.ToArray()
+                    Tokens = toReturn.ToArray()
                 };
             }, request.Priority);
         }
@@ -282,7 +290,7 @@ namespace LlamaApi.Controllers
                 foreach (RequestLlamaToken token in request.Tokens)
                 {
                     string value = NativeApi.TokenToStr(context.Context.Handle, token.TokenId);
-                    toWrite.Append(new LlamaToken(token.TokenId, value, token.TokenType));
+                    toWrite.Append(new LlamaToken(token.TokenId, value));
                 }
 
                 if (request.StartIndex >= 0)
