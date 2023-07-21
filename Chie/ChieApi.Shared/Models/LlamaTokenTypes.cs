@@ -2,18 +2,18 @@
 {
     public enum LlamaTokenType
     {
-        Undefined,
+        Undefined = 0,
 
-        Control,
+        Control = 1,
 
-        Input,
+        Input = 2,
 
-        Null,
+        Null = 3,
 
-        Prompt,
+        Prompt = 4,
 
-        Response,
+        Response = 5,
 
-        Temporary
+        Temporary = 6
     }
 }

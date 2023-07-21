@@ -13,7 +13,7 @@ namespace ChieApi.Controllers
         }
 
         [HttpGet("/Context")]
-        public async Task<IActionResult> Context() => this.View(this._llamaService.LastContextModification);
+        public async Task<IActionResult> Context() => this.View(this._llamaService.Context);
 
         [HttpGet("/")]
         public async Task<IActionResult> Home() => this.View();

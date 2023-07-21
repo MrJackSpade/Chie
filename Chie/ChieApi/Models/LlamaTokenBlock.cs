@@ -48,11 +48,17 @@ namespace ChieApi.Models
 
         private async Task EnsureTokens()
         {
-            if (this._tokens == null && !string.IsNullOrEmpty(this.Content)) 
+            if (this._tokens == null) 
             {
-                this._cachedContent ??= await this._cache.Get(" " + this.Content, false);
+                if (!string.IsNullOrEmpty(this.Content))
+                {
+                    this._cachedContent ??= await this._cache.Get(" " + this.Content, false);
 
-                this._tokens = this._cachedContent;
+                    this._tokens = this._cachedContent;
+                } else
+                {
+                    this._tokens = new LlamaTokenCollection();
+                }
             }
         }
     }

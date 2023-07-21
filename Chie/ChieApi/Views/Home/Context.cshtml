@@ -1,11 +1,10 @@
-﻿@using Llama.Events;
-@using Llama.Data;
+﻿@using Llama.Data.Models;
 
-@model ContextModificationEventArgs
+@model IAsyncEnumerable<LlamaToken>
 
 @if (Model != null)
 {
-    foreach (LlamaToken token in Model.Evaluated)
+    await foreach (LlamaToken token in Model)
     {
         if (token.Id == 13)
         {

@@ -1,6 +1,4 @@
-﻿using Llama.Core.Samplers.Repetition;
-using Llama.Core.Samplers.Temperature;
-using Llama.Data;
+﻿using Llama.Data;
 using Llama.Data.Models.Settings;
 using Llama.Data.Scheduler;
 using LlamaApi.Attributes;

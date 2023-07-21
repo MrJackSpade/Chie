@@ -4,6 +4,7 @@ using Ai.Utils.Extensions;
 using Llama.Data.Extensions;
 using ChieApi.Interfaces;
 using ChieApi.Models;
+using Llama.Data.Interfaces;
 
 namespace ChieApi.Samplers
 {
@@ -14,7 +15,7 @@ namespace ChieApi.Samplers
         {
             _tokenCache = cache;
         }
-        public async Task<Dictionary<int, float>> SampleNext(LlamaTokenCollection thisInferrence)
+        public async Task<Dictionary<int, float>> SampleNext(IReadOnlyLlamaTokenCollection thisInferrence)
         {
             Dictionary<int, float> toReturn = new()
             {

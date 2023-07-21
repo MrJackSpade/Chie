@@ -1,4 +1,4 @@
-﻿namespace Llama.Core.Samplers.Temperature
+﻿namespace Llama.Data.Models.Settings
 {
     public class TemperatureSamplerSettings
     {
