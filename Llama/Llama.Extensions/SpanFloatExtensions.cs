@@ -12,6 +12,29 @@ namespace Llama.Extensions
             }
         }
 
+        public static void Update(this Span<float> target, IEnumerable<KeyValuePair<int, string>> list)
+        {
+            foreach ((int key, string value) in list)
+            {
+                float v;
+
+                if (string.Equals("-inf", value, StringComparison.OrdinalIgnoreCase))
+                {
+                    v = float.NegativeInfinity;
+                }
+                else if (string.Equals("+inf", value, StringComparison.OrdinalIgnoreCase))
+                {
+                    v = float.PositiveInfinity;
+                }
+                else
+                {
+                    v = float.Parse(value);
+                }
+
+                target[key] = v;
+            }
+        }
+
         public static Dictionary<LlamaToken, float> Extract(this Span<float> source, IEnumerable<LlamaToken> list)
         {
             Dictionary<LlamaToken, float> toReturn = new();

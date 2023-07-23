@@ -2,6 +2,7 @@
 using ChieApi.Interfaces;
 using Llama.Data.Collections;
 using Llama.Data.Models;
+using System.Diagnostics.Eventing.Reader;
 using System.Text.Json;
 
 namespace ChieApi.Models
@@ -28,19 +29,25 @@ namespace ChieApi.Models
             {
                 TokenBlockState blockState = new()
                 {
-                    Content = await collection.ToStateList(),
                     Type = collection.Type
                 };
 
                 if (collection is LlamaMessage lm)
                 {
                     blockState.UserName = await lm.UserName.ToStateList();
+                    blockState.Content = await lm.Content.ToStateList();
                     blockState.TokenBlockType = TokenBlockType.Message;
                 }
-                else
+                else if(collection is LlamaTokenBlock bl)
                 {
+                    blockState.Content = await bl.Content.ToStateList();
                     blockState.TokenBlockType = TokenBlockType.Block;
+                } else
+                {
+                    throw new NotImplementedException();
                 }
+
+                this.MessageStates.Add(blockState);
             }
         }
 

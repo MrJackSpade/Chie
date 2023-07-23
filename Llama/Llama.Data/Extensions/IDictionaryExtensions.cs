@@ -10,6 +10,29 @@
             }
         }
 
+        public static void Add(this IDictionary<int, float> target, IDictionary<int, string> source)
+        {
+            foreach (KeyValuePair<int, string> kvb in source)
+            {
+                float v;
+
+                if (string.Equals("-inf", kvb.Value, StringComparison.OrdinalIgnoreCase))
+                {
+                    v = float.NegativeInfinity;
+                }
+                else if (string.Equals("+inf", kvb.Value, StringComparison.OrdinalIgnoreCase))
+                {
+                    v = float.PositiveInfinity;
+                }
+                else
+                {
+                    v = float.Parse(kvb.Value);
+                }
+
+                target.Add(kvb.Key, v);
+            }
+        }
+
         public static void AddOrUpdate<TKey, TValue>(this IDictionary<TKey, TValue> target, IDictionary<TKey, TValue> source)
         {
             foreach (KeyValuePair<TKey, TValue> kvp in source)

@@ -47,6 +47,7 @@
     <ProjectReference Include="..\..\Logging\LoggingApiClient\LoggingApiClient.csproj" />
     <ProjectReference Include="..\..\Utils\Ai.Abstractions\Ai.Abstractions.csproj" />
     <ProjectReference Include="..\..\Utils\Ai.Utils\Ai.Utils.csproj" />
+    <ProjectReference Include="..\..\Utils\Loxifi.AsyncExtensions\Loxifi.AsyncExtensions.csproj" />
     <ProjectReference Include="..\ChieApi.Shared\ChieApi.Shared.csproj" />
   </ItemGroup>
 

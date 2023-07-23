@@ -1,6 +1,7 @@
 ﻿using ChieApi.Interfaces;
-using global::Llama.Data.Interfaces;
-using global::Llama.Data.Models;
+using Llama.Data.Interfaces;
+using Llama.Data.Models;
+using Loxifi.AsyncExtensions;
 
 namespace ChieApi.Extensions
 {

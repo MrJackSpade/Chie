@@ -16,17 +16,5 @@ namespace Llama.Data.Extensions
 
             return toReturn;
         }
-
-        public static async Task<List<LlamaToken>> ToList(this IAsyncEnumerable<LlamaToken> enumerable)
-        {
-            List<LlamaToken> toReturn = new();
-
-            await foreach (LlamaToken token in enumerable)
-            {
-                toReturn.Add(token);
-            }
-
-            return toReturn;
-        }
     }
 }

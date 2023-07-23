@@ -15,11 +15,11 @@ using Llama.Data.Interfaces;
 using Llama.Data.Models;
 using Llama.Data.Models.Settings;
 using LlamaApi.Models.Request;
-using LlamaApi.Models.Response;
 using LlamaApi.Shared.Models.Response;
 using LlamaApiClient;
 using Loxifi;
 using System.Text.Json.Serialization;
+using Loxifi.AsyncExtensions;
 
 namespace ChieApi.Services
 {
@@ -35,8 +35,6 @@ namespace ChieApi.Services
 
         private readonly LlamaContextClient _client;
 
-        private LlamaContextModel _contextModel;
-        private readonly SummarizationService _summarizationService;
         private readonly ILogger _logger;
 
         private readonly LogitService _logitService;
@@ -45,11 +43,19 @@ namespace ChieApi.Services
 
         private readonly List<ISimpleSampler> _simpleSamplers;
 
+        private readonly SummarizationService _summarizationService;
+
         private readonly LlamaTokenCache _tokenCache;
 
         private readonly List<ITokenTransformer> _transformers;
 
         private CharacterConfiguration _characterConfiguration;
+
+        private LlamaTokenCollection _context;
+
+        private LlamaContextModel _contextModel;
+
+        private Task<SummaryResponse>? _summaryTask;
 
         public LlamaService(SummarizationService summarizationService, ICharacterFactory characterFactory, LlamaContextClient client, LlamaContextModel contextModel, LlamaTokenCache llamaTokenCache, ILogger logger, ChatService chatService, LogitService logitService)
         {
@@ -82,7 +88,7 @@ namespace ChieApi.Services
 
         public string CharacterName { get; private set; }
 
-        public IReadOnlyLlamaTokenCollection Context { get; private set; }
+        public IReadOnlyLlamaTokenCollection Context => _context;
 
         public string CurrentResponse { get; private set; }
 
@@ -130,6 +136,21 @@ namespace ChieApi.Services
             return lastMessageId;
         }
 
+        public async Task Save()
+        {
+            string fname = $"State.{DateTime.Now.Ticks}.json";
+            string fPath = Path.Combine("ContextStates", fname);
+            FileInfo saveInfo = new(fPath);
+            if (!saveInfo.Directory.Exists)
+            {
+                saveInfo.Directory.Create();
+            }
+
+            ContextSaveState contextSaveState = new();
+            await contextSaveState.LoadFrom(this._contextModel);
+            contextSaveState.SaveTo(saveInfo.FullName);
+        }
+
         public async Task<long> Send(ChatEntry chatEntry) => await this.Send(new ChatEntry[] { chatEntry });
 
         public async Task<long> Send(ChatEntry[] chatEntries)
@@ -172,6 +193,38 @@ namespace ChieApi.Services
 
         public bool TryGetReply(long originalMessageId, out ChatEntry? chatEntry) => this._chatService.TryGetOriginal(originalMessageId, out chatEntry);
 
+        public bool TryLoad()
+        {
+            if (Directory.Exists("ContextStates"))
+            {
+                IEnumerable<string> files = Directory.EnumerateFiles("ContextStates", "State.*.json");
+                IEnumerable<FileInfo> fileInfoes = files.Select(f => new FileInfo(f));
+                IEnumerable<FileInfo> orderedFileInfoes = fileInfoes.OrderByDescending(d => d.LastWriteTime);
+                FileInfo? lastState = orderedFileInfoes.FirstOrDefault();
+
+                if (lastState != null)
+                {
+                    ContextSaveState contextSaveState = new();
+                    contextSaveState.LoadFrom(lastState.FullName);
+                    this._contextModel = contextSaveState.ToModel(this._tokenCache);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private async Task Cleanup()
+        {
+            LlamaTokenCollection contextState = await this._contextModel.GetState();
+
+            _context = contextState;
+
+            await this._client.Eval(contextState, 0);
+
+            this.CurrentResponse = string.Empty;
+        }
+
         private async Task<LlamaTokenCollection> Infer()
         {
             InferenceEnumerator enumerator = await this._client.Infer();
@@ -179,6 +232,8 @@ namespace ChieApi.Services
             LlamaTokenCollection thisInference = new();
 
             enumerator.SetLogit(LlamaToken.EOS.Id, 0, LogitBiasLifeTime.Temporary);
+
+            enumerator.SetLogits(this._characterConfiguration.LogitOverrides, LogitBiasLifeTime.Inferrence);
 
             while (await enumerator.MoveNextAsync())
             {
@@ -197,6 +252,10 @@ namespace ChieApi.Services
                     }
 
                     thisInference.Append(llamaToken);
+
+                    this.CurrentResponse += llamaToken.Value;
+
+                    this._context.Append(llamaToken);
 
                     Dictionary<int, float> logits = await this._simpleSamplers.SampleNext(thisInference);
 
@@ -242,7 +301,7 @@ namespace ChieApi.Services
             {
                 BatchSize = this._characterConfiguration.BatchSize,
                 ContextSize = this._characterConfiguration.ContextLength,
-                EvalThreadCount = this._characterConfiguration.Threads ?? System.Environment.ProcessorCount / 2
+                EvalThreadCount = this._characterConfiguration.Threads ?? System.Environment.ProcessorCount / 2,
             }, (c) =>
             {
                 c.ContextId = Guid.Empty;
@@ -301,84 +360,13 @@ namespace ChieApi.Services
                 }
             }
 
-            this.Context = await this._contextModel.GetState();
+            this._context = await this._contextModel.GetState();
             await this._client.Eval(this.Context, 0);
             await summarizationInit;
             this.LoopingThread = new Thread(async () => await this.LoopProcess());
             this.LoopingThread.Start();
         }
 
-        private void WaitForNext()
-        {
-            this._acceptingInput.Set();
-
-            this._processingInput.WaitOne();
-        }
-
-        private async Task PrepRemoteContext()
-        {
-            LlamaTokenCollection contextState = await this._contextModel.GetState();
-
-            contextState.Append(await this._tokenCache.Get($"|{this.CharacterName}:"));
-
-            this.Context = contextState;
-
-            await this._client.Eval(contextState, 0);
-        }
-
-        private async Task ReadNextResponse()
-        {
-            LlamaTokenCollection thisInference = await this.Infer();
-
-            await this.ReceiveResponse(thisInference);
-        }
-
-        private async Task Cleanup()
-        {
-            LlamaTokenCollection contextState = await this._contextModel.GetState();
-
-            this.Context = contextState;
-
-            await this._client.Eval(contextState, 0);
-        }
-
-        private Task<SummaryResponse>? _summaryTask;
-
-        private async Task TrySummarize()
-        {
-            if (this._summaryTask != null)
-            {
-                SummaryResponse summary = await this._summaryTask;
-
-                this._contextModel.Summary = new LlamaTokenBlock(summary.Summary, LlamaTokenType.Undefined);
-
-                foreach (ITokenCollection summarized in summary.Summarized)
-                {
-                    this._contextModel.Messages.Remove(summarized);
-                }
-            }
-
-            if ((await this._contextModel.ToCollection()).Count > this._characterConfiguration.ContextLength / 2)
-            {
-                TokenCollectionCollection tokenCollections = new();
-
-                if (this._contextModel.Summary is not null)
-                {
-                    tokenCollections.Add(this._contextModel.Summary);
-                }
-
-                int p = 0;
-
-                while (await tokenCollections.GetTokenCount() < this._characterConfiguration.ContextLength / 4)
-                {
-                    tokenCollections.Add(this._contextModel.Messages[p]);
-
-                    p++;
-                }
-
-                this._summaryTask = this._summarizationService.Summarize(tokenCollections);
-            }
-        }
         private async Task LoopProcess()
         {
             do
@@ -396,44 +384,25 @@ namespace ChieApi.Services
                 await this.Cleanup();
 
                 await this.Save();
-
             } while (true);
         }
 
-        public async Task Save()
+        private async Task PrepRemoteContext()
         {
-            string fname = $"State.{DateTime.Now.Ticks}.json";
-            string fPath = Path.Combine("ContextStates", fname);
-            FileInfo saveInfo = new(fPath);
-            if (!saveInfo.Directory.Exists)
-            {
-                saveInfo.Directory.Create();
-            }
+            LlamaTokenCollection contextState = await this._contextModel.GetState();
 
-            ContextSaveState contextSaveState = new();
-            await contextSaveState.LoadFrom(this._contextModel);
-            contextSaveState.SaveTo(saveInfo.FullName);
+            contextState.Append(await this._tokenCache.Get($"|{this.CharacterName}:"));
+
+            this._context = contextState;
+
+            await this._client.Eval(contextState, 0);
         }
 
-        public bool TryLoad()
+        private async Task ReadNextResponse()
         {
-            if (Directory.Exists("ContextStates"))
-            {
-                IEnumerable<string> files = Directory.EnumerateFiles("ContextStates", "State.*.json");
-                IEnumerable<FileInfo> fileInfoes = files.Select(f => new FileInfo(f));
-                IEnumerable<FileInfo> orderedFileInfoes = fileInfoes.OrderByDescending(d => d.LastWriteTime);
-                FileInfo? lastState = orderedFileInfoes.FirstOrDefault();
+            LlamaTokenCollection thisInference = await this.Infer();
 
-                if (lastState != null)
-                {
-                    ContextSaveState contextSaveState = new();
-                    contextSaveState.LoadFrom(lastState.FullName);
-                    this._contextModel = contextSaveState.ToModel(this._tokenCache);
-                    return true;
-                }
-            }
-
-            return false;
+            await this.ReceiveResponse(thisInference);
         }
 
         private async Task ReceiveResponse(LlamaTokenCollection collection)
@@ -534,6 +503,66 @@ namespace ChieApi.Services
             return true;
         }
 
+        private async Task TrySummarize()
+        {
+            int c = (await this._contextModel.ToCollection()).Count;
+            bool gtHalf = c > this._characterConfiguration.ContextLength * .5;
+            bool gtQuart = c > this._characterConfiguration.ContextLength * .75;
+
+            if (this._summaryTask != null && gtQuart)
+            {
+                SummaryResponse summary = await this._summaryTask;
+
+                this._contextModel.Summary = new LlamaTokenBlock(summary.Summary, LlamaTokenType.Undefined);
+
+                int maxIndex = summary.Summarized.Max(this._contextModel.Messages.IndexOf);
+
+                for (int i = 0; i < maxIndex + 1; i++)
+                {
+                    this._contextModel.Messages.Dequeue();
+                }
+
+                this._summaryTask = null;
+
+                c = (await this._contextModel.ToCollection()).Count;
+                gtHalf = c > this._characterConfiguration.ContextLength * .5;
+                gtQuart = c > this._characterConfiguration.ContextLength * .75;
+            }
+
+            if (this._summaryTask is null && gtHalf)
+            {
+                TokenCollectionCollection tokenCollections = new();
+
+                if (this._contextModel.Summary is not null && await this._contextModel.Summary.Any())
+                {
+                    tokenCollections.Add(this._contextModel.Summary);
+                }
+
+                int p = 0;
+
+                while (await tokenCollections.GetTokenCount() < this._characterConfiguration.ContextLength / 4)
+                {
+                    ITokenCollection block = this._contextModel.Messages[p];
+
+                    if (block.Type is LlamaTokenType.Response or LlamaTokenType.Input)
+                    {
+                        tokenCollections.Add(block);
+                    }
+
+                    p++;
+                }
+
+                this._summaryTask = this._summarizationService.Summarize(tokenCollections);
+            }
+        }
+
         private void Unlock() => _ = this._chatLock.Release();
+
+        private void WaitForNext()
+        {
+            this._acceptingInput.Set();
+
+            this._processingInput.WaitOne();
+        }
     }
 }

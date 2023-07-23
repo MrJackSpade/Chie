@@ -1,4 +1,5 @@
 ﻿using ChieApi.Interfaces;
+using ChieApi.Models;
 using ChieApi.Shared.Entities;
 using Loxifi.Extensions;
 using System.ComponentModel;
@@ -49,7 +50,7 @@ namespace ChieApi.Shared.Services
 
             if (!includeTemporary)
             {
-                query += $" and (Tag is null OR Tag != 'Temporary') ";
+                query += $" and (Type = 0 OR Type != {(int)LlamaTokenType.Temporary}) ";
             }
 
             ChatEntry[] ids = connection.Query<ChatEntry>(query).ToArray();
@@ -121,7 +122,7 @@ namespace ChieApi.Shared.Services
 
             if (!includeTemporary)
             {
-                query += $" and (Tag is null OR Tag != 'Temporary') ";
+                query += $" and (Type is null OR Type != {(int)LlamaTokenType.Temporary}) ";
             }
 
             query += "order by id asc";
