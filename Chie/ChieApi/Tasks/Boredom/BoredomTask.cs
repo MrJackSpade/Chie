@@ -22,9 +22,7 @@ namespace ChieApi.Tasks.Boredom
             this._data = data;
         }
 
-        public async Task Initialize()
-        {
-        }
+        public Task Initialize() => Task.CompletedTask;
 
         public async IAsyncEnumerable<ChatEntry> Process(ChatEntry chatEntry)
         {

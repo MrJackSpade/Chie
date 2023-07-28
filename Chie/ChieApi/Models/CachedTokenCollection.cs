@@ -1,4 +1,4 @@
-﻿using Llama.Data.Collections;
+﻿using Llama.Data.Interfaces;
 using Llama.Data.Models;
 
 namespace ChieApi.Models
@@ -9,45 +9,49 @@ namespace ChieApi.Models
 
         private readonly bool _saveToCache;
 
-        private Task<LlamaTokenCollection> _tokens;
+        private Task<IReadOnlyLlamaTokenCollection> _tokens;
 
-        private string _value;
+        private string? _value;
 
-        public CachedTokenCollection(LlamaTokenCollection tokens)
+        public CachedTokenCollection(IReadOnlyLlamaTokenCollection tokens)
         {
             this._tokens = Task.FromResult(tokens);
         }
 
         public CachedTokenCollection(string value, LlamaTokenCache cache, bool saveToCache)
         {
-            this._value = value;
+            this._value = value ?? throw new ArgumentNullException(nameof(value));
             this._cache = cache;
             this._saveToCache = saveToCache;
         }
 
-        public Task<LlamaTokenCollection> Tokens
+        public Task<IReadOnlyLlamaTokenCollection> Tokens
         {
             get
             {
-                this._tokens ??= this._cache.Get(this.Value, this._saveToCache);
+                this._tokens ??= this._cache.Get(this._value, this._saveToCache);
 
                 return this._tokens;
             }
         }
 
-        public string Value
+        private async Task<string?> GetValue()
         {
-            get
+            if (this._value == null)
             {
-                this._value ??= this._tokens.ToString();
+                IReadOnlyLlamaTokenCollection tc = await this.Tokens;
 
-                return this._value;
+                this._value = tc?.ToString();
             }
+
+            return this._value;
         }
+
+        public Task<string?> Value => this.GetValue();
 
         public async IAsyncEnumerator<LlamaToken> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
-            LlamaTokenCollection toReturn = await this.Tokens;
+            IReadOnlyLlamaTokenCollection toReturn = await this.Tokens;
 
             foreach (LlamaToken token in toReturn)
             {

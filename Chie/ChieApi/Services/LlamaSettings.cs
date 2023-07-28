@@ -1,10 +1,8 @@
 ﻿using Llama.Data.Enums;
-using LlamaApi.Models.Response;
 using LlamaApi.Shared.Models.Response;
 
 namespace ChieApi.Services
 {
-
     public class LlamaSettings
     {
         public string[] AdditionalReversePrompts { get; set; } = Array.Empty<string>();
@@ -25,19 +23,17 @@ namespace ChieApi.Services
             }
         }
 
+        public int BatchSize { get; set; } = 512;
+
         public int ContextLength { get; set; } = 2048;
 
         public bool GenerateEmbedding { get; set; }
 
         public int GpuLayers { get; set; } = 0;
 
-        public int? KeepPromptTokens { get; set; }
-
         public Dictionary<int, string> LogitOverrides { get; set; } = new Dictionary<int, string>();
 
         public MemoryMode MemoryMode { get; set; }
-
-        public int BatchSize { get; set; } = 512;
 
         public MirostatType MiroStat { get; set; }
 
@@ -68,6 +64,8 @@ namespace ChieApi.Services
         public int Timeout { get; set; } = 600_000;
 
         public float TopP { get; set; } = 0.95f;
+
+        public bool UseGqa { get; set; }
 
         public bool UseSessionData { get; set; }
 

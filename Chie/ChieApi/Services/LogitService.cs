@@ -9,14 +9,28 @@ namespace ChieApi.Services
     {
         private readonly string _connectionString;
 
+        private readonly SemaphoreSlim _semaphore = new(1);
+
+        private double?[] _cache = Array.Empty<double?>();
+
         public LogitService(IHasConnectionString connectionString)
         {
             this._connectionString = connectionString.ConnectionString;
         }
 
-        private double?[] _cache = Array.Empty<double?>();
+        public IEnumerable<Logit> GetLogits(bool includeZeros = false)
+        {
+            using SqlConnection connection = new(this._connectionString);
 
-        private readonly SemaphoreSlim _semaphore = new(1);
+            string query = "select * from logit ";
+
+            if (!includeZeros)
+            {
+                query += "where bias != 0";
+            }
+
+            return connection.Query<Logit>(query).ToList();
+        }
 
         public void Identify(int id, string value, string displayValue)
         {
@@ -68,27 +82,14 @@ namespace ChieApi.Services
                     Id = id,
                     Value = value,
                 });
-            } else
+            }
+            else
             {
                 using SqlConnection connection = new(this._connectionString);
                 connection.Execute($"update logit set LastEncountered = GetDate(), Encountered = Encountered + 1 where id = {id}");
             }
 
             this._semaphore.Release();
-        }
-
-        public IEnumerable<Logit> GetLogits(bool includeZeros = false)
-        {
-            using SqlConnection connection = new(this._connectionString);
-
-            string query = "select * from logit ";
-
-            if (!includeZeros)
-            {
-                query += "where bias != 0";
-            }
-
-            return connection.Query<Logit>(query).ToList();
         }
 
         public void Save(Logit chatEntry)

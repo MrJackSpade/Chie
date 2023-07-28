@@ -1,15 +1,18 @@
 ﻿using ChieApi.Interfaces;
 using ChieApi.Models;
-using Llama.Data.Extensions;
-using Loxifi.AsyncExtensions;
-using Llama.Data.Interfaces;
 using Llama.Data.Models;
+using LlamaApiClient;
+using Loxifi.AsyncExtensions;
 
 namespace ChieApi.TokenTransformers
 {
     public class TextTruncationTransformer : ITokenTransformer
     {
+        private readonly LlamaTokenCache _cache;
+
         private readonly string _endChars;
+
+        private readonly int _hardmax;
 
         private readonly int _max;
 
@@ -17,21 +20,26 @@ namespace ChieApi.TokenTransformers
 
         private readonly Random _random = new();
 
-        readonly LlamaTokenCache _cache;
-
-        public TextTruncationTransformer(int max, int min, string endChars, LlamaTokenCache cache)
+        public TextTruncationTransformer(int hardmax, int max, int min, string endChars, LlamaTokenCache cache)
         {
             this._min = min;
             this._max = max;
+            this._hardmax = hardmax;
             this._endChars = endChars;
             this._cache = cache;
         }
 
-        public async IAsyncEnumerable<LlamaToken> TransformToken(IReadOnlyLlamaTokenCollection thisCall, IAsyncEnumerable<LlamaToken> selectedTokens)
+        public async IAsyncEnumerable<LlamaToken> TransformToken(InferenceEnumerator enumerator, IAsyncEnumerable<LlamaToken> selectedTokens)
         {
-            List<LlamaToken> tokens = await selectedTokens.ToList();
+            string written = enumerator.Enumerated.ToString();
 
-            string written = thisCall.ToString();
+            if (written.Length > _hardmax)
+            {
+                yield return LlamaToken.EOS;
+                yield break;
+            }
+
+            List<LlamaToken> tokens = await selectedTokens.ToList();
 
             int characterCount = written.Length;
 
@@ -39,6 +47,11 @@ namespace ChieApi.TokenTransformers
 
             if (nextT == null)
             {
+                await foreach (LlamaToken token in selectedTokens)
+                {
+                    yield return token;
+                }
+
                 yield break;
             }
 

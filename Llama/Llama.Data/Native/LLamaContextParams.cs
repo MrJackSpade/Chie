@@ -2,7 +2,7 @@
 
 namespace Llama.Data.Native
 {
-    public delegate void LlamaProgressCallback(float progress, nint ctx);
+    public delegate void LlamaProgressCallback(float progress, IntPtr ctx);
 
     /// <summary>
     /// Represents the parameters for a llama context.
@@ -13,84 +13,98 @@ namespace Llama.Data.Native
         /// <summary>
         /// RNG seed, -1 for random.
         /// </summary>
-        public int seed;
+        public uint Seed;
 
         /// <summary>
         /// Text context.
         /// </summary>
-        public int n_ctx;
+        public int NCtx;
 
         /// <summary>
         /// Prompt processing batch size.
         /// </summary>
-        public int n_batch;
+        public int NBatch;
+
+        /// <summary>
+        /// Grouped-query attention (TEMP - will be moved to model hparams).
+        /// </summary>
+        public int NGqa;
 
         /// <summary>
         /// Number of layers to store in VRAM.
         /// </summary>
-        public int n_gpu_layers;
+        public int NGpuLayers;
 
         /// <summary>
         /// The GPU that is used for scratch and small tensors.
         /// </summary>
-        public int main_gpu;
+        public int MainGpu;
 
         /// <summary>
-        /// How to split layers across multiple GPUs.
+        /// How to split layers across multiple GPUs (size: LLAMA_MAX_DEVICES).
         /// </summary>
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
-        public float[] tensor_split;
+        public IntPtr TensorSplit;
+
+        /// <summary>
+        /// RoPE base frequency. See: https://github.com/ggerganov/llama.cpp/pull/2054
+        /// </summary>
+        public float RopeFreqBase;
+
+        /// <summary>
+        /// RoPE frequency scaling factor.
+        /// </summary>
+        public float RopeFreqScale;
 
         /// <summary>
         /// Called with a progress value between 0 and 1, pass NULL to disable.
         /// </summary>
-        public IntPtr progress_callback;
+        public IntPtr ProgressCallback;
 
         /// <summary>
         /// Context pointer passed to the progress callback.
         /// </summary>
-        public IntPtr progress_callback_user_data;
+        public IntPtr ProgressCallbackUserData;
 
         /// <summary>
         /// If true, reduce VRAM usage at the cost of performance.
         /// </summary>
         [MarshalAs(UnmanagedType.I1)]
-        public bool low_vram;
+        public bool LowVram;
 
         /// <summary>
         /// Use fp16 for KV cache.
         /// </summary>
         [MarshalAs(UnmanagedType.I1)]
-        public bool f16_kv;
+        public bool F16Kv;
 
         /// <summary>
         /// The llama_eval() call computes all logits, not just the last one.
         /// </summary>
         [MarshalAs(UnmanagedType.I1)]
-        public bool logits_all;
+        public bool LogitsAll;
 
         /// <summary>
         /// Only load the vocabulary, no weights.
         /// </summary>
         [MarshalAs(UnmanagedType.I1)]
-        public bool vocab_only;
+        public bool VocabOnly;
 
         /// <summary>
         /// Use mmap if possible.
         /// </summary>
         [MarshalAs(UnmanagedType.I1)]
-        public bool use_mmap;
+        public bool UseMmap;
 
         /// <summary>
         /// Force system to keep model in RAM.
         /// </summary>
         [MarshalAs(UnmanagedType.I1)]
-        public bool use_mlock;
+        public bool UseMlock;
 
         /// <summary>
         /// Embedding mode only.
         /// </summary>
         [MarshalAs(UnmanagedType.I1)]
-        public bool embedding;
+        public bool Embedding;
     }
 }

@@ -1,6 +1,5 @@
 ﻿using Llama.Data;
 using Llama.Data.Collections;
-using Llama.Data.Enums;
 using Llama.Data.Models;
 using LlamaApi.Models;
 using LlamaApi.Models.Request;
@@ -26,7 +25,7 @@ namespace LlamaApiClient
             this._settings = settings;
         }
 
-        public async void DisposeContext(Guid contextId)
+        public async Task DisposeContext(Guid contextId)
         {
             await this.Post("/Llama/context/dispose", new ContextDisposeRequest()
             {
@@ -44,7 +43,7 @@ namespace LlamaApiClient
             Debug.WriteLine("Evaluated: " + response.Evaluated);
         }
 
-        public async Task<InferenceEnumerator> Infer(Guid contextId)
+        public InferenceEnumerator Infer(Guid contextId)
         {
             return new InferenceEnumerator(
                 (b) => this.Predict(contextId, b),

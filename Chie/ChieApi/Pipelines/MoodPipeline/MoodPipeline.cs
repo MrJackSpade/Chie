@@ -2,7 +2,6 @@
 using ChieApi.Models;
 using ChieApi.Services;
 using ChieApi.Shared.Entities;
-using Llama.Data.Models;
 
 namespace ChieApi.Pipelines.MoodPipeline
 {

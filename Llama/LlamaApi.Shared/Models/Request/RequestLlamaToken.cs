@@ -1,5 +1,4 @@
-﻿using Llama.Data.Enums;
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace LlamaApi.Models.Request

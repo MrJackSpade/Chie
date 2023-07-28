@@ -11,7 +11,7 @@ namespace ChieApi.Extensions
         {
             LlamaTokenCollection collection = new();
 
-            foreach(LlamaTokenState item in source)
+            foreach (LlamaTokenState item in source)
             {
                 collection.Append(new LlamaToken(item.Id, item.Value));
             }

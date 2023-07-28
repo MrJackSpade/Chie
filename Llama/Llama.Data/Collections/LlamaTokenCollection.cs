@@ -1,5 +1,4 @@
-﻿using Llama.Data.Enums;
-using Llama.Data.Interfaces;
+﻿using Llama.Data.Interfaces;
 using Llama.Data.Models;
 using System.Collections;
 

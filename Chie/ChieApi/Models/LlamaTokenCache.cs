@@ -1,4 +1,4 @@
-﻿using Llama.Data.Collections;
+﻿using Llama.Data.Interfaces;
 using LlamaApiClient;
 using System.Collections.Concurrent;
 
@@ -6,17 +6,18 @@ namespace ChieApi.Models
 {
     public class LlamaTokenCache
     {
+        private readonly ConcurrentDictionary<string, IReadOnlyLlamaTokenCollection> _cache = new();
+
         private readonly LlamaContextClient _client;
 
-        private readonly ConcurrentDictionary<string, LlamaTokenCollection> _cache = new();
         public LlamaTokenCache(LlamaContextClient client)
         {
             _client = client;
         }
 
-        public async Task<LlamaTokenCollection> Get(string value, bool cache = true)
+        public async Task<IReadOnlyLlamaTokenCollection> Get(string value, bool cache = true)
         {
-            if (_cache.TryGetValue(value, out LlamaTokenCollection? token))
+            if (_cache.TryGetValue(value, out IReadOnlyLlamaTokenCollection? token))
             {
                 return token;
             }

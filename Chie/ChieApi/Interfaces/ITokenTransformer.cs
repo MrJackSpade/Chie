@@ -1,10 +1,10 @@
-﻿using Llama.Data.Interfaces;
-using Llama.Data.Models;
+﻿using Llama.Data.Models;
+using LlamaApiClient;
 
 namespace ChieApi.Interfaces
 {
     public interface ITokenTransformer
     {
-        IAsyncEnumerable<LlamaToken> TransformToken(IReadOnlyLlamaTokenCollection thisCall, IAsyncEnumerable<LlamaToken> selectedTokens);
+        IAsyncEnumerable<LlamaToken> TransformToken(InferenceEnumerator enumerator, IAsyncEnumerable<LlamaToken> selectedTokens);
     }
 }

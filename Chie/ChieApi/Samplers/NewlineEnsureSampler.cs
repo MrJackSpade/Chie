@@ -1,46 +1,40 @@
-﻿using Llama.Data.Collections;
-using Llama.Data.Models;
-using Ai.Utils.Extensions;
-using Llama.Data.Extensions;
-using ChieApi.Interfaces;
+﻿using ChieApi.Interfaces;
 using ChieApi.Models;
-using Llama.Data.Interfaces;
+using Llama.Data.Models;
+using LlamaApiClient;
 
 namespace ChieApi.Samplers
 {
     public class NewlineEnsureSampler : ISimpleSampler
     {
-        readonly LlamaTokenCache _tokenCache;
+        private readonly LlamaTokenCache _tokenCache;
+
         public NewlineEnsureSampler(LlamaTokenCache cache)
         {
-            _tokenCache = cache;
+            this._tokenCache = cache;
         }
-        public async Task<Dictionary<int, float>> SampleNext(IReadOnlyLlamaTokenCollection thisInferrence)
-        {
-            Dictionary<int, float> toReturn = new()
-            {
-                { 30004, 0 }
-            };
 
-            LlamaToken? lastToken = thisInferrence.LastOrDefault();
+        public async Task SampleNext(InferenceEnumerator enumerator)
+        {
+            enumerator.SetLogit(30004, 0, LogitBiasLifeTime.Inferrence);
+
+            LlamaToken? lastToken = enumerator.Enumerated.LastOrDefault();
 
             if (lastToken is not null && lastToken.Id == 13)
             {
-                toReturn.AddOrUpdate(13, 0);
+                enumerator.SetLogit(13, 0, LogitBiasLifeTime.Temporary);
             }
 
             LlamaToken[] banTokens = new LlamaToken[]
             {
-                (await _tokenCache.Get("|")).Single(),
-                (await _tokenCache.Get(" |")).Single(),
+                (await this._tokenCache.Get("|")).Single(),
+                (await this._tokenCache.Get(" |")).Single(),
             };
 
             foreach (LlamaToken t in banTokens)
             {
-                toReturn.AddOrUpdate(t.Id, 0);
+                enumerator.SetLogit(t.Id, 0, LogitBiasLifeTime.Inferrence);
             }
-
-            return toReturn;
         }
     }
 }

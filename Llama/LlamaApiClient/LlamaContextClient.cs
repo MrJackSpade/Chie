@@ -1,10 +1,7 @@
 ﻿using Llama.Data;
 using Llama.Data.Collections;
-using LlamaApi.Models;
 using LlamaApi.Models.Request;
 using LlamaApi.Shared.Models.Response;
-using System.Net.Http.Json;
-using System.Text.Json;
 
 namespace LlamaApiClient
 {
@@ -20,7 +17,7 @@ namespace LlamaApiClient
 
         public Task Eval() => base.Eval(this._contextGuid);
 
-        public Task<InferenceEnumerator> Infer() => base.Infer(this._contextGuid);
+        public InferenceEnumerator Infer() => base.Infer(this._contextGuid);
 
         public override async Task<ContextState> LoadContext(LlamaContextSettings settings, Action<ContextRequest> settingsAction)
         {

@@ -10,62 +10,20 @@ using System.Text;
 
 namespace ChieApi.Services
 {
-    public class SummaryResponse
-    {
-        public SummaryResponse(LlamaTokenCollection summary, IReadOnlyList<ITokenCollection> summarized)
-        {
-            this.Summary = summary ?? throw new ArgumentNullException(nameof(summary));
-            this.Summarized = summarized ?? throw new ArgumentNullException(nameof(summarized));
-        }
-
-        public LlamaTokenCollection Summary { get; private set; }
-        public IReadOnlyList<ITokenCollection> Summarized { get; private set; }
-    }
     public partial class SummarizationService
     {
         private const string DIR_SUMMARIZATION = "SummarizationData";
-
-        private readonly string _summarizePrefix = string.Empty;
-
-        private readonly string _summarizeSuffix = string.Empty;
 
         private readonly LlamaClient _client = new(new LlamaClientSettings("http://192.168.0.93"));
 
         private readonly Guid _contextId = Guid.Parse("1dbfcbcd-153f-4f11-9a1d-b309da9f06cb");
 
+        private readonly string _summarizePrefix = string.Empty;
+
+        private readonly string _summarizeSuffix = string.Empty;
+
         private bool _isSetup;
 
-        public async Task TrySetup()
-        {
-            if (!this._isSetup)
-            {
-                await this._client.LoadModel(new LlamaModelSettings()
-                {
-                    Model = "D:\\Chie\\Models\\airoboros-65b-gpt4-1.3.ggmlv3.q5_K_M.bin",
-                    ContextSize = 2048,
-                    BatchSize = 512
-                });
-
-                _ = (await this._client.LoadContext(new LlamaContextSettings()
-                {
-                    BatchSize = 512,
-                    ContextSize = 2048,
-                    EvalThreadCount = 8,
-                }, (cr) =>
-                {
-                    cr.ContextId = this._contextId;
-                    cr.TemperatureSamplerSettings = new TemperatureSamplerSettings()
-                    {
-                        Temperature = -1
-                    };
-
-                    cr.RepetitionSamplerSettings = new RepetitionSamplerSettings();
-                }
-                )).Id;
-
-                this._isSetup = true;
-            }
-        }
         public SummarizationService()
         {
             if (!Directory.Exists(DIR_SUMMARIZATION))
@@ -76,11 +34,8 @@ namespace ChieApi.Services
             this._summarizeSuffix = "\nHuman: Please summarize the above in a single paragraph\n\nAssistant:";
         }
 
-        private async Task<IReadOnlyLlamaTokenCollection> RemoteTokenize(string toTokenize) => await this._client.Tokenize(this._contextId, toTokenize);
-
         public async Task<SummaryResponse> Summarize(IList<ITokenCollection> block)
         {
-
             TaskCompletionSource<LlamaTokenCollection> toReturn = new();
 
             LlamaTokenCollection summarized = new();
@@ -114,7 +69,7 @@ namespace ChieApi.Services
 
             await this._client.Eval(this._contextId);
 
-            InferenceEnumerator enumerator = await this._client.Infer(this._contextId);
+            InferenceEnumerator enumerator = this._client.Infer(this._contextId);
 
             enumerator.SetLogit(2, 0, LogitBiasLifeTime.Temporary);
 
@@ -163,5 +118,52 @@ namespace ChieApi.Services
 
             return new SummaryResponse(cleaned, block.ToList());
         }
+
+        public async Task TrySetup()
+        {
+            if (!this._isSetup)
+            {
+                await this._client.LoadModel(new LlamaModelSettings()
+                {
+                    Model = "D:\\Chie\\Models\\airoboros-65b-gpt4-1.3.ggmlv3.q5_K_M.bin",
+                    ContextSize = 2048,
+                    BatchSize = 512
+                });
+
+                _ = (await this._client.LoadContext(new LlamaContextSettings()
+                {
+                    BatchSize = 512,
+                    ContextSize = 2048,
+                    EvalThreadCount = 8,
+                }, (cr) =>
+                {
+                    cr.ContextId = this._contextId;
+                    cr.TemperatureSamplerSettings = new TemperatureSamplerSettings()
+                    {
+                        Temperature = -1
+                    };
+
+                    cr.RepetitionSamplerSettings = new RepetitionSamplerSettings();
+                }
+                )).Id;
+
+                this._isSetup = true;
+            }
+        }
+
+        private async Task<IReadOnlyLlamaTokenCollection> RemoteTokenize(string toTokenize) => await this._client.Tokenize(this._contextId, toTokenize);
+    }
+
+    public class SummaryResponse
+    {
+        public SummaryResponse(LlamaTokenCollection summary, IReadOnlyList<ITokenCollection> summarized)
+        {
+            this.Summary = summary ?? throw new ArgumentNullException(nameof(summary));
+            this.Summarized = summarized ?? throw new ArgumentNullException(nameof(summarized));
+        }
+
+        public IReadOnlyList<ITokenCollection> Summarized { get; private set; }
+
+        public LlamaTokenCollection Summary { get; private set; }
     }
 }

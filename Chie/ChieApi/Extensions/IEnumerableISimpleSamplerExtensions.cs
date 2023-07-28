@@ -1,7 +1,5 @@
 ﻿using ChieApi.Interfaces;
-using global::Llama.Data.Interfaces;
-using global::Llama.Data.Models;
-using Llama.Data.Extensions;
+using LlamaApiClient;
 
 namespace ChieApi.Extensions
 {
@@ -9,18 +7,12 @@ namespace ChieApi.Extensions
     {
         public static class IEnumerableISimpleSampler
         {
-            public static async Task<Dictionary<int, float>> SampleNext(this IEnumerable<ISimpleSampler> tokenTransformers, IReadOnlyLlamaTokenCollection thisCall)
+            public static async Task SampleNext(this IEnumerable<ISimpleSampler> tokenTransformers, InferenceEnumerator enumerator)
             {
-                Dictionary<int, float> returnTokens = new();
-
                 foreach (ISimpleSampler tokenTransformer in tokenTransformers)
                 {
-                    Dictionary<int, float> thisLogits = await tokenTransformer.SampleNext(thisCall);
-
-                    returnTokens.AddOrUpdate(thisLogits);
+                    await tokenTransformer.SampleNext(enumerator);
                 }
-
-                return returnTokens;
             }
         }
     }

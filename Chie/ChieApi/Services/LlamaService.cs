@@ -18,8 +18,9 @@ using LlamaApi.Models.Request;
 using LlamaApi.Shared.Models.Response;
 using LlamaApiClient;
 using Loxifi;
-using System.Text.Json.Serialization;
 using Loxifi.AsyncExtensions;
+using System.Diagnostics;
+using System.Text.Json.Serialization;
 
 namespace ChieApi.Services
 {
@@ -55,10 +56,13 @@ namespace ChieApi.Services
 
         private LlamaContextModel _contextModel;
 
+        private readonly DictionaryService _dictionaryService;
+
         private Task<SummaryResponse>? _summaryTask;
 
-        public LlamaService(SummarizationService summarizationService, ICharacterFactory characterFactory, LlamaContextClient client, LlamaContextModel contextModel, LlamaTokenCache llamaTokenCache, ILogger logger, ChatService chatService, LogitService logitService)
+        public LlamaService(SummarizationService summarizationService, DictionaryService dictionaryService, ICharacterFactory characterFactory, LlamaContextClient client, LlamaContextModel contextModel, LlamaTokenCache llamaTokenCache, ILogger logger, ChatService chatService, LogitService logitService)
         {
+            this._dictionaryService = dictionaryService;
             this._summarizationService = summarizationService;
             this._client = client;
             this._characterFactory = characterFactory;
@@ -73,12 +77,17 @@ namespace ChieApi.Services
 
             this._simpleSamplers = new List<ISimpleSampler>()
             {
-                new NewlineEnsureSampler(llamaTokenCache)
+                new NewlineEnsureSampler(llamaTokenCache),
+                new RepetitionBlockingSampler(3)
             };
 
             this._transformers = new List<ITokenTransformer>()
             {
-                new TextTruncationTransformer(250, 150, ".!?", llamaTokenCache)
+                new SpaceStartTransformer(),
+                new NewlineTransformer(),
+                new TextTruncationTransformer(1000, 250, 150, ".!?", llamaTokenCache),
+                new RepetitionBlockingTransformer(3),
+                new InvalidCharacterBlockingTransformer()
             };
 
             this.Initialization = Task.Run(this.Init);
@@ -88,7 +97,7 @@ namespace ChieApi.Services
 
         public string CharacterName { get; private set; }
 
-        public IReadOnlyLlamaTokenCollection Context => _context;
+        public IReadOnlyLlamaTokenCollection Context => this._context;
 
         public string CurrentResponse { get; private set; }
 
@@ -218,32 +227,41 @@ namespace ChieApi.Services
         {
             LlamaTokenCollection contextState = await this._contextModel.GetState();
 
-            _context = contextState;
+            this._context = contextState;
+
+            if (contextState.Count > this._characterConfiguration.ContextLength)
+            {
+                Debugger.Break();
+                throw new Exception("Context length too long?");
+            }
 
             await this._client.Eval(contextState, 0);
 
             this.CurrentResponse = string.Empty;
         }
 
-        private async Task<LlamaTokenCollection> Infer()
+        private async Task<IReadOnlyLlamaTokenCollection> Infer()
         {
-            InferenceEnumerator enumerator = await this._client.Infer();
-
-            LlamaTokenCollection thisInference = new();
+            InferenceEnumerator enumerator = this._client.Infer();
 
             enumerator.SetLogit(LlamaToken.EOS.Id, 0, LogitBiasLifeTime.Temporary);
+            enumerator.SetLogit(LlamaToken.NewLine.Id, 0, LogitBiasLifeTime.Temporary);
 
             enumerator.SetLogits(this._characterConfiguration.LogitOverrides, LogitBiasLifeTime.Inferrence);
 
             while (await enumerator.MoveNextAsync())
             {
-                await this.SetState(AiState.Responding);
+                this.SetState(AiState.Responding);
 
-                await foreach (LlamaToken llamaToken in this._transformers.Transform(thisInference, new LlamaToken(enumerator.Current.Id, enumerator.Current.Value)))
+                LlamaToken selected = new(enumerator.Current.Id, enumerator.Current.Value);
+
+                await foreach (LlamaToken llamaToken in this._transformers.Transform(enumerator, selected))
                 {
-                    if (llamaToken.Id == 13)
+                    //Neither of these need to be accepted because the local
+                    //context manages both
+                    if (llamaToken.Id == LlamaToken.EOS.Id)
                     {
-                        return thisInference;
+                        return enumerator.Enumerated;
                     }
 
                     if (llamaToken.Value != null)
@@ -251,22 +269,22 @@ namespace ChieApi.Services
                         Console.Write(llamaToken.Value);
                     }
 
-                    thisInference.Append(llamaToken);
+                    await enumerator.Accept(llamaToken);
 
                     this.CurrentResponse += llamaToken.Value;
 
                     this._context.Append(llamaToken);
-
-                    Dictionary<int, float> logits = await this._simpleSamplers.SampleNext(thisInference);
-
-                    foreach (KeyValuePair<int, float> pair in logits)
-                    {
-                        enumerator.SetLogit(pair.Key, pair.Value, LogitBiasLifeTime.Temporary);
-                    }
                 }
+
+                if (!enumerator.Accepted)
+                {
+                    enumerator.MoveBack();
+                }
+
+                await this._simpleSamplers.SampleNext(enumerator);
             }
 
-            return thisInference;
+            return enumerator.Enumerated.TrimWhiteSpace();
         }
 
         private async Task Init()
@@ -290,6 +308,7 @@ namespace ChieApi.Services
                 BatchSize = this._characterConfiguration.BatchSize,
                 ContextSize = this._characterConfiguration.ContextLength,
                 GpuLayerCount = this._characterConfiguration.GpuLayers,
+                UseGqa = this._characterConfiguration.UseGqa,
                 MemoryMode = this._characterConfiguration.MemoryMode,
                 Model = this._characterConfiguration.ModelPath,
                 ThreadCount = this._characterConfiguration.Threads ?? System.Environment.ProcessorCount / 2,
@@ -338,7 +357,7 @@ namespace ChieApi.Services
 
             if (this.AiState == AiState.Initializing)
             {
-                _ = await this.SetState(AiState.Idle);
+                _ = this.SetState(AiState.Idle);
             }
 
             if (!this.TryLoad())
@@ -379,12 +398,78 @@ namespace ChieApi.Services
 
                 await this.ReadNextResponse();
 
+                await this.CleanLastResponse();
+
                 this._contextModel.RemoveTemporary();
 
                 await this.Cleanup();
 
                 await this.Save();
             } while (true);
+        }
+
+        private async Task CleanLastResponse()
+        {
+            if (!this._contextModel.Messages.Any())
+            {
+                return;
+            }
+            
+            if(this._contextModel.Messages.Peek() is not LlamaMessage lastMessage || await lastMessage.UserName.Value != this._characterConfiguration.CharacterName)
+            {
+                return;
+            }
+
+            string? content = await lastMessage.Content.Value;
+
+            if (content is null)
+            {
+                return;
+            }
+
+            bool isChanged = false;
+
+            foreach(string word in _dictionaryService.BreakWords(content)) 
+            { 
+                if(!_dictionaryService.IsWord(word))
+                {
+                    string fingerprint = _dictionaryService.GetFingerprint(word);
+
+                    List<DictionaryEntry> possibleCorrections = _dictionaryService.GetByFingerprint(fingerprint).Where(c => c.Word.Length < word.Length).ToList();
+
+                    if (!possibleCorrections.Any())
+                    {
+                        continue;
+                    }
+
+                    if (possibleCorrections.Count > 1)
+                    {
+
+                        List<WordDrift> drifts = possibleCorrections.Select(b => _dictionaryService.GetDrift(word, b.Word)).ToList();
+
+                        WordDrift bestMatch = drifts.OrderBy(d => d.Drift).First();
+
+                        content = _dictionaryService.Replace(content, word, bestMatch.WordB);
+                    } else
+                    {
+                        DictionaryEntry correction = possibleCorrections.Single();
+
+                        content = _dictionaryService.Replace(content, word, correction.Word);
+                    }
+
+                    isChanged = true;
+                }
+            }
+
+            if (isChanged)
+            {
+                LlamaTokenCollection newContent = await _client.Tokenize(content);
+
+                LlamaMessage newMessage = new(lastMessage.UserName, newContent, lastMessage.Type, this._tokenCache);
+
+                this._contextModel.Messages.Pop();
+                this._contextModel.Messages.Push(newMessage);
+            }
         }
 
         private async Task PrepRemoteContext()
@@ -400,12 +485,12 @@ namespace ChieApi.Services
 
         private async Task ReadNextResponse()
         {
-            LlamaTokenCollection thisInference = await this.Infer();
+            IReadOnlyLlamaTokenCollection thisInference = await this.Infer();
 
             await this.ReceiveResponse(thisInference);
         }
 
-        private async Task ReceiveResponse(LlamaTokenCollection collection)
+        private async Task ReceiveResponse(IReadOnlyLlamaTokenCollection collection)
         {
             foreach (LlamaToken token in collection)
             {
@@ -440,7 +525,7 @@ namespace ChieApi.Services
 
             this._contextModel.Messages.Enqueue(new LlamaMessage(this.CharacterName, collection, LlamaTokenType.Response, this._tokenCache));
 
-            _ = await this.SetState(AiState.Idle);
+            _ = this.SetState(AiState.Idle);
 
             if (chatEntry.Content != null)
             {
@@ -452,14 +537,14 @@ namespace ChieApi.Services
         {
             await this.Initialization;
 
-            _ = await this.SetState(AiState.Processing);
+            _ = this.SetState(AiState.Processing);
 
             if (chatEntry.Type == LlamaTokenType.Undefined)
             {
                 chatEntry.Type = LlamaTokenType.Input;
             }
 
-            this.LastMessageId = await this._chatService.Save(chatEntry);
+            this.LastMessageId = this._chatService.Save(chatEntry);
             this.LastChannel = chatEntry.SourceChannel;
 
             string toSend;
@@ -479,7 +564,7 @@ namespace ChieApi.Services
             }
         }
 
-        private async Task<bool> SetState(AiState state)
+        private bool SetState(AiState state)
         {
             if (this.AiState != state)
             {

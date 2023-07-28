@@ -78,6 +78,7 @@ namespace ChieApi
             _ = builder.Services.AddSingleton<LlamaContextModel>();
             _ = builder.Services.AddSingleton<LlamaTokenCache>();
             _ = builder.Services.AddSingleton<SummarizationService>();
+            _ = builder.Services.AddSingleton<DictionaryService>();
 
             LlamaClientSettings clientSettings = new("http://127.0.0.1:10030");
             _ = builder.Services.AddSingleton(clientSettings);

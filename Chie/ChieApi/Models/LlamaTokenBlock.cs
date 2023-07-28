@@ -44,7 +44,6 @@ namespace ChieApi.Models
         {
             if (this._tokens == null)
             {
-
                 this._tokens = new LlamaTokenCollection();
 
                 if (this.Content != null)

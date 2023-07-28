@@ -4,10 +4,11 @@
     {
         public static string GetStringOrContent(string pathOrContent)
         {
-            if(File.Exists(pathOrContent))
+            if (File.Exists(pathOrContent))
             {
                 return File.ReadAllText(pathOrContent);
-            } else
+            }
+            else
             {
                 return pathOrContent;
             }

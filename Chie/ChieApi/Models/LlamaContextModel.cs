@@ -1,6 +1,7 @@
 ﻿using ChieApi.Interfaces;
 using Llama.Data.Collections;
 using Llama.Data.Extensions;
+using Llama.Data.Interfaces;
 using Llama.Data.Models;
 
 namespace ChieApi.Models
@@ -14,26 +15,29 @@ namespace ChieApi.Models
             this._cache = cache;
         }
 
-        private Task<LlamaTokenCollection> NewLine => this._cache.Get("\n");
-
         public ITokenCollection Instruction { get; set; } = new LlamaTokenBlock();
-
-        public ITokenCollection Summary { get; set; } = new LlamaTokenBlock();
 
         public List<ITokenCollection> Messages { get; } = new List<ITokenCollection>();
 
-        private async IAsyncEnumerable<LlamaToken> AndNewLine(IAsyncEnumerable<LlamaToken> toReturn)
+        public ITokenCollection Summary { get; set; } = new LlamaTokenBlock();
+
+        private Task<IReadOnlyLlamaTokenCollection> NewLine => this._cache.Get("\n");
+
+        public async IAsyncEnumerator<LlamaToken> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
-            LlamaTokenCollection collection = await toReturn.ToCollection();
-
-            if (collection.Count > 0)
+            await foreach (LlamaToken token in this.AndNewLine(this.Instruction))
             {
-                foreach (LlamaToken token in collection)
-                {
-                    yield return token;
-                }
+                yield return token;
+            }
 
-                foreach (LlamaToken token in await this.NewLine)
+            await foreach (LlamaToken token in this.AndNewLine(this.Summary))
+            {
+                yield return token;
+            }
+
+            foreach (ITokenCollection message in this.Messages)
+            {
+                await foreach (LlamaToken token in this.AndNewLine(message))
                 {
                     yield return token;
                 }
@@ -52,21 +56,18 @@ namespace ChieApi.Models
             return contextState;
         }
 
-        public async IAsyncEnumerator<LlamaToken> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+        private async IAsyncEnumerable<LlamaToken> AndNewLine(IAsyncEnumerable<LlamaToken> toReturn)
         {
-            await foreach (LlamaToken token in this.AndNewLine(this.Instruction))
-            {
-                yield return token;
-            }
+            LlamaTokenCollection collection = await toReturn.ToCollection();
 
-            await foreach (LlamaToken token in this.AndNewLine(this.Summary))
+            if (collection.Count > 0)
             {
-                yield return token;
-            }
+                foreach (LlamaToken token in collection)
+                {
+                    yield return token;
+                }
 
-            foreach (ITokenCollection message in this.Messages)
-            {
-                await foreach (LlamaToken token in this.AndNewLine(message))
+                foreach (LlamaToken token in await this.NewLine)
                 {
                     yield return token;
                 }

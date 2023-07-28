@@ -23,6 +23,87 @@ namespace ChieApi.Pipelines
             this._characterFactory = characterFactory;
         }
 
+        public async IAsyncEnumerable<ChatEntry> Process(ChatEntry chatEntry)
+        {
+            if (string.IsNullOrWhiteSpace(this._characterName))
+            {
+                this._characterName = (await this._characterFactory.Build()).CharacterName;
+            }
+
+            this.SwapId(chatEntry);
+
+            if (chatEntry.DisplayName != this._characterName &&
+                !string.IsNullOrWhiteSpace(chatEntry.UserId) &&
+                //Gotta check to make sure we haven't already returned this request
+                this._returnedData.Add(chatEntry.UserId))
+            {
+                UserData userData = await this._userDataService.GetOrCreate(chatEntry.UserId);
+                this._userDataService.Encounter(chatEntry.UserId);
+
+                if (userData.Blocked)
+                {
+                    yield break;
+                }
+
+                //If prepend
+                if (this.TryGetChatEntry(chatEntry, userData, out ChatEntry? ce1) && userData.BeforeMessage)
+                {
+                    yield return ce1;
+                }
+
+                string overrideName = this.Coalesce(userData?.DisplayName, chatEntry.DisplayName, chatEntry.UserId);
+
+                yield return chatEntry with { DisplayName = overrideName };
+
+                //If append
+                if (this.TryGetChatEntry(chatEntry, userData, out ChatEntry ce2) && !userData.BeforeMessage)
+                {
+                    yield return ce2;
+                }
+            }
+        }
+
+        public bool TryGetChatEntry(ChatEntry chatEntry, UserData userData, out ChatEntry? ce)
+        {
+            if (userData == null || userData.IsBot)
+            {
+                ce = null;
+                return false;
+            }
+
+            TextResult displayText = this.GetText(userData);
+
+            if (!displayText.HasValue)
+            {
+                ce = null;
+                return false;
+            }
+
+            ce = new ChatEntry()
+            {
+                DisplayName = null,
+                Content = displayText.Content,
+                IsVisible = false,
+                SourceChannel = chatEntry.SourceChannel,
+                Type = displayText.Type
+            };
+
+            return true;
+        }
+
+        private string Coalesce(params string[] args)
+        {
+            foreach (string arg in args)
+            {
+                if (!string.IsNullOrWhiteSpace(arg))
+                {
+                    return arg;
+                }
+            }
+
+            throw new NotImplementedException();
+        }
+
         private TextResult GetText(UserData userData)
         {
             if (!string.IsNullOrWhiteSpace(userData.UserPrompt))
@@ -65,87 +146,6 @@ namespace ChieApi.Pipelines
                     }
                 }
             }
-        }
-
-        public async IAsyncEnumerable<ChatEntry> Process(ChatEntry chatEntry)
-        {
-            if (string.IsNullOrWhiteSpace(this._characterName))
-            {
-                this._characterName = (await this._characterFactory.Build()).CharacterName;
-            }
-
-            this.SwapId(chatEntry);
-
-            if (chatEntry.DisplayName != this._characterName &&
-                !string.IsNullOrWhiteSpace(chatEntry.UserId) &&
-                //Gotta check to make sure we haven't already returned this request
-                this._returnedData.Add(chatEntry.UserId))
-            {
-                UserData userData = await this._userDataService.GetOrCreate(chatEntry.UserId);
-                this._userDataService.Encounter(chatEntry.UserId);
-
-                if (userData.Blocked)
-                {
-                    yield break;
-                }
-
-                //If prepend
-                if (this.TryGetChatEntry(chatEntry, userData, out ChatEntry? ce1) && userData.BeforeMessage)
-                {
-                    yield return ce1;
-                }
-
-                string overrideName = this.Coalesce(userData?.DisplayName, chatEntry.DisplayName, chatEntry.UserId);
-
-                yield return chatEntry with { DisplayName = overrideName };
-
-                //If append
-                if (this.TryGetChatEntry(chatEntry, userData, out ChatEntry ce2) && !userData.BeforeMessage)
-                {
-                    yield return ce2;
-                }
-            }
-        }
-
-        private string Coalesce(params string[] args)
-        {
-            foreach (string arg in args)
-            {
-                if (!string.IsNullOrWhiteSpace(arg))
-                {
-                    return arg;
-                }
-            }
-
-            throw new NotImplementedException();
-        }
-
-        public bool TryGetChatEntry(ChatEntry chatEntry, UserData userData, out ChatEntry? ce)
-        {
-            if (userData == null || userData.IsBot)
-            {
-                ce = null;
-                return false;
-            }
-
-            TextResult displayText = this.GetText(userData);
-
-            if (!displayText.HasValue)
-            {
-                ce = null;
-                return false;
-            }
-
-            ce = new ChatEntry()
-            {
-                DisplayName = null,
-                Content = displayText.Content,
-                IsVisible = false,
-                SourceChannel = chatEntry.SourceChannel,
-                Type = displayText.Type
-            };
-
-            return true;
         }
     }
 }

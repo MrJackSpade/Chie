@@ -103,12 +103,7 @@ namespace ChieApi.Services
                 parameters.Add(commands.Dequeue());
             }
 
-            ConstructorInfo countMatchConstuctor = toInstantiate.GetConstructors().Where(c => c.GetParameters().Count() == parameters.Count()).FirstOrDefault();
-
-            if (countMatchConstuctor is null)
-            {
-                throw new NotImplementedException();
-            }
+            ConstructorInfo countMatchConstuctor = toInstantiate.GetConstructors().Where(c => c.GetParameters().Count() == parameters.Count()).FirstOrDefault() ?? throw new NotImplementedException();
 
             List<object> parsedParameters = new();
             List<ParameterInfo> expectedParameters = countMatchConstuctor.GetParameters().ToList();
