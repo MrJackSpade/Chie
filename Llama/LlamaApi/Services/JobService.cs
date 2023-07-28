@@ -5,6 +5,7 @@ using LlamaApi.Utils;
 using Loxifi.Extensions;
 using System.Collections.Concurrent;
 using System.Data.SqlClient;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 
@@ -30,11 +31,15 @@ namespace LlamaApi.Services
 
         private SqlConnection NewConnection => new(this._connectionString);
 
-        public Job Enqueue<TResult>(Func<TResult> func, ExecutionPriority priority)
+        public Job Enqueue<TResult>(Func<TResult> func, ExecutionPriority priority, [CallerMemberName] string jobKind = "")
         {
             using SqlConnection newConnect = this.NewConnection;
 
-            Job job = new();
+            Job job = new()
+            {
+                Caller = jobKind,
+                Machine = System.Environment.MachineName
+            };
 
             newConnect.Insert(job);
 
@@ -62,9 +67,13 @@ namespace LlamaApi.Services
             return job;
         }
 
-        public Job Enqueue(Action action, ExecutionPriority priority)
+        public Job Enqueue(Action action, ExecutionPriority priority, [CallerMemberName] string jobKind = "")
         {
-            Job job = new();
+            Job job = new()
+            {
+                Caller = jobKind,
+                Machine = System.Environment.MachineName
+            };
 
             using SqlConnection newConnect = this.NewConnection;
 

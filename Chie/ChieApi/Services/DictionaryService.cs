@@ -2,6 +2,7 @@
 using ChieApi.Models;
 using Loxifi.Extensions;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -32,20 +33,44 @@ namespace ChieApi.Services
 
         public bool IsWord(string word)
         {
-            SqlConnection sqlConnection = new(this.ConnectionString);
+            do
+            {
+                try
+                {
+                    using SqlConnection sqlConnection = new(this.ConnectionString);
 
-            string pWord = word.Replace("'", "''");
+                    string pWord = word.Replace("'", "''");
 
-            return sqlConnection.Query<DictionaryEntry>($"select * from Dictionary where word = '{pWord}'").Any();
+                    return sqlConnection.Query<DictionaryEntry>($"select * from Dictionary where word = '{pWord}'").Any();
+
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex);
+                    System.Threading.Thread.Sleep(1000);
+                }
+            } while (true);
         }
 
         public IEnumerable<DictionaryEntry> GetByFingerprint(string fingerprint)
         {
-            SqlConnection sqlConnection = new(this.ConnectionString);
+            do
+            {
+                try
+                {
+                    using SqlConnection sqlConnection = new(this.ConnectionString);
 
-            string pWord = fingerprint.Replace("'", "''");
+                    string pWord = fingerprint.Replace("'", "''");
 
-            return sqlConnection.Query<DictionaryEntry>($"select * from Dictionary where fingerprint = '{pWord}'").ToList();
+                    return sqlConnection.Query<DictionaryEntry>($"select * from Dictionary where fingerprint = '{pWord}'").ToList();
+
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex);
+                    System.Threading.Thread.Sleep(1000);
+                }
+            } while (true);
         }
 
         public WordDrift GetDrift(string wordA, string wordB)
@@ -57,7 +82,7 @@ namespace ChieApi.Services
 
         public int CompareLetterRepetitions(string word1, string word2)
         {
-            
+
             int difference = 0;
             int index1 = 0;
             int index2 = 0;
