@@ -22,7 +22,7 @@ namespace Llama.Extensions
             }
         }
 
-        public static void AppendControl(this LlamaTokenCollection target, int id) => target.Append(new LlamaToken(id, null, LlamaTokenType.Control));
+        public static void AppendControl(this LlamaTokenCollection target, int id) => target.Append(new LlamaToken(id, null));
 
         public static bool Contains(this LlamaTokenCollection target, int tokenId)
         {

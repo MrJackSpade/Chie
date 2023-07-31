@@ -9,6 +9,7 @@ using DiscordGpt.Constants;
 using DiscordGpt.Events;
 using DiscordGpt.Models;
 using Logging.Shared.Extensions;
+using Loxifi.AsyncExtensions;
 using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
 
@@ -22,15 +23,12 @@ namespace DiscordGpt.Services
 
         private readonly ILogger _logger;
 
-        private readonly NameService _nameService;
-
         private readonly DelayedTrigger _outgoingMessageTrigger;
 
         private string _lastError = string.Empty;
 
-        public ChieMessageService(ChieClient chieClient, ILogger logger, NameService nameService)
+        public ChieMessageService(ChieClient chieClient, ILogger logger)
         {
-            this._nameService = nameService;
             this._logger = logger;
             this._chieClient = chieClient;
             this._outgoingMessageTrigger = new DelayedTrigger(this.Flush, 3000, 30_000);

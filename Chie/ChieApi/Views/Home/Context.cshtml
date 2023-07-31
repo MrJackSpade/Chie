@@ -1,11 +1,11 @@
-﻿@using Llama.Events;
-@using Llama.Data;
+﻿@using Llama.Data.Interfaces;
+@using Llama.Data.Models;
 
-@model ContextModificationEventArgs
+@model IReadOnlyLlamaTokenCollection
 
 @if (Model != null)
 {
-    foreach (LlamaToken token in Model.Evaluated)
+    foreach (LlamaToken token in Model)
     {
         if (token.Id == 13)
         {

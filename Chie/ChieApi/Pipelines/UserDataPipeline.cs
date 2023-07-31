@@ -1,7 +1,7 @@
 ﻿using ChieApi.Interfaces;
+using ChieApi.Models;
 using ChieApi.Shared.Entities;
 using ChieApi.Shared.Services;
-using Llama.Constants;
 using Loxifi;
 using System.Text.RegularExpressions;
 
@@ -21,49 +21,6 @@ namespace ChieApi.Pipelines
         {
             this._userDataService = userDataService;
             this._characterFactory = characterFactory;
-        }
-
-        private TextResult GetText(UserData userData)
-        {
-            if (!string.IsNullOrWhiteSpace(userData.UserPrompt))
-            {
-                return new TextResult(userData.UserPrompt, LlamaTokenTags.TEMPORARY);
-            }
-
-            if (!string.IsNullOrWhiteSpace(userData.UserSummary) && userData.LastEncountered.HasValue)
-            {
-                int minutes = (int)(DateTime.Now - userData.LastEncountered.Value).TotalMinutes;
-
-                string displayName = this.Coalesce(userData?.DisplayName, userData.UserId);
-
-                if (minutes > 60)
-                {
-                    return new TextResult($"[Chies friend {displayName} arrives. {userData.UserSummary}]", LlamaTokenTags.STAGE_DIRECTION);
-                } else
-                {
-                    return new TextResult($"[{userData.UserSummary.To(". ")}]", LlamaTokenTags.TEMPORARY);
-                }
-            }
-
-            return new TextResult();
-        }
-
-        private void SwapId(ChatEntry chatEntry)
-        {
-            if (!string.IsNullOrWhiteSpace(chatEntry.Content))
-            {
-                foreach (Match m in Regex.Matches(chatEntry.Content, "<@(.*?)>"))
-                {
-                    string userId = m.Groups[1].Value;
-
-                    UserData? userData = this._userDataService.GetOrDefault(userId);
-
-                    if (userData != null && !string.IsNullOrWhiteSpace(userData.DisplayName))
-                    {
-                        chatEntry.Content = chatEntry.Content.Replace(m.Groups[0].Value, userData.DisplayName);
-                    }
-                }
-            }
         }
 
         public async IAsyncEnumerable<ChatEntry> Process(ChatEntry chatEntry)
@@ -106,19 +63,6 @@ namespace ChieApi.Pipelines
             }
         }
 
-        private string Coalesce(params string[] args)
-        {
-            foreach (string arg in args)
-            {
-                if (!string.IsNullOrWhiteSpace(arg))
-                {
-                    return arg;
-                }
-            }
-
-            throw new NotImplementedException();
-        }
-
         public bool TryGetChatEntry(ChatEntry chatEntry, UserData userData, out ChatEntry? ce)
         {
             if (userData == null || userData.IsBot)
@@ -141,10 +85,67 @@ namespace ChieApi.Pipelines
                 Content = displayText.Content,
                 IsVisible = false,
                 SourceChannel = chatEntry.SourceChannel,
-                Tag = displayText.Tag
+                Type = displayText.Type
             };
 
             return true;
+        }
+
+        private string Coalesce(params string[] args)
+        {
+            foreach (string arg in args)
+            {
+                if (!string.IsNullOrWhiteSpace(arg))
+                {
+                    return arg;
+                }
+            }
+
+            throw new NotImplementedException();
+        }
+
+        private TextResult GetText(UserData userData)
+        {
+            if (!string.IsNullOrWhiteSpace(userData.UserPrompt))
+            {
+                return new TextResult(userData.UserPrompt, LlamaTokenType.Temporary);
+            }
+
+            if (!string.IsNullOrWhiteSpace(userData.UserSummary) && userData.LastEncountered.HasValue)
+            {
+                int minutes = (int)(DateTime.Now - userData.LastEncountered.Value).TotalMinutes;
+
+                string displayName = this.Coalesce(userData?.DisplayName, userData.UserId);
+
+                if (minutes > 60)
+                {
+                    return new TextResult($"[Chies friend {displayName} arrives. {userData.UserSummary}]", LlamaTokenType.Input);
+                }
+                else
+                {
+                    return new TextResult($"[{userData.UserSummary.To(". ")}]", LlamaTokenType.Temporary);
+                }
+            }
+
+            return new TextResult();
+        }
+
+        private void SwapId(ChatEntry chatEntry)
+        {
+            if (!string.IsNullOrWhiteSpace(chatEntry.Content))
+            {
+                foreach (Match m in Regex.Matches(chatEntry.Content, "<@(.*?)>"))
+                {
+                    string userId = m.Groups[1].Value;
+
+                    UserData? userData = this._userDataService.GetOrDefault(userId);
+
+                    if (userData != null && !string.IsNullOrWhiteSpace(userData.DisplayName))
+                    {
+                        chatEntry.Content = chatEntry.Content.Replace(m.Groups[0].Value, userData.DisplayName);
+                    }
+                }
+            }
         }
     }
 }

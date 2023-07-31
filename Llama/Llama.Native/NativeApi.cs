@@ -1,5 +1,6 @@
 ﻿using Llama.Data;
 using Llama.Data.Exceptions;
+using Llama.Data.Extensions;
 using Llama.Data.Models;
 using Llama.Data.Native;
 using System.Runtime.InteropServices;
@@ -52,15 +53,19 @@ namespace Llama.Native
         {
             LlamaContextParams lparams = LlamaCppApi.ContextDefaultParams();
 
-            lparams.n_ctx = contextSettings.ContextSize;
-            lparams.n_gpu_layers = modelSettings.GpuLayerCount;
-            lparams.n_batch = contextSettings.BatchSize;
-            lparams.seed = modelSettings.Seed;
-            lparams.f16_kv = modelSettings.MemoryMode == Llama.Data.Enums.MemoryMode.Float16;
-            lparams.use_mmap = modelSettings.UseMemoryMap;
-            lparams.use_mlock = modelSettings.UseMemoryLock;
-            lparams.logits_all = modelSettings.Perplexity;
-            lparams.embedding = modelSettings.GenerateEmbedding;
+            lparams.NCtx = contextSettings.ContextSize;
+            lparams.NGpuLayers = modelSettings.GpuLayerCount;
+            lparams.NBatch = contextSettings.BatchSize;
+            lparams.Seed = modelSettings.Seed;
+            lparams.NGqa = modelSettings.UseGqa ? 8 : 1;
+            lparams.F16Kv = modelSettings.MemoryMode == Llama.Data.Enums.MemoryMode.Float16;
+            lparams.UseMmap = modelSettings.UseMemoryMap;
+            lparams.UseMlock = modelSettings.UseMemoryLock;
+            lparams.LogitsAll = modelSettings.Perplexity;
+            lparams.Embedding = modelSettings.GenerateEmbedding;
+            lparams.RopeFreqBase = modelSettings.RopeFrequencyBase;
+            lparams.RopeFreqScale = modelSettings.RopeFrequencyScaling;
+            SetTensors(ref lparams, new float[16]);
 
             IntPtr ctx_ptr = LlamaCppApi.NewContextWithModel(model, lparams);
 
@@ -87,15 +92,19 @@ namespace Llama.Native
         {
             LlamaContextParams lparams = LlamaCppApi.ContextDefaultParams();
 
-            lparams.n_ctx = modelSettings.ContextSize;
-            lparams.n_gpu_layers = modelSettings.GpuLayerCount;
-            lparams.n_batch = modelSettings.BatchSize;
-            lparams.seed = modelSettings.Seed;
-            lparams.f16_kv = modelSettings.MemoryMode == Llama.Data.Enums.MemoryMode.Float16;
-            lparams.use_mmap = modelSettings.UseMemoryMap;
-            lparams.use_mlock = modelSettings.UseMemoryLock;
-            lparams.logits_all = modelSettings.Perplexity;
-            lparams.embedding = modelSettings.GenerateEmbedding;
+            lparams.NCtx = modelSettings.ContextSize;
+            lparams.NGpuLayers = modelSettings.GpuLayerCount;
+            lparams.NBatch = modelSettings.BatchSize;
+            lparams.Seed = modelSettings.Seed;
+            lparams.NGqa = modelSettings.UseGqa ? 8 : 1;
+            lparams.F16Kv = modelSettings.MemoryMode == Llama.Data.Enums.MemoryMode.Float16;
+            lparams.UseMmap = modelSettings.UseMemoryMap;
+            lparams.UseMlock = modelSettings.UseMemoryLock;
+            lparams.LogitsAll = modelSettings.Perplexity;
+            lparams.Embedding = modelSettings.GenerateEmbedding;
+            lparams.RopeFreqBase = modelSettings.RopeFrequencyBase;
+            lparams.RopeFreqScale = modelSettings.RopeFrequencyScaling;
+            SetTensors(ref lparams, new float[16]);
 
             if (!File.Exists(modelSettings.Model))
             {
@@ -112,6 +121,23 @@ namespace Llama.Native
             return new(new(model_ptr, (p) => LlamaCppApi.FreeModel(p)));
         }
 
+        private static void SetTensors(ref LlamaContextParams param, float[] values)
+        {
+            // Populate your array.
+            for (int i = 0; i < 16; i++)
+            {
+                values[i] = (float)i;
+            }
+
+            // Allocate unmanaged memory for the array.
+            IntPtr tensorSplitPtr = Marshal.AllocHGlobal(16 * sizeof(float));
+
+            // Copy the managed array to unmanaged memory.
+            Marshal.Copy(values, 0, tensorSplitPtr, 16);
+
+            // Now you can set the pointer in your structure.
+            param.TensorSplit = tensorSplitPtr;
+        }
         public static int NVocab(SafeLlamaContextHandle handle) => LlamaCppApi.NVocab(handle);
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0022:Use expression body for method", Justification = "<Pending>")]

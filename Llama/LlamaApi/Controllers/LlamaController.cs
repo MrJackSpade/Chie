@@ -16,6 +16,7 @@ using LlamaApi.Models;
 using LlamaApi.Models.Request;
 using LlamaApi.Models.Response;
 using LlamaApi.Shared.Models.Request;
+using LlamaApi.Shared.Models.Response;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json.Nodes;
 
@@ -135,15 +136,16 @@ namespace LlamaApi.Controllers
             {
                 ContextEvaluator context = this._loadedModel.GetContext(request.ContextId);
 
-                context.Evaluate(request.Priority);
+                int evaluated = context.Evaluate(request.Priority);
 
-                return new ContextState()
+                return new EvaluationResponse()
                 {
-                    Size = context.Context.Size,
                     AvailableBuffer = context.Context.AvailableBuffer,
                     Id = request.ContextId,
-                    IsLoaded = true
+                    IsLoaded = true,
+                    Evaluated = evaluated
                 };
+
             }, request.Priority);
         }
 
@@ -259,9 +261,16 @@ namespace LlamaApi.Controllers
 
                 List<int> tokens = NativeApi.LlamaTokenize(context.Context.Handle, request.Content!, false, System.Text.Encoding.UTF8);
 
+                List<LlamaToken> toReturn = new();
+
+                foreach (int token in tokens)
+                {
+                    toReturn.Add(new LlamaToken(token, NativeApi.TokenToStr(context.Context.Handle, token)));
+                }
+
                 return new TokenizeResponse()
                 {
-                    Tokens = tokens.ToArray()
+                    Tokens = toReturn.ToArray()
                 };
             }, request.Priority);
         }
@@ -283,7 +292,7 @@ namespace LlamaApi.Controllers
                 foreach (RequestLlamaToken token in request.Tokens)
                 {
                     string value = NativeApi.TokenToStr(context.Context.Handle, token.TokenId);
-                    toWrite.Append(new LlamaToken(token.TokenId, value, token.TokenType));
+                    toWrite.Append(new LlamaToken(token.TokenId, value));
                 }
 
                 if (request.StartIndex >= 0)

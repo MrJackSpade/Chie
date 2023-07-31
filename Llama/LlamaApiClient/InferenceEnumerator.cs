@@ -1,6 +1,9 @@
-﻿using Llama.Data.Extensions;
+﻿using Llama.Data.Collections;
+using Llama.Data.Extensions;
+using Llama.Data.Interfaces;
+using Llama.Data.Models;
 using LlamaApi.Models.Request;
-using LlamaApi.Models.Response;
+using LlamaApi.Shared.Models.Response;
 
 namespace LlamaApiClient
 {
@@ -14,6 +17,8 @@ namespace LlamaApiClient
     public class InferenceEnumerator
     {
         private readonly Func<RequestLlamaToken, Task> _accept;
+
+        private readonly LlamaTokenCollection _enumerated = new();
 
         private readonly Dictionary<int, float> _inferrenceBias = new();
 
@@ -31,7 +36,50 @@ namespace LlamaApiClient
             this._accept = accept;
         }
 
+        public bool Accepted { get; private set; }
+
         public ResponseLlamaToken Current { get; private set; }
+
+        public IReadOnlyLlamaTokenCollection Enumerated => this._enumerated;
+
+        public async Task Accept(LlamaToken token)
+        {
+            this.Current = new ResponseLlamaToken()
+            {
+                Id = token.Id,
+                Value = token.Value
+            };
+
+            this.Accepted = true;
+
+            await this._accept(new RequestLlamaToken() { TokenId = token.Id });
+
+            this._enumerated.Append(token);
+
+            //Clear out any temp bias from the last run if we didn't move back
+            this._lastTemporaryBias = new();
+        }
+
+        public async Task Accept()
+        {
+            if (!this.Accepted)
+            {
+                this.Accepted = true;
+
+                if (this.Current != null)
+                {
+                    await this._accept(new RequestLlamaToken()
+                    {
+                        TokenId = this.Current.Id
+                    });
+
+                    this._enumerated.Append(new LlamaToken(this.Current.Id, this.Current.Value));
+                }
+
+                //Clear out any temp bias from the last run if we didn't move back
+                this._lastTemporaryBias = new();
+            }
+        }
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
@@ -49,22 +97,14 @@ namespace LlamaApiClient
         {
             if (this._moveBack == 0)
             {
-                if (this.Current != null)
-                {
-                    await this._accept(new RequestLlamaToken()
-                    {
-                        TokenId = this.Current.Id,
-                        TokenType = Llama.Data.Enums.LlamaTokenType.Response
-                    });
-                }
-
-                //Clear out any temp bias from the last run if we didn't move back
-                this._lastTemporaryBias = new();
+                await this.Accept();
             }
             else
             {
                 this._moveBack -= 1;
             }
+
+            this.Accepted = false;
 
             //Cache whatever our current bias is incase we need to use it again.
             //rebuilding the list here allows new tokens to be appended from the temporary
@@ -84,11 +124,11 @@ namespace LlamaApiClient
             switch (lifeTime)
             {
                 case LogitBiasLifeTime.Temporary:
-                    _temporaryBias.AddOrUpdate(tokenId, value);
+                    this._temporaryBias.AddOrUpdate(tokenId, value);
                     break;
 
                 case LogitBiasLifeTime.Inferrence:
-                    _inferrenceBias.AddOrUpdate(tokenId, value);
+                    this._inferrenceBias.AddOrUpdate(tokenId, value);
                     break;
             }
         }

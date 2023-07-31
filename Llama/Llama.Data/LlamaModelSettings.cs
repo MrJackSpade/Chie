@@ -24,9 +24,15 @@ namespace Llama.Data
 
         public bool Perplexity { get; set; }
 
-        public int Seed { get; set; } = new Random().Next();
+        public float RopeFrequencyBase { get; set; } = 10_000;
+
+        public float RopeFrequencyScaling { get; set; } = 1.0f;
+
+        public uint Seed { get; set; } = (uint)new Random().Next();
 
         public int ThreadCount { get; set; } = Math.Max(Environment.ProcessorCount / 2, 1);
+
+        public bool UseGqa { get; set; }
 
         public bool UseMemoryLock { get; set; } = false;
 

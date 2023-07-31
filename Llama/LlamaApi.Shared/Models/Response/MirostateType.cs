@@ -1,4 +1,4 @@
-﻿namespace LlamaApi.Models.Response
+﻿namespace LlamaApi.Shared.Models.Response
 {
     public enum MirostatType
     {

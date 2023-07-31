@@ -73,27 +73,21 @@ namespace Llama.Core
             }
         }
 
-        public LlamaTokenCollection Tokenize(string toTokenize, LlamaTokenType tokenType) => this.Context.Tokenize(toTokenize, tokenType);
+        public LlamaTokenCollection Tokenize(string toTokenize) => this.Context.Tokenize(toTokenize);
 
-        public LlamaTokenCollection Tokenize(string toTokenize) => this.Context.Tokenize(toTokenize, LlamaTokenType.Undefined);
-
-        public void Write(params string[] inputText) => this.Write(inputText.Select(t => new InputText(t)).ToArray());
-
-        public void Write(params InputText[] text) => this.ProcessInputText(text);
+        public void Write(params string[] inputText) => this.ProcessInputText(inputText);
 
         public void Write(LlamaTokenCollection text) => this.Context.Write(text);
 
-        private void ProcessInputText(params InputText[] inputTexts)
+        private void ProcessInputText(params string[] inputTexts)
         {
-            foreach (InputText inputText in inputTexts)
+            foreach (string inputText in inputTexts)
             {
-                string text = inputText.Content;
+                Console.Write(inputText);
 
-                Console.Write(text);
-
-                if (text.Length > 1)
+                if (inputText.Length > 1)
                 {
-                    LlamaTokenCollection line_inp = this.Context.Tokenize(text, inputText.TokenType);
+                    LlamaTokenCollection line_inp = this.Context.Tokenize(inputText);
 
                     this.Context.Write(line_inp);
                 }

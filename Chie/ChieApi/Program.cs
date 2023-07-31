@@ -2,11 +2,13 @@ using Ai.Utils.Extensions;
 using Blip;
 using ChieApi.Factories;
 using ChieApi.Interfaces;
+using ChieApi.Models;
 using ChieApi.Pipelines;
 using ChieApi.Pipelines.MoodPipeline;
 using ChieApi.Services;
 using ChieApi.Shared.Services;
 using ChieApi.Tasks.Boredom;
+using LlamaApiClient;
 using Logging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -73,7 +75,14 @@ namespace ChieApi
             _ = builder.Services.AddSingleton<BoredomTaskData>();
             _ = builder.Services.AddSingleton<IHostLifetime>(new NullLifetime());
             _ = builder.Services.AddSingleton<IHasConnectionString>(s => s.GetService<IOptions<ChieApiSettings>>().Value);
+            _ = builder.Services.AddSingleton<LlamaContextModel>();
+            _ = builder.Services.AddSingleton<LlamaTokenCache>();
+            _ = builder.Services.AddSingleton<SummarizationService>();
+            _ = builder.Services.AddSingleton<DictionaryService>();
 
+            LlamaClientSettings clientSettings = new("http://127.0.0.1:10030");
+            _ = builder.Services.AddSingleton(clientSettings);
+            _ = builder.Services.AddSingleton<LlamaContextClient>();
             _ = builder.Services.Configure<JsonOptions>(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
             WebApplication app = builder.Build();

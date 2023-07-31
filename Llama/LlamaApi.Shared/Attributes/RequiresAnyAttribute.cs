@@ -31,12 +31,7 @@ namespace LlamaApi.Attributes
 
             foreach (string propertyName in this.PropertyList)
             {
-                PropertyInfo? pi = validationContext.ObjectType.GetProperty(propertyName);
-
-                if (pi is null)
-                {
-                    throw new ArgumentException($"Property with name {propertyName} not found");
-                }
+                PropertyInfo? pi = validationContext.ObjectType.GetProperty(propertyName) ?? throw new ArgumentException($"Property with name {propertyName} not found");
 
                 if (pi.GetCustomAttribute<JsonPropertyNameAttribute>() is JsonPropertyNameAttribute jpn)
                 {

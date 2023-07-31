@@ -23,6 +23,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ChieApi.Shared", "Chie\Chie
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ChieApiClient", "Chie\ChieApiClient\ChieApiClient.csproj", "{F28009BD-709D-4F18-8D0D-B9ECCD1E780E}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Loxifi.AsyncExtensions", "Utils\Loxifi.AsyncExtensions\Loxifi.AsyncExtensions.csproj", "{C71D5834-F029-4E2B-8E0A-6AED6EF7F23E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,6 +59,10 @@ Global
 		{F28009BD-709D-4F18-8D0D-B9ECCD1E780E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F28009BD-709D-4F18-8D0D-B9ECCD1E780E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F28009BD-709D-4F18-8D0D-B9ECCD1E780E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C71D5834-F029-4E2B-8E0A-6AED6EF7F23E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C71D5834-F029-4E2B-8E0A-6AED6EF7F23E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C71D5834-F029-4E2B-8E0A-6AED6EF7F23E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C71D5834-F029-4E2B-8E0A-6AED6EF7F23E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -67,6 +73,7 @@ Global
 		{CB2B3221-901F-4BD0-AAA4-134A43FD4F69} = {761E2A39-71AA-4B96-84C5-02C0EAA7FB84}
 		{ACCA2B21-68BD-4C68-82E5-C7A468830C0B} = {778468E7-5066-432A-816B-4F551D6E26AA}
 		{F28009BD-709D-4F18-8D0D-B9ECCD1E780E} = {778468E7-5066-432A-816B-4F551D6E26AA}
+		{C71D5834-F029-4E2B-8E0A-6AED6EF7F23E} = {71BCCF92-76DE-423A-AFEA-4A6DD10FF9D7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {92C1A929-95D1-4E53-AEC4-B97AF3EF7C96}

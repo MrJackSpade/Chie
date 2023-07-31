@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\Logging\Logging.Shared\Logging.Shared.csproj" />
     <ProjectReference Include="..\..\Logging\LoggingApiClient\LoggingApiClient.csproj" />
     <ProjectReference Include="..\..\Utils\Ai.Utils\Ai.Utils.csproj" />
+    <ProjectReference Include="..\..\Utils\Loxifi.AsyncExtensions\Loxifi.AsyncExtensions.csproj" />
     <ProjectReference Include="..\DiscordClient\DiscordClient.csproj" />
   </ItemGroup>
 

@@ -1,5 +1,5 @@
 ﻿using LlamaApi.Attributes;
-using LlamaApi.Models.Response;
+using LlamaApi.Shared.Models.Response;
 
 namespace LlamaApi.Models.Request
 {

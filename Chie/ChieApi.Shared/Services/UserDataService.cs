@@ -1,7 +1,7 @@
 ﻿using ChieApi.Interfaces;
 using ChieApi.Shared.Entities;
-using System.Data.SqlClient;
 using Loxifi.Extensions;
+using System.Data.SqlClient;
 
 namespace ChieApi.Shared.Services
 {
@@ -14,13 +14,13 @@ namespace ChieApi.Shared.Services
             this._connectionString = connectionString.ConnectionString;
         }
 
-        public UserData? GetOrDefault(string userId)
+        public void Encounter(string userId)
         {
             using SqlConnection connection = new(this._connectionString);
 
-            string query = $"select * from UserData where UserId = '{userId}'";
-            string noUserQuery = $"select * from UserData where UserId = ''";
-            return connection.Query<UserData>(query).FirstOrDefault() ?? connection.Query<UserData>(noUserQuery).FirstOrDefault();
+            string query = $"update UserData set LastEncountered = '{DateTime.Now:yyyy-MM-dd HH:mm:ss}' where UserId = '{userId}'";
+
+            connection.Execute(query);
         }
 
         public UserData? Get(string userId)
@@ -29,7 +29,6 @@ namespace ChieApi.Shared.Services
 
             string query = $"select * from UserData where UserId = '{userId}'";
             return connection.Query<UserData>(query).FirstOrDefault();
-
         }
 
         public async Task<UserData> GetOrCreate(string userId)
@@ -48,7 +47,7 @@ namespace ChieApi.Shared.Services
                     UserId = userId,
                 };
 
-                long id = await this.Save(userData);
+                long id = this.Save(userData);
 
                 userData.Id = id;
             }
@@ -56,16 +55,16 @@ namespace ChieApi.Shared.Services
             return userData;
         }
 
-        public void Encounter(string userId)
+        public UserData? GetOrDefault(string userId)
         {
             using SqlConnection connection = new(this._connectionString);
 
-            string query = $"update UserData set LastEncountered = '{DateTime.Now:yyyy-MM-dd HH:mm:ss}' where UserId = '{userId}'";
-           
-            connection.Execute(query);
+            string query = $"select * from UserData where UserId = '{userId}'";
+            string noUserQuery = $"select * from UserData where UserId = ''";
+            return connection.Query<UserData>(query).FirstOrDefault() ?? connection.Query<UserData>(noUserQuery).FirstOrDefault();
         }
 
-        public async Task<long> Save(UserData userData)
+        public long Save(UserData userData)
         {
             using SqlConnection connection = new(this._connectionString);
 

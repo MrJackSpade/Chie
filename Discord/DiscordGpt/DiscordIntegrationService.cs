@@ -148,6 +148,14 @@ namespace DiscordGpt
                 messageContent = messageContent.Replace(placeholder, $"*at <@{user.Username}>*");
             }
 
+            foreach (SocketRole role in arg.MentionedRoles)
+            {
+                string placeholder = $"<@&{role.Id}>";
+                messageContent = messageContent.Replace(placeholder, $"*at {role.Name}*");
+            }
+
+            messageContent = messageContent.Replace($"<@&{_discordClient.CurrentUser.Id}>", $"*at <@{_discordClient.CurrentUser.GetDisplayName()}>*");
+
             string userCleaned = this._nameService.CleanUserName(arg.Author.GetDisplayName());
 
             ActiveChannel activeChannel = this._activeChannels.GetOrAdd(arg.Channel);

@@ -1,6 +1,6 @@
 ﻿using ChieApi.Shared.Entities;
 using LoggingApi.Interfaces;
-using Loxifi.Database.Extensions;
+using Loxifi.Extensions;
 using System.Data.SqlClient;
 
 namespace LoggingApi.Services

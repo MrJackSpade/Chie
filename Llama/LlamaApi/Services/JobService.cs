@@ -5,6 +5,7 @@ using LlamaApi.Utils;
 using Loxifi.Extensions;
 using System.Collections.Concurrent;
 using System.Data.SqlClient;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 
@@ -30,15 +31,17 @@ namespace LlamaApi.Services
 
         private SqlConnection NewConnection => new(this._connectionString);
 
-        public Job Enqueue<TResult>(Func<TResult> func, ExecutionPriority priority)
+        public Job Enqueue<TResult>(Func<TResult> func, ExecutionPriority priority, [CallerMemberName] string jobKind = "")
         {
             using SqlConnection newConnect = this.NewConnection;
 
-            Job job = new();
+            Job job = new()
+            {
+                Caller = jobKind,
+                Machine = System.Environment.MachineName
+            };
 
-            long id = newConnect.Insert(job)!.Value;
-
-            job.Id = id;
+            newConnect.Insert(job);
 
             this._threadPool.Execute(() =>
             {
@@ -46,33 +49,35 @@ namespace LlamaApi.Services
                 {
                     TResult result = this._executionScheduler.Execute(() =>
                     {
-                        this.UpdateState(id, JobState.Processing);
+                        this.UpdateState(job.Id, JobState.Processing);
                         return func.Invoke();
                     }
                     , priority);
 
-                    this.UpdateResult(id, result);
+                    this.UpdateResult(job.Id, result);
                 }
                 catch (Exception ex)
                 {
-                    this.UpdateResult(id, new JobFailure(ex));
+                    this.UpdateResult(job.Id, new JobFailure(ex));
                 }
 
-                this.Cache(id);
+                this.Cache(job.Id);
             });
 
             return job;
         }
 
-        public Job Enqueue(Action action, ExecutionPriority priority)
+        public Job Enqueue(Action action, ExecutionPriority priority, [CallerMemberName] string jobKind = "")
         {
-            Job job = new();
+            Job job = new()
+            {
+                Caller = jobKind,
+                Machine = System.Environment.MachineName
+            };
 
             using SqlConnection newConnect = this.NewConnection;
 
-            long id = newConnect.Insert(job)!.Value;
-
-            job.Id = id;
+            newConnect.Insert(job);
 
             this._threadPool.Execute(() =>
             {
@@ -80,19 +85,19 @@ namespace LlamaApi.Services
                 {
                     this._executionScheduler.Execute(() =>
                     {
-                        this.UpdateState(id, JobState.Processing);
+                        this.UpdateState(job.Id, JobState.Processing);
                         action.Invoke();
                     }
                     , priority);
 
-                    this.UpdateResult(id, null);
+                    this.UpdateResult(job.Id, null);
                 }
                 catch (Exception ex)
                 {
-                    this.UpdateResult(id, new JobFailure(ex));
+                    this.UpdateResult(job.Id, new JobFailure(ex));
                 }
 
-                this.Cache(id);
+                this.Cache(job.Id);
             });
 
             return job;

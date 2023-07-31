@@ -1,4 +1,4 @@
-﻿namespace Llama.Core.Samplers.Repetition
+﻿namespace Llama.Data.Models.Settings
 {
     public class RepetitionSamplerSettings
     {

@@ -1,7 +1,11 @@
-﻿namespace LlamaApi.Models.Response
+﻿using Llama.Data.Models;
+using System.Text.Json.Serialization;
+
+namespace LlamaApi.Shared.Models.Response
 {
     public class TokenizeResponse
     {
-        public int[] Tokens { get; set; }
+        [JsonPropertyName("tokens")]
+        public LlamaToken[] Tokens { get; set; }
     }
 }

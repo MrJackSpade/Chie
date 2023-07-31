@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace LlamaApi.Models.Response
+namespace LlamaApi.Shared.Models.Response
 {
     public class ContextState
     {

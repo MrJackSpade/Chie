@@ -1,7 +1,8 @@
-﻿using System.Text.Json.Nodes;
+﻿using LlamaApi.Models;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
-namespace LlamaApi.Models.Response
+namespace LlamaApi.Shared.Models.Response
 {
     public class JobResponse
     {

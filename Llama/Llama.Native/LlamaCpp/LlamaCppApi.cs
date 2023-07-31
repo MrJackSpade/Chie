@@ -24,7 +24,7 @@ namespace Llama.Native
                     "expected not to be changed, then consider build llama.cpp from source or submit an issue to LlamaSharp.");
             }
 
-            InitBackend();
+            InitBackend(false);
         }
 
         /// <summary>
@@ -128,8 +128,8 @@ namespace Llama.Native
         /// Initialize the llama + ggml backend
         /// Call once at the start of the program
         /// </summary>
-        [DllImport(LIBRARY_NAME, EntryPoint = "llama_init_backend")]
-        public static extern void InitBackend();
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_backend_init")]
+        public static extern void InitBackend(bool numa);
 
         /// <summary>
         /// Various functions for loading a ggml llama model.

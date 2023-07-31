@@ -4,8 +4,6 @@ namespace ChieApi.Shared.Entities
 {
     public class UserData
     {
-        public bool IsBot { get; set; }
-
         public bool Admin { get; set; }
 
         public bool BeforeMessage { get; set; } = false;
@@ -14,12 +12,14 @@ namespace ChieApi.Shared.Entities
 
         public string DisplayName { get; set; } = string.Empty;
 
-        public DateTime? LastEncountered { get; set; }
-
         [Key]
         public long Id { get; set; }
 
+        public bool IsBot { get; set; }
+
         public long LastChatId { get; set; } = 0;
+
+        public DateTime? LastEncountered { get; set; }
 
         public string UserId { get; set; } = string.Empty;
 

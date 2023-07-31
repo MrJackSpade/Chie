@@ -1,10 +1,9 @@
-﻿using Llama.Data.Enums;
-using Llama.Data.Models;
+﻿using Llama.Data.Models;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
-namespace LlamaApi.Models.Response
+namespace LlamaApi.Shared.Models.Response
 {
     public class ResponseLlamaToken
     {
@@ -15,9 +14,8 @@ namespace LlamaApi.Models.Response
 
         public ResponseLlamaToken(LlamaToken t)
         {
-            this.EscapedValue = t.EscapedValue;
+            this.EscapedValue = t.GetEscapedValue();
             this.Id = t.Id;
-            this.TokenType = t.TokenType;
             this.Value = t.Value;
 
             if (t.Data != null)
@@ -33,14 +31,16 @@ namespace LlamaApi.Models.Response
             }
         }
 
+        [JsonPropertyName("escapedValue")]
         public string EscapedValue { get; set; }
 
+        [JsonPropertyName("id")]
         public int Id { get; set; }
 
+        [JsonPropertyName("tokenData")]
         public JsonObject? TokenData { get; set; }
 
-        public LlamaTokenType TokenType { get; set; }
-
+        [JsonPropertyName("value")]
         public string Value { get; set; }
     }
 }

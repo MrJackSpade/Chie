@@ -1,5 +1,4 @@
-﻿using Llama.Data.Enums;
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace LlamaApi.Models.Request
@@ -11,8 +10,5 @@ namespace LlamaApi.Models.Request
 
         [JsonPropertyName("tokenId")]
         public int TokenId { get; set; }
-
-        [JsonPropertyName("tokenType")]
-        public LlamaTokenType TokenType { get; set; }
     }
 }

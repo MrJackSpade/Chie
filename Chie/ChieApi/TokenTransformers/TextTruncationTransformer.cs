@@ -1,16 +1,18 @@
-﻿using Llama.Collections.Interfaces;
-using Llama.Constants;
-using Llama.Context;
-using Llama.Context.Extensions;
-using Llama.Context.Interfaces;
-using Llama.Data;
-using Llama.Pipeline.Interfaces;
+﻿using ChieApi.Interfaces;
+using ChieApi.Models;
+using Llama.Data.Models;
+using LlamaApiClient;
+using Loxifi.AsyncExtensions;
 
-namespace Llama.TokenTransformers
+namespace ChieApi.TokenTransformers
 {
     public class TextTruncationTransformer : ITokenTransformer
     {
+        private readonly LlamaTokenCache _cache;
+
         private readonly string _endChars;
+
+        private readonly int _hardmax;
 
         private readonly int _max;
 
@@ -18,18 +20,26 @@ namespace Llama.TokenTransformers
 
         private readonly Random _random = new();
 
-        public TextTruncationTransformer(int max, int min, string endChars)
+        public TextTruncationTransformer(int hardmax, int max, int min, string endChars, LlamaTokenCache cache)
         {
             this._min = min;
             this._max = max;
+            this._hardmax = hardmax;
             this._endChars = endChars;
+            this._cache = cache;
         }
 
-        public IEnumerable<LlamaToken> TransformToken(Context.LlamaContextSettings settings, IContext context, IReadOnlyLlamaTokenCollection thisCall, IEnumerable<LlamaToken> selectedTokens)
+        public async IAsyncEnumerable<LlamaToken> TransformToken(InferenceEnumerator enumerator, IAsyncEnumerable<LlamaToken> selectedTokens)
         {
-            List<LlamaToken> tokens = selectedTokens.ToList();
+            string written = enumerator.Enumerated.ToString();
 
-            string written = thisCall.ToString();
+            if (written.Length > _hardmax)
+            {
+                yield return LlamaToken.EOS;
+                yield break;
+            }
+
+            List<LlamaToken> tokens = await selectedTokens.ToList();
 
             int characterCount = written.Length;
 
@@ -37,6 +47,11 @@ namespace Llama.TokenTransformers
 
             if (nextT == null)
             {
+                await foreach (LlamaToken token in selectedTokens)
+                {
+                    yield return token;
+                }
+
                 yield break;
             }
 
@@ -46,7 +61,7 @@ namespace Llama.TokenTransformers
 
             if (!truncate || !this.GoodEndChar(written) || !nextT.StartsWith(" "))
             {
-                foreach (LlamaToken token in selectedTokens)
+                await foreach (LlamaToken token in selectedTokens)
                 {
                     yield return token;
                 }
@@ -54,7 +69,7 @@ namespace Llama.TokenTransformers
                 yield break;
             }
 
-            yield return context.GetToken(13, LlamaTokenTags.RESPONSE);
+            yield return LlamaToken.EOS;
         }
 
         private bool GoodEndChar(string toTest)

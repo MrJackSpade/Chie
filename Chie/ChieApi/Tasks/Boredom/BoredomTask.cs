@@ -1,7 +1,7 @@
 ﻿using ChieApi.Interfaces;
+using ChieApi.Models;
 using ChieApi.Services;
 using ChieApi.Shared.Entities;
-using Llama.Constants;
 
 namespace ChieApi.Tasks.Boredom
 {
@@ -22,9 +22,7 @@ namespace ChieApi.Tasks.Boredom
             this._data = data;
         }
 
-        public async Task Initialize()
-        {
-        }
+        public Task Initialize() => Task.CompletedTask;
 
         public async IAsyncEnumerable<ChatEntry> Process(ChatEntry chatEntry)
         {
@@ -75,7 +73,7 @@ namespace ChieApi.Tasks.Boredom
             {
                 SourceChannel = highestVolumeChannel,
                 Content = selectedAction.Text,
-                Tag = LlamaTokenTags.TEMPORARY,
+                Type = LlamaTokenType.Temporary,
                 IsVisible = false,
                 DisplayName = this._llamaService.CharacterName
             });
