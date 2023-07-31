@@ -69,7 +69,7 @@ namespace ChieApi.TokenTransformers
                 yield break;
             }
 
-            yield return (await this._cache.Get("\n")).Single();
+            yield return LlamaToken.EOS;
         }
 
         private bool GoodEndChar(string toTest)

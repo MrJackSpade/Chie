@@ -140,7 +140,7 @@ namespace ChieApi.Services
                     cr.ContextId = this._contextId;
                     cr.TemperatureSamplerSettings = new TemperatureSamplerSettings()
                     {
-                        Temperature = -1
+                        Temperature = .4f
                     };
 
                     cr.RepetitionSamplerSettings = new RepetitionSamplerSettings();
