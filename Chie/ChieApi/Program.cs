@@ -12,6 +12,8 @@ using LlamaApiClient;
 using Logging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using Summary;
+using Summary.Interfaces;
 using System.Diagnostics;
 using System.Text.Json.Serialization;
 
@@ -51,6 +53,7 @@ namespace ChieApi
             builder.Services.RegisterSecret<MoodPipelineSettings>(configuration);
             builder.Services.RegisterSecret<ChieApiSettings>(configuration);
             builder.Services.RegisterSecret<BlipApiClientSettings>(configuration);
+            builder.Services.RegisterSecret<SummaryApiClientSettings>(configuration);
             builder.Services.RegisterSecret<BoredomTaskSettings>(configuration);
 
             _ = builder.Services.AddSingleton<ChatService>();
@@ -59,6 +62,7 @@ namespace ChieApi
             _ = builder.Services.AddSingleton<UserDataService>();
             _ = builder.Services.AddSingleton<LogitService>();
             _ = builder.Services.AddSingleton<BlipApiClient>();
+            _ = builder.Services.AddSingleton<ISummaryApiClient, SummaryApiClient>();
             _ = builder.Services.AddSingleton<LlamaService>();
             _ = builder.Services.AddSingleton<ICharacterFactory, CharacterService>();
             _ = builder.Services.AddTransient<IRequestPipeline, ImageRecognitionPipeline>();

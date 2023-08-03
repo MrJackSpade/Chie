@@ -13,11 +13,12 @@ namespace Summary
             this._settings = settings;
         }
 
-        public async Task<SummaryResponse> Summarize(string data)
+        public async Task<SummaryResponse> Summarize(string data, int maxLength = 512)
         {
             return await this.Summarize(new SummaryRequest()
             {
-                TextData = data
+                TextData = data,
+                MaxLength = maxLength
             });
         }
 

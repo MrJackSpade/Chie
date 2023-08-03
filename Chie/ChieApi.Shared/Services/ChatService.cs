@@ -60,7 +60,8 @@ namespace ChieApi.Shared.Services
         public IEnumerable<ChatEntry> GetLastMessages(string userId, bool includeHidden = false)
         {
             using SqlConnection connection = new(this._connectionString);
-            string query = $"select * from chatentry ";
+
+            string query = $"select * from chatentry where 1 = 1";
 
             if (userId != null)
             {
@@ -75,6 +76,22 @@ namespace ChieApi.Shared.Services
             query += $"  order by id desc";
 
             return connection.Query<ChatEntry>(query).Take(100).ToArray();
+        }
+
+        public ChatEntry GetBefore(long id, bool includeHidden = false)
+        {
+            using SqlConnection connection = new(this._connectionString);
+
+            string query = $"select top 1 * from chatentry where id < {id}";
+
+            if (!includeHidden)
+            {
+                query += $" and IsVisible = 1 ";
+            }
+
+            query += $"  order by id desc";
+
+            return connection.Query<ChatEntry>(query).SingleOrDefault();
         }
 
         public ChatEntry[] GetMessages(string? channelId = null, long after = 0, string userId = null, bool includeHidden = false, bool includeTemporary = false)

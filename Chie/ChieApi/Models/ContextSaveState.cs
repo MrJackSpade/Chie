@@ -38,7 +38,8 @@ namespace ChieApi.Models
             {
                 TokenBlockState blockState = new()
                 {
-                    Type = collection.Type
+                    Type = collection.Type,
+                    Id = collection.Id
                 };
 
                 if (collection is LlamaMessage lm)
@@ -133,6 +134,8 @@ namespace ChieApi.Models
     public class TokenBlockState
     {
         public List<LlamaTokenState> Content { get; set; } = new();
+
+        public long Id { get; set; }
 
         public TokenBlockType TokenBlockType { get; set; }
 

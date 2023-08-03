@@ -310,8 +310,6 @@ namespace ChieApi.Services
 
             this._logger.LogInformation("Connecting to client...");
 
-            Task summarizationInit = this._summarizationService.TrySetup();
-
             await this._client.LoadModel(new LlamaModelSettings()
             {
                 BatchSize = this._characterConfiguration.BatchSize,
@@ -390,7 +388,6 @@ namespace ChieApi.Services
 
             this._context = await this._contextModel.GetState();
             await this._client.Eval(this.Context, 0);
-            await summarizationInit;
             this.LoopingThread = new Thread(async () => await this.LoopProcess());
             this.LoopingThread.Start();
         }
@@ -423,8 +420,8 @@ namespace ChieApi.Services
             {
                 return;
             }
-            
-            if(this._contextModel.Messages.Peek() is not LlamaMessage lastMessage || await lastMessage.UserName.Value != this._characterConfiguration.CharacterName)
+
+            if (this._contextModel.Messages.Peek() is not LlamaMessage lastMessage || await lastMessage.UserName.Value != this._characterConfiguration.CharacterName)
             {
                 return;
             }
@@ -440,7 +437,7 @@ namespace ChieApi.Services
 
             if (cleanedContent != content)
             {
-                LlamaTokenCollection newContent = await _client.Tokenize(cleanedContent);
+                LlamaTokenCollection newContent = await this._client.Tokenize(cleanedContent);
 
                 LlamaMessage newMessage = new(lastMessage.UserName, newContent, lastMessage.Type, this._tokenCache);
 
@@ -500,14 +497,16 @@ namespace ChieApi.Services
                 Type = LlamaTokenType.Response
             };
 
-            this._contextModel.Messages.Enqueue(new LlamaMessage(this.CharacterName, collection, LlamaTokenType.Response, this._tokenCache));
-
-            _ = this.SetState(AiState.Idle);
+            LlamaMessage message = new(this.CharacterName, collection, LlamaTokenType.Response, this._tokenCache);
 
             if (chatEntry.Content != null)
             {
-                _ = this._chatService.Save(chatEntry);
+                message.Id = this._chatService.Save(chatEntry);
             }
+
+            this._contextModel.Messages.Enqueue(message);
+
+            _ = this.SetState(AiState.Idle);
         }
 
         private async Task SendText(ChatEntry chatEntry, bool flush)
@@ -575,11 +574,11 @@ namespace ChieApi.Services
             {
                 SummaryResponse summary = await this._summaryTask;
 
-                this._contextModel.Summary = new LlamaTokenBlock(summary.Summary, LlamaTokenType.Undefined);
+                IReadOnlyLlamaTokenCollection tokens = await this._tokenCache.Get(summary.Summary, false);
 
-                int maxIndex = summary.Summarized.Max(this._contextModel.Messages.IndexOf);
+                this._contextModel.Summary = new LlamaTokenBlock(tokens, LlamaTokenType.Undefined);
 
-                for (int i = 0; i < maxIndex + 1; i++)
+                while (this._contextModel.Messages.First().Id <= summary.FirstId)
                 {
                     this._contextModel.Messages.Dequeue();
                 }
@@ -588,34 +587,71 @@ namespace ChieApi.Services
 
                 c = (await this._contextModel.ToCollection()).Count;
                 gtHalf = c > this._characterConfiguration.ContextLength * .5;
-                gtQuart = c > this._characterConfiguration.ContextLength * .75;
             }
 
             if (this._summaryTask is null && gtHalf)
             {
-                TokenCollectionCollection tokenCollections = new();
+                int tokenCount = 0;
+                long lastMessageId = 0;
+                int i = 0;
 
-                if (this._contextModel.Summary is not null && await this._contextModel.Summary.Any())
+                while (tokenCount < this._characterConfiguration.ContextLength / 4)
                 {
-                    tokenCollections.Add(this._contextModel.Summary);
-                }
+                    ITokenCollection block = this._contextModel.Messages[i];
 
-                int p = 0;
-
-                while (await tokenCollections.GetTokenCount() < this._characterConfiguration.ContextLength / 4)
-                {
-                    ITokenCollection block = this._contextModel.Messages[p];
-
-                    if (block.Type is LlamaTokenType.Response or LlamaTokenType.Input)
+                    if (block.Type != LlamaTokenType.Temporary)
                     {
-                        tokenCollections.Add(block);
+                        tokenCount += await block.Count();
+                        lastMessageId = Math.Max(block.Id, lastMessageId);
+                        tokenCount++;
                     }
 
-                    p++;
+                    i++;
                 }
 
-                this._summaryTask = this._summarizationService.Summarize(tokenCollections);
+                string summary = null;
+
+                if (this._contextModel.Summary != null)
+                {
+                    summary = (await this._contextModel.Summary.ToCollection()).ToString().Trim('[').Trim(']').Trim();
+                }
+
+                this._summaryTask = this._summarizationService.Summarize(summary, lastMessageId, this.GetMessagesReversed(lastMessageId));
             }
+        }
+
+        public IEnumerable<string> GetMessagesReversed(long before)
+        {
+            do
+            {
+                ChatEntry ce = this._chatService.GetBefore(before);
+
+                if (ce is null)
+                {
+                    yield break;
+                }
+
+                if(ce.Type == LlamaTokenType.Temporary)
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(ce.UserId))
+                {
+                    yield return $"[{ce.Content}]";
+                }
+                else
+                {
+                    string n = ce.DisplayName;
+
+                    if (string.IsNullOrWhiteSpace(n))
+                    {
+                        n = ce.UserId;
+                    }
+
+                    yield return $"{n}: {ce.Content}";
+                }
+            } while (true);
         }
 
         private void Unlock() => _ = this._chatLock.Release();

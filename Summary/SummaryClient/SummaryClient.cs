@@ -10,7 +10,6 @@ namespace ImageRecognition
 
         private readonly SummaryClientSettings _settings;
 
-        private readonly object _lock = new();
         public SummaryClient(SummaryClientSettings settings)
         {
             this._settings = settings;
@@ -146,7 +145,7 @@ namespace ImageRecognition
             ["Ċ"] = "\n"
         };
 
-        public async Task<string> Summarize(string data)
+        public async Task<string> Summarize(string data, int maxLength)
         {
 
             if (File.Exists(TEMP_FILE_NAME))
@@ -167,7 +166,7 @@ namespace ImageRecognition
                 {
                     ProcessSettings settings = new(this._settings.PythonPath)
                     {
-                        Arguments = $"{this._settings.SummaryPath} {Path.Combine(Directory.GetCurrentDirectory(), TEMP_FILE_NAME)}",
+                        Arguments = $"{this._settings.SummaryPath} {Path.Combine(Directory.GetCurrentDirectory(), TEMP_FILE_NAME)} {maxLength}",
                         StdOutWrite = (s, e) => resultBuilder.Append(e),
                         StdErrWrite = (s, e) => errorBuilder.Append(e),
                         WorkingDirectory = new FileInfo(this._settings.SummaryPath).DirectoryName

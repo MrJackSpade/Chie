@@ -137,6 +137,8 @@ namespace ChieApi.Models
 
         public CachedTokenCollection Content { get; }
 
+        public long Id { get; set; }
+
         public LlamaTokenType Type { get; }
 
         public CachedTokenCollection UserName { get; }

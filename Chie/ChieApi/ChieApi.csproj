@@ -49,6 +49,8 @@
     <ProjectReference Include="..\..\Blip\BlipApiClient\BlipApiClient.csproj" />
     <ProjectReference Include="..\..\Llama\LlamaApiClient\LlamaApiClient.csproj" />
     <ProjectReference Include="..\..\Logging\LoggingApiClient\LoggingApiClient.csproj" />
+    <ProjectReference Include="..\..\Summary\SummaryApi.Shared\SummaryApi.Shared.csproj" />
+    <ProjectReference Include="..\..\Summary\SummaryApiClient\SummaryApiClient.csproj" />
     <ProjectReference Include="..\..\Utils\Ai.Abstractions\Ai.Abstractions.csproj" />
     <ProjectReference Include="..\..\Utils\Ai.Utils\Ai.Utils.csproj" />
     <ProjectReference Include="..\..\Utils\Loxifi.AsyncExtensions\Loxifi.AsyncExtensions.csproj" />

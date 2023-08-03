@@ -6,5 +6,8 @@ namespace Summary.Models
     {
         [JsonPropertyName("textData")]
         public string TextData { get; set; }
+
+        [JsonPropertyName("maxLength")]
+        public int MaxLength { get; set; }
     }
 }

@@ -5,6 +5,8 @@ namespace ChieApi.Interfaces
 {
     public interface ITokenCollection : IAsyncEnumerable<LlamaToken>
     {
+        long Id { get; }
+
         LlamaTokenType Type { get; }
     }
 }

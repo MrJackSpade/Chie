@@ -1,6 +1,7 @@
 ﻿using ChieApi.Interfaces;
 using Llama.Data.Collections;
 using Llama.Data.Extensions;
+using Llama.Data.Interfaces;
 using Llama.Data.Models;
 
 namespace ChieApi.Models
@@ -20,7 +21,7 @@ namespace ChieApi.Models
             this.Type = type;
         }
 
-        public LlamaTokenBlock(LlamaTokenCollection content, LlamaTokenType type)
+        public LlamaTokenBlock(IReadOnlyLlamaTokenCollection content, LlamaTokenType type)
         {
             this.Content = new CachedTokenCollection(content);
             this.Type = type;
@@ -29,6 +30,7 @@ namespace ChieApi.Models
         public CachedTokenCollection Content { get; private set; }
 
         public LlamaTokenType Type { get; private set; }
+        public long Id { get; }
 
         public async IAsyncEnumerator<LlamaToken> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {

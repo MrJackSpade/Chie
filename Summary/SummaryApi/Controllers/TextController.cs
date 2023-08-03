@@ -54,7 +54,7 @@ namespace SummaryApi.Controllers
 
             try
             {
-                string response = await this._client.Summarize(request.TextData);
+                string response = await this._client.Summarize(request.TextData, request.MaxLength);
 
                 return new SummaryResponse()
                 {
