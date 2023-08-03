@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>b8ed9f6b-3cfa-48e2-be24-40a0dc034c56</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SummaryApi.Shared\SummaryApi.Shared.csproj" />
+    <ProjectReference Include="..\SummaryClient\SummaryClient.csproj" />
+  </ItemGroup>
+
+</Project>

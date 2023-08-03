@@ -1,5 +1,6 @@
 ﻿using Ai.Abstractions;
 using Ai.Utils.Extensions;
+using ChieApi.CleanupPipeline;
 using ChieApi.Extensions;
 using ChieApi.Extensions.Llama.Extensions;
 using ChieApi.Interfaces;
@@ -43,6 +44,8 @@ namespace ChieApi.Services
         private readonly AutoResetEvent _processingInput = new(false);
 
         private readonly List<ISimpleSampler> _simpleSamplers;
+
+        private readonly List<IResponseCleaner> _responseCleaners;
 
         private readonly SummarizationService _summarizationService;
 
@@ -88,6 +91,12 @@ namespace ChieApi.Services
                 new TextTruncationTransformer(1000, 250, 150, ".!?", llamaTokenCache),
                 new RepetitionBlockingTransformer(3),
                 new InvalidCharacterBlockingTransformer()
+            };
+
+            this._responseCleaners = new List<IResponseCleaner>()
+            {
+                new SpellingCleaner(dictionaryService),
+                new DanglingQuoteCleaner()
             };
 
             this.Initialization = Task.Run(this.Init);
@@ -427,43 +436,11 @@ namespace ChieApi.Services
                 return;
             }
 
-            bool isChanged = false;
+            string cleanedContent = this._responseCleaners.Clean(content);
 
-            foreach(string word in _dictionaryService.BreakWords(content)) 
-            { 
-                if(!_dictionaryService.IsWord(word))
-                {
-                    string fingerprint = _dictionaryService.GetFingerprint(word);
-
-                    List<DictionaryEntry> possibleCorrections = _dictionaryService.GetByFingerprint(fingerprint).Where(c => c.Word.Length < word.Length).ToList();
-
-                    if (!possibleCorrections.Any())
-                    {
-                        continue;
-                    }
-
-                    if (possibleCorrections.Count > 1)
-                    {
-
-                        List<WordDrift> drifts = possibleCorrections.Select(b => _dictionaryService.GetDrift(word, b.Word)).ToList();
-
-                        WordDrift bestMatch = drifts.OrderBy(d => d.Drift).First();
-
-                        content = _dictionaryService.Replace(content, word, bestMatch.WordB);
-                    } else
-                    {
-                        DictionaryEntry correction = possibleCorrections.Single();
-
-                        content = _dictionaryService.Replace(content, word, correction.Word);
-                    }
-
-                    isChanged = true;
-                }
-            }
-
-            if (isChanged)
+            if (cleanedContent != content)
             {
-                LlamaTokenCollection newContent = await _client.Tokenize(content);
+                LlamaTokenCollection newContent = await _client.Tokenize(cleanedContent);
 
                 LlamaMessage newMessage = new(lastMessage.UserName, newContent, lastMessage.Type, this._tokenCache);
 
