@@ -1,10 +1,11 @@
-﻿using ChieApi.Shared.Entities;
+﻿using Ai.Utils.Extensions;
+using ChieApi.Shared.Entities;
+using ChieApi.Shared.Models;
 using ChieApi.Shared.Services;
-using Llama.Collections;
-using Llama.Context.Extensions;
-using Llama.Context.Interfaces;
-using Llama.Extensions;
+using Embedding;
+using Embedding.Models;
 using Microsoft.Extensions.Logging;
+using System.Text;
 
 namespace ChatVectorizer
 {
@@ -12,57 +13,68 @@ namespace ChatVectorizer
     {
         private readonly ChatService _chatService;
 
-        private readonly IContext _context;
+        private readonly EmbeddingApiClient _embeddingApiClient;
 
         private readonly ILogger _logger;
 
+        private readonly ModelService _modelService;
+
         private readonly ChatVectorizerSettings _settings;
 
-        private readonly UserDataService _userDataService;
-
-        public ChatVectorizer(ILogger logger, IContext context, ChatService chatService, UserDataService userDataService, ChatVectorizerSettings settings)
+        public ChatVectorizer(EmbeddingApiClient embeddingApiClient, ILogger logger, ModelService modelService, ChatService chatService, ChatVectorizerSettings settings)
         {
-            this._context = context;
+            this._embeddingApiClient = embeddingApiClient;
+            this._modelService = modelService;
             this._chatService = chatService;
-            this._userDataService = userDataService;
             this._settings = settings;
             this._logger = logger;
+        }
+
+        public static string StripNonASCII(string input)
+        {
+            StringBuilder sb = new();
+            foreach (char c in input)
+            {
+                if (c is >= (char)0 and <= (char)127) // ASCII range
+                {
+                    sb.Append(c);
+                }
+            }
+
+            return sb.ToString();
         }
 
         public async Task Execute()
         {
             List<EmbeddingsJob> jobs = new();
 
-            foreach (ChatEntry ce in this._chatService.GetMissingEmbeddings())
-            {
-                jobs.Add(new EmbeddingsJob(ce.Id, ce.Content, this._context.Tokenize(ce.Content, "", true)));
-            }
+            Model m = this._modelService.GetModel(this._settings.DefaultModel);
 
-            jobs = jobs.OrderBy(j => j.Tokens.ToString()).ToList();
+            foreach (ChatEntry ce in this._chatService.GetMissingEmbeddings(m))
+            {
+                jobs.Add(new EmbeddingsJob(ce.Id, ce.Content));
+            }
 
             while (jobs.Count > 0)
             {
+                List<EmbeddingsJob> tryTook = jobs.TryTake(250);
+
                 Console.WriteLine($"Jobs Remaining: {jobs.Count}");
 
-                EmbeddingsJob job = jobs[0];
-                jobs.RemoveAt(0);
+                string[] toVectorize = tryTook.Select(j => StripNonASCII(j.Content)).ToArray();
 
-                Console.WriteLine("\tSize: " + job.Tokens.Count);
-                Console.WriteLine("\tContent: " + job.Content);
+                EmbeddingResponse result = await this._embeddingApiClient.Generate(toVectorize);
 
-                this._context.Clear();
+                Console.WriteLine($"Writing to database...");
 
-                LlamaTokenCollection toEval = new();
+                Parallel.For(0, toVectorize.Length, i =>
+                {
+                    EmbeddingsJob job = tryTook[i];
 
-                toEval.Append(job.Tokens);
+                    float[] embeddings = result.Content[i];
 
-                this._context.Write(toEval);
-
-                this._context.Evaluate();
-
-                float[] embeddings = this._context.GetEmbeddings();
-
-                this._chatService.SaveEmbeddings(job.ChatEntryId, embeddings);
+                    this._chatService.SaveEmbeddings(m, job.ChatEntryId, embeddings);
+                });
             }
         }
     }

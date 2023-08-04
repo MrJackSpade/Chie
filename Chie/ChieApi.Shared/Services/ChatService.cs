@@ -1,6 +1,7 @@
 ﻿using ChieApi.Interfaces;
 using ChieApi.Models;
 using ChieApi.Shared.Entities;
+using ChieApi.Shared.Models;
 using Loxifi.Extensions;
 using System.Data.SqlClient;
 
@@ -15,11 +16,11 @@ namespace ChieApi.Shared.Services
             this._connectionString = connectionString.ConnectionString;
         }
 
-        public float[]? GetEmbeddings(long chatEntryId)
+        public float[]? GetEmbeddings(Model model, long chatEntryId)
         {
             using SqlConnection connection = new(this._connectionString);
 
-            ChatEntryEmbedding? embeddings = connection.Query<ChatEntryEmbedding>($"select * from ChatEntryEmbedding where ChatEntryId = {chatEntryId}").SingleOrDefault();
+            ChatEntryEmbedding? embeddings = connection.Query<ChatEntryEmbedding>($"select * from ChatEntryEmbedding where ChatEntryId = {chatEntryId} and modelid = {model.Id}").SingleOrDefault();
 
             if (embeddings == null)
             {
@@ -127,11 +128,11 @@ namespace ChieApi.Shared.Services
             return chatEntries;
         }
 
-        public ChatEntry[] GetMissingEmbeddings(bool includeHidden = false, bool includeTemporary = false)
+        public ChatEntry[] GetMissingEmbeddings(Model model, bool includeHidden = false, bool includeTemporary = false)
         {
             using SqlConnection connection = new(this._connectionString);
 
-            string query = "select ce.* from ChatEntry ce left outer join ChatEntryEmbedding cee on cee.chatentryid = ce.id where cee.chatentryid is null";
+            string query = $"select ce.* from ChatEntry ce left outer join ChatEntryEmbedding cee on cee.chatentryid = ce.id and cee.modelid = {model.Id} where cee.chatentryid is null";
 
             if (!includeHidden)
             {
@@ -177,13 +178,14 @@ namespace ChieApi.Shared.Services
             return chatEntry.Id;
         }
 
-        public void SaveEmbeddings(long id, float[] embeddings)
-        {
-            using SqlConnection connection = new(this._connectionString);
+        private readonly object _databaseLock = new();    
 
+        public void SaveEmbeddings(Model model, long id, float[] embeddings)
+        {
             ChatEntryEmbedding cee = new()
             {
                 ChatEntryId = id,
+                ModelId = model.Id,
                 Data = new byte[embeddings.Length * sizeof(float)]
             };
 
@@ -197,7 +199,11 @@ namespace ChieApi.Shared.Services
                 }
             }
 
-            connection.Insert(cee, commandTimeout: int.MaxValue);
+            lock (_databaseLock)
+            {
+                using SqlConnection connection = new(this._connectionString);
+                connection.Insert(cee, commandTimeout: int.MaxValue);
+            }
         }
 
         public bool TryGetOriginal(long originalMessageId, out ChatEntry? chatEntry)

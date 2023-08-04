@@ -1,13 +1,9 @@
 ﻿using ChieApi.Interfaces;
-using ChieApi.Shared.Services;
-using Llama.Context;
-using Llama.Shared;
-using Microsoft.Extensions.Logging;
 using System.Text.Json.Serialization;
 
 namespace ChatVectorizer
 {
-    public class ChatVectorizerSettings : LlamaSettings, IHasConnectionString
+    public class ChatVectorizerSettings : IHasConnectionString
     {
         [JsonPropertyName("connectionString")]
         public string ConnectionString { get; set; }

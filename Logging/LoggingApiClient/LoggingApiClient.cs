@@ -7,13 +7,17 @@ using System.Net.Http.Json;
 
 namespace Logging
 {
-    public class LoggingApiClient : ILogger
+    public class LoggingApiClient : ILogger, IDisposable
     {
         private readonly HttpClient _httpClient = new();
 
         private readonly AutoResetEvent _logGate = new(false);
 
         private readonly Thread _processingThread;
+
+        private readonly AutoResetEvent _exitGate = new(false);
+
+        private bool _disposed = false;
 
         private readonly Stack<ILoggingScope> _scopes = new();
 
@@ -24,7 +28,7 @@ namespace Logging
         public LoggingApiClient(LoggingApiClientSettings settings)
         {
             this._settings = settings;
-            this._processingThread = new Thread(async () => await this.SendLoop());
+            this._processingThread = new Thread(() => this.SendLoop());
             this._processingThread.Start();
         }
 
@@ -46,6 +50,12 @@ namespace Logging
             return loggingScope;
         }
 
+        public void Dispose()
+        {
+            this._disposed = true;
+            this._logGate.Set();
+            this._exitGate.WaitOne();
+        }
         public bool IsEnabled(LogLevel logLevel) => this._settings.LogLevel <= logLevel;
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
@@ -68,11 +78,13 @@ namespace Logging
             this._logGate.Set();
         }
 
-        private async Task SendLoop()
+        private async void SendLoop()
         {
             do
             {
                 this._logGate.WaitOne();
+
+                bool exitAfter = this._disposed;
 
                 try
                 {
@@ -102,7 +114,13 @@ namespace Logging
                 {
                 }
 
-                await Task.Delay(1000);
+                if (exitAfter)
+                {
+                    this._exitGate.Set();
+                    return;
+                }
+
+                Thread.Sleep(1000);
             } while (true);
         }
     }

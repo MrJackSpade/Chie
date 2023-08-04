@@ -23,7 +23,10 @@ namespace Embedding
 
         public async Task<EmbeddingResponse> Generate(EmbeddingRequest request)
         {
-            JsonClient client = new();
+            JsonClient client = new(new Loxifi.Settings.JsonClientSettings()
+            {
+                HttpClient = new HttpClient() { Timeout = TimeSpan.FromDays(1) }
+            });
 
             string url = $"{this._settings.RootUrl}/Embedding/Generate";
 

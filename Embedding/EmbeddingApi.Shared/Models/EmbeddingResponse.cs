@@ -4,8 +4,11 @@ namespace Embedding.Models
 {
     public class EmbeddingResponse
     {
+        [JsonPropertyName("exception")]
+        public string Exception { get; set; }
+
         [JsonPropertyName("content")]
-        public string? Content { get; set; }
+        public float[][] Content { get; set; }
 
         [JsonPropertyName("success")]
         public bool Success { get; set; }

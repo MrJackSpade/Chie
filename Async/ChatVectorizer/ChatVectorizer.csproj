@@ -14,8 +14,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\Chie\ChieApi.Shared\ChieApi.Shared.csproj" />
-		<ProjectReference Include="..\..\Llama\LlamaClient\LlamaClient.csproj" />
-		<ProjectReference Include="..\..\Llama\LLamaSharp\LLamaSharp.csproj" />
+		<ProjectReference Include="..\..\Embedding\EmbeddingApiClient\EmbeddingApiClient.csproj" />
 		<ProjectReference Include="..\..\Logging\LoggingApiClient\LoggingApiClient.csproj" />
 		<ProjectReference Include="..\..\Utils\Ai.Utils\Ai.Utils.csproj" />
 	</ItemGroup>
