@@ -1,5 +1,6 @@
 ﻿using Summary.Interfaces;
 using Summary.Models;
+using System.Diagnostics;
 using System.Text;
 
 namespace ChieApi.Services
@@ -14,7 +15,7 @@ namespace ChieApi.Services
     {
         private const string DIR_SUMMARIZATION = "SummarizationData";
 
-        private const int MAX_TOKENS = 4064;
+        private const int MAX_TOKENS = 1000;
 
         private readonly ISummaryApiClient _summaryApiClient;
         public SummarizationService(ISummaryApiClient summaryApiClient)
@@ -44,6 +45,7 @@ namespace ChieApi.Services
 
             IEnumerator<string> messages = messagesReversed.GetEnumerator();
 
+            List<string> toAppend = new();
             do
             {
                 if (!messages.MoveNext())
@@ -53,18 +55,29 @@ namespace ChieApi.Services
 
                 string message = messages.Current;
 
+                Debug.WriteLine("Requesting Tokens: " + message);
+
                 TokenizeResponse response = await this._summaryApiClient.Tokenize(message + "\n");
 
                 tokenCount += response.Content.Length;
 
-                if (tokenCount == MAX_TOKENS)
+                Debug.WriteLine("Token Count: " + tokenCount);
+
+                if (tokenCount >= MAX_TOKENS)
                 {
                     break;
                 }
 
-                toSummarize.AppendLine(message);
+                toAppend.Add(message);
 
             } while (true);
+
+            toAppend.Reverse();
+
+            foreach (string message in toAppend)
+            {
+                toSummarize.AppendLine(message);
+            }
 
             string summaryResponse = (await this._summaryApiClient.Summarize(toSummarize.ToString())).Content;
 

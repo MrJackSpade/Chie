@@ -21,6 +21,7 @@ using LlamaApiClient;
 using Loxifi;
 using Loxifi.AsyncExtensions;
 using System.Diagnostics;
+using System.Text;
 using System.Text.Json.Serialization;
 
 namespace ChieApi.Services
@@ -520,18 +521,21 @@ namespace ChieApi.Services
                 chatEntry.Type = LlamaTokenType.Input;
             }
 
-            this.LastMessageId = this._chatService.Save(chatEntry);
+            long thisMessageId = this._chatService.Save(chatEntry);
+
+            this.LastMessageId = thisMessageId;
+
             this.LastChannel = chatEntry.SourceChannel;
 
             string toSend;
 
             if (!string.IsNullOrWhiteSpace(chatEntry.DisplayName))
             {
-                this._contextModel.Messages.Enqueue(new LlamaMessage(chatEntry.DisplayName, chatEntry.Content, chatEntry.Type, this._tokenCache));
+                this._contextModel.Messages.Enqueue(new LlamaMessage(chatEntry.DisplayName, chatEntry.Content, chatEntry.Type, this._tokenCache) { Id = thisMessageId});
             }
             else
             {
-                this._contextModel.Messages.Enqueue(new LlamaTokenBlock(chatEntry.Content, chatEntry.Type, this._tokenCache));
+                this._contextModel.Messages.Enqueue(new LlamaTokenBlock(chatEntry.Content, chatEntry.Type, this._tokenCache) { Id = thisMessageId });
             }
 
             if (flush)
@@ -631,14 +635,16 @@ namespace ChieApi.Services
                     yield break;
                 }
 
-                if(ce.Type == LlamaTokenType.Temporary)
+                if (ce.Type == LlamaTokenType.Temporary)
                 {
                     continue;
                 }
 
+                string c = StripNonASCII(ce.Content);
+
                 if (string.IsNullOrWhiteSpace(ce.UserId))
                 {
-                    yield return $"[{ce.Content}]";
+                    yield return $"[{c}]";
                 }
                 else
                 {
@@ -649,9 +655,25 @@ namespace ChieApi.Services
                         n = ce.UserId;
                     }
 
-                    yield return $"{n}: {ce.Content}";
+                    yield return $"{n}: {c}";
                 }
+
+                before = ce.Id;
             } while (true);
+        }
+
+        public static string StripNonASCII(string input)
+        {
+            StringBuilder sb = new();
+            foreach (char c in input)
+            {
+                if (c is >= (char)0 and <= (char)127) // ASCII range
+                {
+                    sb.Append(c);
+                }
+            }
+
+            return sb.ToString();
         }
 
         private void Unlock() => _ = this._chatLock.Release();

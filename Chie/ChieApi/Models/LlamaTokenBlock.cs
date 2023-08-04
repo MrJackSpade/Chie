@@ -29,8 +29,9 @@ namespace ChieApi.Models
 
         public CachedTokenCollection Content { get; private set; }
 
+        public long Id { get; set; }
+
         public LlamaTokenType Type { get; private set; }
-        public long Id { get; }
 
         public async IAsyncEnumerator<LlamaToken> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {

@@ -106,13 +106,17 @@ namespace ChieApi.Models
                             message.UserName.ToCollection(),
                             message.Content.ToCollection(),
                             message.Type,
-                            cache));
+                            cache)
+                        { Id = message.Id });
                         break;
 
                     case TokenBlockType.Block:
                         toReturn.Messages.Add(new LlamaTokenBlock(
                             message.Content.ToCollection(),
-                            message.Type));
+                            message.Type)
+                        {
+                            Id = message.Id,
+                        });
                         break;
 
                     default:

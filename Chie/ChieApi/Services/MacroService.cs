@@ -16,6 +16,13 @@ namespace ChieApi.Services
 
             foreach (string line in input.Split(Environment.NewLine))
             {
+                //Vicuna prompt short circuit
+                if (line.StartsWith("###"))
+                {
+                    outputLines.Add(line); 
+                    continue;
+                }
+
                 if (line.StartsWith("#"))
                 {
                     await ResolveCommand(line, macros);
