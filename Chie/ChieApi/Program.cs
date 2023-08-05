@@ -80,7 +80,11 @@ namespace ChieApi
             _ = builder.Services.AddSingleton<IHostLifetime>(new NullLifetime());
             _ = builder.Services.AddSingleton<IHasConnectionString>(s => s.GetService<IOptions<ChieApiSettings>>().Value);
             _ = builder.Services.AddSingleton<LlamaContextModel>();
-            _ = builder.Services.AddSingleton<LlamaTokenCache>();
+            _ = builder.Services.AddSingleton(s =>
+            {
+                LlamaContextClient client = s.GetService<LlamaContextClient>();
+                return new LlamaTokenCache(client.Tokenize);
+            });
             _ = builder.Services.AddSingleton<SummarizationService>();
             _ = builder.Services.AddSingleton<DictionaryService>();
 

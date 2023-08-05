@@ -63,7 +63,7 @@ namespace ChieApi.Models
             this._cache = cache;
         }
 
-        public LlamaMessage(LlamaTokenCollection userName, LlamaTokenCollection content, LlamaTokenType type, LlamaTokenCache cache)
+        public LlamaMessage(IReadOnlyLlamaTokenCollection userName, IReadOnlyLlamaTokenCollection content, LlamaTokenType type, LlamaTokenCache cache)
         {
             if (userName is null)
             {
@@ -81,7 +81,7 @@ namespace ChieApi.Models
             this._cache = cache;
         }
 
-        public LlamaMessage(CachedTokenCollection userName, LlamaTokenCollection content, LlamaTokenType type, LlamaTokenCache cache)
+        public LlamaMessage(CachedTokenCollection userName, IReadOnlyLlamaTokenCollection content, LlamaTokenType type, LlamaTokenCache cache)
         {
             if (userName is null)
             {
@@ -117,7 +117,7 @@ namespace ChieApi.Models
             this._cache = cache;
         }
 
-        public LlamaMessage(LlamaTokenCollection userName, CachedTokenCollection content, LlamaTokenType type, LlamaTokenCache cache)
+        public LlamaMessage(IReadOnlyLlamaTokenCollection userName, CachedTokenCollection content, LlamaTokenType type, LlamaTokenCache cache)
         {
             if (userName is null)
             {

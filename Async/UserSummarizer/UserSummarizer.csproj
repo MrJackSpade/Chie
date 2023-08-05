@@ -8,7 +8,7 @@
     <UserSecretsId>e435626e-548b-4f72-8b8a-e55a7d58067b</UserSecretsId>
   </PropertyGroup>
 
-  <ItemGroup>
+ <ItemGroup>
     <PackageReference Include="Accord" Version="3.8.0" />
     <PackageReference Include="Accord.MachineLearning" Version="3.8.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="7.0.0" />
@@ -17,9 +17,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Chie\ChieApi.Shared\ChieApi.Shared.csproj" />
-    <ProjectReference Include="..\..\Llama\LlamaClient\LlamaClient.csproj" />
-    <ProjectReference Include="..\..\Llama\LLamaSharp\LLamaSharp.csproj" />
+    <ProjectReference Include="..\..\Llama\Llama.Data\Llama.Data.csproj" />
+    <ProjectReference Include="..\..\Llama\LlamaApi.Shared\LlamaApi.Shared.csproj" />
+    <ProjectReference Include="..\..\Llama\LlamaApiClient\LlamaApiClient.csproj" />
     <ProjectReference Include="..\..\Logging\LoggingApiClient\LoggingApiClient.csproj" />
+    <ProjectReference Include="..\..\Summary\SummaryApi.Shared\SummaryApi.Shared.csproj" />
+    <ProjectReference Include="..\..\Summary\SummaryApiClient\SummaryApiClient.csproj" />
     <ProjectReference Include="..\..\Utils\Ai.Utils\Ai.Utils.csproj" />
   </ItemGroup>
 

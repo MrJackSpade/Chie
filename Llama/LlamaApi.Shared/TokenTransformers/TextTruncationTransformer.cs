@@ -1,5 +1,5 @@
 ﻿using ChieApi.Interfaces;
-using ChieApi.Models;
+using Llama.Data.Interfaces;
 using Llama.Data.Models;
 using LlamaApiClient;
 using Loxifi.AsyncExtensions;
@@ -8,7 +8,7 @@ namespace ChieApi.TokenTransformers
 {
     public class TextTruncationTransformer : ITokenTransformer
     {
-        private readonly LlamaTokenCache _cache;
+        private readonly IDictionaryService _dictionaryService;
 
         private readonly string _endChars;
 
@@ -20,13 +20,13 @@ namespace ChieApi.TokenTransformers
 
         private readonly Random _random = new();
 
-        public TextTruncationTransformer(int hardmax, int max, int min, string endChars, LlamaTokenCache cache)
+        public TextTruncationTransformer(int hardmax, int max, int min, string endChars, IDictionaryService dictionaryService)
         {
             this._min = min;
             this._max = max;
             this._hardmax = hardmax;
             this._endChars = endChars;
-            this._cache = cache;
+            this._dictionaryService = dictionaryService;
         }
 
         public async IAsyncEnumerable<LlamaToken> TransformToken(InferenceEnumerator enumerator, IAsyncEnumerable<LlamaToken> selectedTokens)
@@ -59,7 +59,7 @@ namespace ChieApi.TokenTransformers
 
             bool truncate = this._random.NextDouble() < chance;
 
-            if (!truncate || !this.GoodEndChar(written) || !nextT.StartsWith(" "))
+            if (!truncate || !this.GoodEndChar(written) || !nextT.StartsWith(" ") || this.EndsWithWord(written))
             {
                 await foreach (LlamaToken token in selectedTokens)
                 {
@@ -70,6 +70,20 @@ namespace ChieApi.TokenTransformers
             }
 
             yield return LlamaToken.EOS;
+        }
+
+        private bool EndsWithWord(string toTest)
+        {
+            if (string.IsNullOrWhiteSpace(toTest))
+            {
+                return false;
+            }
+
+            string[] words = toTest.Split(' ').Select(s => s.Trim()).Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
+
+            string lastWord = words[^1];
+
+            return _dictionaryService.IsWord(lastWord);
         }
 
         private bool GoodEndChar(string toTest)

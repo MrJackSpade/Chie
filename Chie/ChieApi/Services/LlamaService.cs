@@ -2,7 +2,6 @@
 using Ai.Utils.Extensions;
 using ChieApi.CleanupPipeline;
 using ChieApi.Extensions;
-using ChieApi.Extensions.Llama.Extensions;
 using ChieApi.Interfaces;
 using ChieApi.Models;
 using ChieApi.Samplers;
@@ -16,6 +15,7 @@ using Llama.Data.Interfaces;
 using Llama.Data.Models;
 using Llama.Data.Models.Settings;
 using LlamaApi.Models.Request;
+using LlamaApi.Shared.Extensions;
 using LlamaApi.Shared.Models.Response;
 using LlamaApiClient;
 using Loxifi;
@@ -89,7 +89,7 @@ namespace ChieApi.Services
             {
                 new SpaceStartTransformer(),
                 new NewlineTransformer(),
-                new TextTruncationTransformer(1000, 250, 150, ".!?", llamaTokenCache),
+                new TextTruncationTransformer(1000, 250, 150, ".!?", dictionaryService),
                 new RepetitionBlockingTransformer(3),
                 new InvalidCharacterBlockingTransformer()
             };
@@ -97,7 +97,8 @@ namespace ChieApi.Services
             this._responseCleaners = new List<IResponseCleaner>()
             {
                 new SpellingCleaner(dictionaryService),
-                new DanglingQuoteCleaner()
+                new DanglingQuoteCleaner(),
+                new CommaPadCleaner()
             };
 
             this.Initialization = Task.Run(this.Init);
@@ -438,7 +439,7 @@ namespace ChieApi.Services
 
             if (cleanedContent != content)
             {
-                LlamaTokenCollection newContent = await this._client.Tokenize(cleanedContent);
+                IReadOnlyLlamaTokenCollection newContent = await this._client.Tokenize(cleanedContent);
 
                 LlamaMessage newMessage = new(lastMessage.UserName, newContent, lastMessage.Type, this._tokenCache);
 

@@ -1,5 +1,6 @@
 ﻿using Llama.Data;
 using Llama.Data.Collections;
+using Llama.Data.Interfaces;
 using LlamaApi.Models.Request;
 using LlamaApi.Shared.Models.Response;
 
@@ -30,7 +31,7 @@ namespace LlamaApiClient
 
         public Task<ResponseLlamaToken> Predict(Dictionary<int, float>? bias = null) => base.Predict(this._contextGuid, bias);
 
-        public Task<LlamaTokenCollection> Tokenize(string s) => base.Tokenize(this._contextGuid, s);
+        public Task<IReadOnlyLlamaTokenCollection> Tokenize(string s) => base.Tokenize(this._contextGuid, s);
 
         public Task<ContextState> Write(RequestLlamaToken requestLlamaToken, int startIndex = -1) => base.Write(this._contextGuid, requestLlamaToken, startIndex);
 

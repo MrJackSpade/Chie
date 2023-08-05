@@ -2,7 +2,7 @@
 using Llama.Data.Interfaces;
 using Llama.Data.Models;
 
-namespace ChieApi.Extensions
+namespace LlamaApi.Shared.Extensions
 {
     public static class IReadOnlyLlamaTokenCollectionExtensions
     {

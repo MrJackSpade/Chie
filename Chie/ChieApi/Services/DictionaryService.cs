@@ -1,5 +1,6 @@
 ﻿using ChieApi.Interfaces;
 using ChieApi.Models;
+using Llama.Data.Interfaces;
 using Loxifi.Extensions;
 using System.Data.SqlClient;
 using System.Diagnostics;
@@ -8,7 +9,7 @@ using System.Text.RegularExpressions;
 
 namespace ChieApi.Services
 {
-    public class DictionaryService
+    public class DictionaryService : IDictionaryService
     {
         private readonly StringComparer _stringComparer = StringComparer.OrdinalIgnoreCase;
         private string ConnectionString { get; set; }

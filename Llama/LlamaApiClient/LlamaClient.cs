@@ -1,5 +1,6 @@
 ﻿using Llama.Data;
 using Llama.Data.Collections;
+using Llama.Data.Interfaces;
 using Llama.Data.Models;
 using LlamaApi.Models;
 using LlamaApi.Models.Request;
@@ -92,7 +93,7 @@ namespace LlamaApiClient
             return response.Predicted;
         }
 
-        public async Task<LlamaTokenCollection> Tokenize(Guid contextId, string s)
+        public async Task<IReadOnlyLlamaTokenCollection> Tokenize(Guid contextId, string s)
         {
             if (s.Length == 0)
             {
@@ -138,7 +139,7 @@ namespace LlamaApiClient
 
         public async Task<ContextState> Write(Guid contextId, string s, int startIndex = -1)
         {
-            LlamaTokenCollection tokens = await this.Tokenize(contextId, s);
+            IReadOnlyLlamaTokenCollection tokens = await this.Tokenize(contextId, s);
 
             WriteTokenRequest request = new()
             {
