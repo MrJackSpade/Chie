@@ -25,19 +25,21 @@ namespace ChieApi.Models
 
         public async IAsyncEnumerator<LlamaToken> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
-            await foreach (LlamaToken token in this.AndNewLine(this.Instruction))
+            await foreach (LlamaToken token in this.GetAllTokens(this.Instruction))
             {
                 yield return token;
             }
 
-            await foreach (LlamaToken token in this.AndNewLine(this.Summary))
+            await foreach (LlamaToken token in this.GetAllTokens(this.Summary))
             {
                 yield return token;
             }
 
-            foreach (ITokenCollection message in this.Messages)
+            for(int i = 0; i < this.Messages.Count; i++) 
             {
-                await foreach (LlamaToken token in this.AndNewLine(message))
+                ITokenCollection message = this.Messages[i];
+
+                await foreach (LlamaToken token in this.GetAllTokens(message, i != this.Messages.Count - 1))
                 {
                     yield return token;
                 }
@@ -56,7 +58,7 @@ namespace ChieApi.Models
             return contextState;
         }
 
-        private async IAsyncEnumerable<LlamaToken> AndNewLine(IAsyncEnumerable<LlamaToken> toReturn)
+        private async IAsyncEnumerable<LlamaToken> GetAllTokens(IAsyncEnumerable<LlamaToken> toReturn, bool andNewLine = true)
         {
             LlamaTokenCollection collection = await toReturn.ToCollection();
 
@@ -67,9 +69,12 @@ namespace ChieApi.Models
                     yield return token;
                 }
 
-                foreach (LlamaToken token in await this.NewLine)
+                if (andNewLine)
                 {
-                    yield return token;
+                    foreach (LlamaToken token in await this.NewLine)
+                    {
+                        yield return token;
+                    }
                 }
             }
         }

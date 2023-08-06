@@ -23,5 +23,11 @@ namespace LlamaApi.Models
 
         [JsonPropertyName("caller")]
         public string? Caller { get; set; }
+
+        [JsonPropertyName("dateCreated")]
+        public DateTime DateCreated { get; set; }
+
+        [JsonPropertyName("dateCompleted")]
+        public DateTime? DateCompleted { get; set; }
     }
 }

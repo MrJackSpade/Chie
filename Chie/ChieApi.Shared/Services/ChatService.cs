@@ -173,7 +173,13 @@ namespace ChieApi.Shared.Services
 
             using SqlConnection connection = new(this._connectionString);
 
-            connection.Insert(chatEntry);
+            if (chatEntry.Id == 0)
+            {
+                connection.Insert(chatEntry);
+            } else
+            {
+                connection.Update(chatEntry);
+            }
 
             return chatEntry.Id;
         }

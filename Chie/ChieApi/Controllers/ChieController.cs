@@ -31,7 +31,7 @@ namespace ChieApi.Controllers
         {
             return Task.FromResult(new ContinueRequestResponse()
             {
-                MessageId = this._llamaService.ReturnControl(false, channelId)
+                MessageId = this._llamaService.ReturnControl(false, true, channelId)
             });
         }
 

@@ -38,7 +38,8 @@ namespace LlamaApi.Services
             Job job = new()
             {
                 Caller = jobKind,
-                Machine = System.Environment.MachineName
+                Machine = System.Environment.MachineName,
+                DateCreated = DateTime.Now
             };
 
             newConnect.Insert(job);
@@ -72,7 +73,8 @@ namespace LlamaApi.Services
             Job job = new()
             {
                 Caller = jobKind,
-                Machine = System.Environment.MachineName
+                Machine = System.Environment.MachineName,
+                DateCreated = DateTime.Now
             };
 
             using SqlConnection newConnect = this.NewConnection;
@@ -144,12 +146,12 @@ namespace LlamaApi.Services
         {
             JobState state = JobState.Success;
 
-            if (result is JobFailure jf)
+            if (result is JobFailure)
             {
                 state = JobState.Failure;
             }
 
-            StringBuilder queryBuilder = new($"update job set state = {(int)state} ");
+            StringBuilder queryBuilder = new($"update job set state = {(int)state}, DateCompleted = '{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}' ");
 
             if (result != null)
             {

@@ -85,6 +85,7 @@ namespace ChieApi
                 LlamaContextClient client = s.GetService<LlamaContextClient>();
                 return new LlamaTokenCache(client.Tokenize);
             });
+
             _ = builder.Services.AddSingleton<SummarizationService>();
             _ = builder.Services.AddSingleton<DictionaryService>();
 

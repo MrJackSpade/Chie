@@ -28,6 +28,8 @@ namespace DiscordGpt.EmojiReactions
 
         public async Task OnReactionAdded(IUser addedUser, IUserMessage message, int newCount)
         {
+            return;
+
             if (!this._activeChannels.TryGetValue(message.Channel.Id, out ActiveChannel? activeChannel))
             {
                 return;
