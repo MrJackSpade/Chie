@@ -37,7 +37,7 @@ namespace UserSummarizer
         private readonly UserDataService _userDataService;
 
         private readonly SummaryApiClient _summaryClient;
-        public UserSummarizer(SummaryApiClient summaryClient, LlamaTokenCache llamaTokenCache, LlamaContextClient client, ILogger logger, ChatService chatService, UserDataService userDataService, UserSummarizerSettings settings)
+        public UserSummarizer(SummaryApiClient summaryClient, IDictionaryService dictionaryService, LlamaTokenCache llamaTokenCache, LlamaContextClient client, ILogger logger, ChatService chatService, UserDataService userDataService, UserSummarizerSettings settings)
         {
             this._summaryClient = summaryClient;
             this._chatService = chatService;
@@ -56,7 +56,7 @@ namespace UserSummarizer
             {
                 new SpaceStartTransformer(),
                 new NewlineTransformer(),
-                new TextTruncationTransformer(1000, 250, 150, ".!?", llamaTokenCache),
+                new TextTruncationTransformer(1000, 500, 500, ".!?", dictionaryService),
                 new RepetitionBlockingTransformer(3),
                 new InvalidCharacterBlockingTransformer()
             };
@@ -157,7 +157,7 @@ namespace UserSummarizer
 
                 c.TemperatureSamplerSettings = new TemperatureSamplerSettings()
                 {
-                    Temperature = -1,
+                    Temperature = .8f,
                 };
 
                 c.RepetitionSamplerSettings = new RepetitionSamplerSettings()
@@ -167,7 +167,7 @@ namespace UserSummarizer
                 };
             });
 
-            Dictionary<UserData, List<string>> userMessages = new();
+            Dictionary<UserData, List<MessageData>> userMessages = new();
 
             foreach (string userId in this._chatService.GetUserIds())
             {
@@ -193,7 +193,7 @@ namespace UserSummarizer
 
                 Console.WriteLine($"\tCalculating...");
 
-                List<string> messages = this.GetMessages(userId);
+                List<MessageData> messages = this.GetMessages(userId);
 
                 userMessages.Add(userData, messages);
             }
@@ -202,13 +202,13 @@ namespace UserSummarizer
 
             Console.WriteLine("Loading Model...");
 
-            foreach (KeyValuePair<UserData, List<string>> kvp in userMessages)
+            userMessages = userMessages.Where(um => um.Value.Count >= 10).ToDictionary(k => k.Key, v => v.Value);
+
+            foreach (KeyValuePair<UserData, List<MessageData>> kvp in userMessages)
             {
                 UserData userData = kvp.Key;
 
-                List<string> messages = kvp.Value;
-
-                ChatEntry lastMessage = this._chatService.GetLastMessage(userData.UserId);
+                List<MessageData> messages = kvp.Value;
 
                 string displayName = this.GetDisplayName(userData);
 
@@ -220,43 +220,36 @@ namespace UserSummarizer
 
                 if (messages.Count > 10)
                 {
-                    summaryRequest.Append($"USER: The following text was written by a user named {displayName}. Please describe {displayName} as a person.\n\n");
+                    summaryRequest.Append($"USER: The following text was written by a user named {displayName} to an irritable college girl named Chie. Please describe what Chie thinks about {displayName}.\n\n");
 
-                    foreach (string message in messages)
+                    foreach (MessageData message in messages.OrderByDescending(m => m.Id))
                     {
-                        summaryRequest.AppendLine(this.CleanMessage(message));
+                        summaryRequest.AppendLine(this.CleanMessage(message.Content));
                     }
 
-                    summaryRequest.Append($"\nASSISTANT: {displayName} is");
+                    Console.Write($"Chie thinks that {displayName} is");
+                    summaryRequest.Append($"\nASSISTANT: Chie thinks that {displayName} is");
 
                     await this._client.Write(summaryRequest.ToString(), 0);
 
                     IReadOnlyLlamaTokenCollection result = await this.Infer();
 
-                    string summary = $"{displayName} is" + result.ToString().Replace("USER:", "", StringComparison.OrdinalIgnoreCase).Trim();
+                    string summary = $"{displayName} is " + result.ToString().Replace("USER:", "", StringComparison.OrdinalIgnoreCase).Trim();
 
-                    List<string> toSave = new();
+                    userData.UserSummary = summary;
 
-                    foreach (string chunk in summary.Split('.').Where(s => s.Length > 10))
-                    {
-                        SummaryResponse summarizedSummary = await this._summaryClient.Summarize(this.Trim(chunk));
-                        toSave.Add(this.Trim(summarizedSummary.Content).ToString());
-                    }
-
-                    userData.UserSummary = string.Join(". ", toSave);
-
-                    userData.LastChatId = lastMessage.Id;
+                    userData.LastChatId = messages.Max(m => m.Id);
 
                     this._userDataService.Save(userData);
+
+                    Console.WriteLine();
                 }
             }
 
             Console.WriteLine("Completed");
         }
 
-        private string Trim(string chunk) => chunk.Trim().Trim('.').Trim();
-
-        public List<string> GetMessages(string userId)
+        public List<MessageData> GetMessages(string userId)
         {
             int groups = 50;
 
@@ -264,7 +257,7 @@ namespace UserSummarizer
 
             if (userEmbeddings.Embeddings.Count == 0)
             {
-                return new List<string>();
+                return new List<MessageData>();
             }
 
             Console.WriteLine("Rolling up: " + userEmbeddings.UserName);
@@ -273,11 +266,11 @@ namespace UserSummarizer
 
             List<Embedding> toWrite = new();
 
-            List<string> lines = new();
+            List<MessageData> lines = new();
 
             if (userEmbeddings.Embeddings.Count == 0)
             {
-                return new List<string>();
+                return new List<MessageData>();
             }
 
             if (userEmbeddings.Embeddings.Count <= groups)
@@ -300,7 +293,11 @@ namespace UserSummarizer
 
             foreach (Embedding e in toWrite)
             {
-                lines.Add(e.Content);
+                lines.Add(new MessageData()
+                {
+                    Id = e.ChatEntryId,
+                    Content = e.Content
+                });
             }
 
             return lines;
@@ -460,7 +457,7 @@ namespace UserSummarizer
 
         private UserEmbeddings GetEmbeddings(string userId)
         {
-            string queryString = $"select content, data, datecreated from chatentryembedding left outer join chatentry on ChatEntry.Id = ChatEntryEmbedding.ChatEntryId where len(content) > 30 and userId = '{userId}' and modelid = (select max(modelid) from chatentryembedding)";
+            string queryString = $"select content, data, datecreated, chatEntryId from chatentryembedding left outer join chatentry on ChatEntry.Id = ChatEntryEmbedding.ChatEntryId where len(content) > 30 and userId = '{userId}' and modelid = (select max(modelid) from chatentryembedding)";
 
             using SqlConnection connection = new(this._settings.ConnectionString);
 
@@ -485,6 +482,7 @@ namespace UserSummarizer
                 {
                     Content = reader[0].ToString(),
                     DateCreated = DateTime.Parse(reader[2].ToString()),
+                    ChatEntryId = int.Parse(reader[3].ToString()),
                     Data = floats
                 });
             }

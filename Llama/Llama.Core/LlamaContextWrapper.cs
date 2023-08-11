@@ -152,14 +152,14 @@ namespace Llama.Core
             return toEvaluate.Count;
         }
 
-        public LlamaToken SampleNext(Dictionary<int, float> logitBias, ExecutionPriority priority) => this._executionScheduler.Execute(() => this.SampleTokenRaw(logitBias), priority);
+        public LlamaToken SampleNext(LogitRuleCollection logitRules, ExecutionPriority priority) => this._executionScheduler.Execute(() => this.SampleTokenRaw(logitRules), priority);
 
-        public LlamaToken SampleTokenRaw(Dictionary<int, float> logitBias)
+        public LlamaToken SampleTokenRaw(LogitRuleCollection logitRules)
         {
             Span<float> logits = this.GetLogits();
 
             // Apply params.logit_bias map
-            logits.Add(this._settings.LogitBias);
+            logits.Add(logitRules.OfType<LogitBias>());
 
             LlamaTokenDataArray candidates = new(logits);
 
@@ -172,6 +172,11 @@ namespace Llama.Core
                 ContextTokens = Evaluated
             };
 
+            foreach(LogitClamp clamp in logitRules.OfType<LogitClamp>()) 
+            { 
+                clamp.SetStart(sampleContext.GetProbability(clamp.LogitId));
+            }
+
             foreach (ISimpleSampler simpleSampler in this._simpleSamplers)
             {
                 simpleSampler.SampleNext(sampleContext);
@@ -179,9 +184,16 @@ namespace Llama.Core
 
             logits.Update(no_penalize);
 
-            foreach (KeyValuePair<int, float> bias in logitBias)
+            //Apply clamping
+            foreach (LogitClamp clamp in logitRules.OfType<LogitClamp>())
             {
-                sampleContext.SetProbability(bias.Key, bias.Value);
+                float nv = sampleContext.GetProbability(clamp.LogitId);
+                float cv = clamp.GetValue(nv);
+
+                if(cv != nv)
+                {
+                    sampleContext.SetProbability(clamp.LogitId, cv);
+                }
             }
 
             int tokenId = this._tokenSelector.SampleNext(sampleContext);

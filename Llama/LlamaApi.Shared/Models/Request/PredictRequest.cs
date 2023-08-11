@@ -1,4 +1,5 @@
-﻿using Llama.Data.Scheduler;
+﻿using Llama.Data.Models;
+using Llama.Data.Scheduler;
 using System.Text.Json.Serialization;
 
 namespace LlamaApi.Models.Request
@@ -9,9 +10,12 @@ namespace LlamaApi.Models.Request
         public Guid ContextId { get; set; }
 
         [JsonPropertyName("logitBias")]
-        public Dictionary<int, float> LogitBias { get; set; } = new Dictionary<int, float>();
+        public LogitRuleCollection LogitRules { get; set; } = new();
 
         [JsonPropertyName("priority")]
         public ExecutionPriority Priority { get; set; }
+
+        [JsonPropertyName("newPrediction")]
+        public bool NewPrediction { get; set; }
     }
 }

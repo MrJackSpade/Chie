@@ -4,36 +4,31 @@ using Llama.Data.Interfaces;
 using Llama.Data.Models;
 using LlamaApi.Models.Request;
 using LlamaApi.Shared.Models.Response;
+using System.Runtime.CompilerServices;
 
 namespace LlamaApiClient
 {
-    public enum LogitBiasLifeTime
-    {
-        Temporary,
-
-        Inferrence
-    }
-
     public class InferenceEnumerator
     {
         private readonly Func<RequestLlamaToken, Task> _accept;
 
         private readonly LlamaTokenCollection _enumerated = new();
 
-        private readonly Dictionary<int, float> _inferrenceBias = new();
+        private readonly Func<LogitRuleCollection, Task<ResponseLlamaToken>> _moveNext;
 
-        private readonly Func<Dictionary<int, float>, Task<ResponseLlamaToken>> _moveNext;
-
-        private readonly Dictionary<int, float> _temporaryBias = new();
-
-        private Dictionary<int, float> _lastTemporaryBias = new();
+        private readonly LogitRuleCollection _logitRuleCollection = new();
 
         private int _moveBack = 0;
 
-        public InferenceEnumerator(Func<Dictionary<int, float>, Task<ResponseLlamaToken>> moveNext, Func<RequestLlamaToken, Task> accept)
+        public InferenceEnumerator(Func<LogitRuleCollection, Task<ResponseLlamaToken>> moveNext, Func<RequestLlamaToken, Task> accept, LogitRuleCollection ruleCollection)
         {
             this._moveNext = moveNext;
             this._accept = accept;
+            
+            foreach(LogitRule rule in ruleCollection)
+            {
+                this.AddLogitRule(rule);
+            }
         }
 
         public bool Accepted { get; private set; }
@@ -57,7 +52,7 @@ namespace LlamaApiClient
             this._enumerated.Append(token);
 
             //Clear out any temp bias from the last run if we didn't move back
-            this._lastTemporaryBias = new();
+            this._logitRuleCollection.Remove(LogitRuleLifetime.Token);
         }
 
         public async Task Accept()
@@ -77,7 +72,7 @@ namespace LlamaApiClient
                 }
 
                 //Clear out any temp bias from the last run if we didn't move back
-                this._lastTemporaryBias = new();
+                this._logitRuleCollection.Remove(LogitRuleLifetime.Token);
             }
         }
 
@@ -106,48 +101,20 @@ namespace LlamaApiClient
 
             this.Accepted = false;
 
-            //Cache whatever our current bias is incase we need to use it again.
-            //rebuilding the list here allows new tokens to be appended from the temporary
-            //collection in case adjustments were made after the last "Move Back"
-            this._lastTemporaryBias = this.GetCurrentBias();
-            this._temporaryBias.Clear();
-
             //apply the lastTemporaryBias and invoke
-            this.Current = await this._moveNext.Invoke(this._lastTemporaryBias);
+            this.Current = await this._moveNext.Invoke(this._logitRuleCollection);
 
-            //clear the current temporary, they're in the _lastTemporary if we need to reinvoke
             return this.Current.Id > 2;
         }
 
-        public void SetLogit(int tokenId, float value, LogitBiasLifeTime lifeTime)
+        public void AddLogitRule(LogitRule rule)
         {
-            switch (lifeTime)
+            if(rule.LifeTime  == LogitRuleLifetime.Context)
             {
-                case LogitBiasLifeTime.Temporary:
-                    this._temporaryBias.AddOrUpdate(tokenId, value);
-                    break;
-
-                case LogitBiasLifeTime.Inferrence:
-                    this._inferrenceBias.AddOrUpdate(tokenId, value);
-                    break;
+                throw new ArgumentException("Can not add logit rule lifetime of context to inferrence enumerator");
             }
-        }
 
-        private Dictionary<int, float> GetCurrentBias()
-        {
-            Dictionary<int, float> toReturn = new()
-            {
-                this._inferrenceBias
-            };
-
-            toReturn.AddOrUpdate(this._lastTemporaryBias);
-
-            //temporaryBias must come after lastTemporaryBias
-            //to ensure that new bias adjustments are reflected
-            //on regen
-            toReturn.AddOrUpdate(this._temporaryBias);
-
-            return toReturn;
+            this._logitRuleCollection.AddOrUpdate(rule);
         }
     }
 }

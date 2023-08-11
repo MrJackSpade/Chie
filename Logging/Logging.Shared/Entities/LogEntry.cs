@@ -10,7 +10,10 @@ namespace ChieApi.Shared.Entities
         public string? ApplicationName { get; set; }
 
         [JsonPropertyName("content")]
-        public string? Content { get; set; }
+        public string? Message { get; set; }
+
+        [JsonPropertyName("data")]
+        public string? Data { get; set; }
 
         [JsonPropertyName("dateCreated")]
         public DateTime DateCreated { get; set; }

@@ -1,4 +1,5 @@
-﻿using Llama.Core.Interfaces;
+﻿using Llama.Core.Extensions;
+using Llama.Core.Interfaces;
 using Llama.Core.Utils;
 using Llama.Data.Collections;
 using Llama.Data.Models;
@@ -20,13 +21,9 @@ namespace Llama.Core.Samplers.FrequencyAndPresence
         {
             LlamaTokenCollection sampleTokens = sampleContext.ContextTokens.Trim();
 
-            int repeat_last_n = this._settings.RepeatTokenPenaltyWindow < 0 ? sampleTokens.Count : this._settings.RepeatTokenPenaltyWindow;
+            LastTokens lastTokens = this.GetLastTokens(sampleTokens, this._settings.RepeatTokenPenaltyWindow);
 
-            int[] ids = sampleTokens.Ids.ToArray();
-
-            ulong last_n_repeat = (ulong)LlamaMath.Min(repeat_last_n, sampleTokens.Count, ids.Length);
-
-            SamplingApi.FrequencyAndPresencePenalties(sampleContext.ContextHandle, sampleContext.Candidates, ids, last_n_repeat, this._settings.FrequencyPenalty, this._settings.PresencePenalty);
+            SamplingApi.FrequencyAndPresencePenalties(sampleContext.ContextHandle, sampleContext.Candidates, lastTokens.Ids, this._settings.FrequencyPenalty, this._settings.PresencePenalty);
         }
     }
 }

@@ -1,4 +1,6 @@
 ﻿using ChieApi.Interfaces;
+using Llama.Data.Extensions;
+using Llama.Data.Models;
 using LlamaApiClient;
 
 namespace ChieApi.Samplers
@@ -27,7 +29,7 @@ namespace ChieApi.Samplers
                 {
                     int single = dist[0];
 
-                    enumerator.SetLogit(single, 0, LogitBiasLifeTime.Temporary);
+                    enumerator.SetBias(single, float.NegativeInfinity, LogitRuleLifetime.Token);
                 }
             }
 

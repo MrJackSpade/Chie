@@ -1,0 +1,30 @@
+﻿using Llama.Data.Models;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace LlamaApi.Shared.Converters
+{
+    public class LogitRuleConverter : JsonConverter<LogitRule>
+    {
+        public override LogitRule Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            using JsonDocument doc = JsonDocument.ParseValue(ref reader);
+
+            if (doc.RootElement.TryGetProperty(nameof(LogitRule.RuleType), out JsonElement ruleTypeProperty))
+            {
+                LogitRuleType ruleType = (LogitRuleType)ruleTypeProperty.GetInt32();
+                switch (ruleType)
+                {
+                    case LogitRuleType.Bias:
+                        return JsonSerializer.Deserialize<LogitBias>(doc.RootElement.GetRawText(), options);
+                    case LogitRuleType.Clamp:
+                        return JsonSerializer.Deserialize<LogitClamp>(doc.RootElement.GetRawText(), options);
+                }
+            }
+
+            throw new JsonException();
+        }
+
+        public override void Write(Utf8JsonWriter writer, LogitRule value, JsonSerializerOptions options) => JsonSerializer.Serialize(writer, value, value.GetType(), options);
+    }
+}

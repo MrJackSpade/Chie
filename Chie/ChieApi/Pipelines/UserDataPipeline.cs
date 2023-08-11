@@ -119,7 +119,7 @@ namespace ChieApi.Pipelines
 
                 if (minutes > 60)
                 {
-                    return new TextResult($"[Chies friend {displayName} arrives. {userData.UserSummary}]", LlamaTokenType.Input);
+                    return new TextResult($"[{displayName} returns. {userData.UserSummary}]", LlamaTokenType.Input);
                 }
                 else
                 {

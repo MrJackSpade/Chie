@@ -1,4 +1,5 @@
 ﻿using ChieApi.Interfaces;
+using Llama.Data.Extensions;
 using Llama.Data.Models;
 using LlamaApiClient;
 
@@ -83,7 +84,7 @@ namespace ChieApi.TokenTransformers
                 //if this one token alone exceeds the count, ban it for the entire inference
                 if (firstCountNew > this._max)
                 {
-                    enumerator.SetLogit(tVal.Id, 0, LogitBiasLifeTime.Inferrence);
+                    enumerator.SetBias(tVal.Id, float.NegativeInfinity, LogitRuleLifetime.Inferrence);
                     continue;
                 }
 
@@ -91,7 +92,7 @@ namespace ChieApi.TokenTransformers
                 //of the new string exceed the max, its banned
                 if (firstCountNew + endCountWritten > this._max && _stringComparer.Equals(firstCharNew, endCharWritten))
                 {
-                    enumerator.SetLogit(tVal.Id, 0, LogitBiasLifeTime.Temporary);
+                    enumerator.SetBias(tVal.Id, float.NegativeInfinity, LogitRuleLifetime.Token);
                     continue;
                 }
 

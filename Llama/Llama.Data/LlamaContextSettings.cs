@@ -1,4 +1,6 @@
-﻿namespace Llama.Data
+﻿using Llama.Data.Models;
+
+namespace Llama.Data
 {
     public record LlamaContextSettings
     {
@@ -8,6 +10,6 @@
 
         public int ContextSize { get; set; }
 
-        public Dictionary<int, float> LogitBias { get; set; } = new();
+        public LogitRuleCollection LogitRules { get; set; } = new();
     }
 }

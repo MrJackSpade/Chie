@@ -22,5 +22,24 @@ namespace Llama.Data.Models
                 p = probability
             };
         }
+
+        public void SetBias(int tokenId, float probability)
+        {
+            Span<LlamaTokenData> span = this.Candidates.data.Span;
+            LlamaTokenData existing = span[tokenId];
+            span[tokenId] = new LlamaTokenData()
+            {
+                id = existing.id,
+                logit = existing.logit + probability,
+                p = existing.p + probability
+            };
+        }
+
+        public float GetProbability(int tokenId)
+        {
+            Span<LlamaTokenData> span = this.Candidates.data.Span;
+            LlamaTokenData existing = span[tokenId];
+            return existing.logit;
+        }
     }
 }

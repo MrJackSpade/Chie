@@ -4,11 +4,11 @@ namespace Llama.Extensions
 {
     public static class SpanFloatExtensions
     {
-        public static void Add(this Span<float> target, IEnumerable<KeyValuePair<int, float>> list)
+        public static void Add(this Span<float> target, IEnumerable<LogitBias> list)
         {
-            foreach ((int key, float value) in list)
+            foreach (LogitBias bias in list)
             {
-                target[key] += value;
+                target[bias.LogitId] += bias.Value;
             }
         }
 

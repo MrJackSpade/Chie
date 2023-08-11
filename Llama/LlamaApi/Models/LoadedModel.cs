@@ -9,7 +9,7 @@ namespace LlamaApi.Models
     {
         private readonly SemaphoreSlim _semaphore = new(1);
 
-        public Dictionary<Guid, ContextEvaluator> Evaluator { get; } = new Dictionary<Guid, ContextEvaluator>();
+        public Dictionary<Guid, ContextInstance> Evaluator { get; } = new Dictionary<Guid, ContextInstance>();
 
         public Guid Id { get; set; }
 
@@ -17,14 +17,14 @@ namespace LlamaApi.Models
 
         public LlamaModelSettings? Settings { get; set; }
 
-        public ContextEvaluator GetContext(Guid id)
+        public ContextInstance GetContext(Guid id)
         {
             if (this.Instance is null)
             {
                 throw new ModelNotLoadedException();
             }
 
-            if (!this.Evaluator.TryGetValue(id, out ContextEvaluator? context))
+            if (!this.Evaluator.TryGetValue(id, out ContextInstance? context))
             {
                 throw new ContextNotFoundException();
             }

@@ -8,10 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Loxifi.Database" Version="0.9.6" />
+    <PackageReference Include="Loxifi.Database" Version="0.9.7" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Logging\LoggingApiClient\LoggingApiClient.csproj" />
     <ProjectReference Include="..\Llama.Core\Llama.Core.csproj" />
     <ProjectReference Include="..\Llama.Data\Llama.Data.csproj" />
     <ProjectReference Include="..\LlamaApi.Shared\LlamaApi.Shared.csproj" />

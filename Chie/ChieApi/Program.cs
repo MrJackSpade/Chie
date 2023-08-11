@@ -62,6 +62,7 @@ namespace ChieApi
             _ = builder.Services.AddSingleton<UserDataService>();
             _ = builder.Services.AddSingleton<LogitService>();
             _ = builder.Services.AddSingleton<BlipApiClient>();
+            _ = builder.Services.AddSingleton<DictionaryCache>();
             _ = builder.Services.AddSingleton<ISummaryApiClient, SummaryApiClient>();
             _ = builder.Services.AddSingleton<LlamaService>();
             _ = builder.Services.AddSingleton<ICharacterFactory, CharacterService>();
@@ -89,7 +90,7 @@ namespace ChieApi
             _ = builder.Services.AddSingleton<SummarizationService>();
             _ = builder.Services.AddSingleton<DictionaryService>();
 
-            LlamaClientSettings clientSettings = new("http://127.0.0.1:10030");
+            LlamaClientSettings clientSettings = new("http://localhost:5059");
             _ = builder.Services.AddSingleton(clientSettings);
             _ = builder.Services.AddSingleton<LlamaContextClient>();
             _ = builder.Services.Configure<JsonOptions>(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));

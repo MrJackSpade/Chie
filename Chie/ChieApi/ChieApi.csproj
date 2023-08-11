@@ -35,7 +35,7 @@
   </ItemGroup>
 	
   <ItemGroup>
-    <PackageReference Include="Loxifi.Database" Version="0.9.6" />
+    <PackageReference Include="Loxifi.Database" Version="0.9.7" />
     <PackageReference Include="Loxifi.JsonClient" Version="0.8.1" />
     <PackageReference Include="Loxifi.StringConvert" Version="0.8.0" />
     <PackageReference Include="Loxifi.StringParsing" Version="0.2.1" />

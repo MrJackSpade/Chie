@@ -1,10 +1,11 @@
-﻿using LlamaApiClient;
+﻿using Llama.Data.Models;
+using LlamaApiClient;
 
 namespace Llama.Data.Extensions
 {
     public static class InferenceEnumeratorExtensions
     {
-        public static void SetLogits(this InferenceEnumerator enumerator, IEnumerable<KeyValuePair<int, string>> logits, LogitBiasLifeTime lifeTime)
+        public static void SetBias(this InferenceEnumerator enumerator, IEnumerable<KeyValuePair<int, string>> logits, LogitRuleLifetime lifeTime)
         {
             foreach (KeyValuePair<int, string> iLogit in logits)
             {
@@ -23,8 +24,10 @@ namespace Llama.Data.Extensions
                     v = float.Parse(iLogit.Value);
                 }
 
-                enumerator.SetLogit(iLogit.Key, v, lifeTime);
+                enumerator.AddLogitRule(new LogitBias(iLogit.Key, v, lifeTime));
             }
         }
+
+        public static void SetBias(this InferenceEnumerator enumerator, int id, float value, LogitRuleLifetime lifeTime) => enumerator.AddLogitRule(new LogitBias(id, value, lifeTime));
     }
 }

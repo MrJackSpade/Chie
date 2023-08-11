@@ -1,5 +1,6 @@
 ﻿using ChieApi.Interfaces;
 using ChieApi.Models;
+using Llama.Data.Extensions;
 using Llama.Data.Models;
 using LlamaApiClient;
 
@@ -16,13 +17,13 @@ namespace ChieApi.Samplers
 
         public async Task SampleNext(InferenceEnumerator enumerator)
         {
-            enumerator.SetLogit(30004, 0, LogitBiasLifeTime.Inferrence);
+            enumerator.SetBias(30004, float.NegativeInfinity, LogitRuleLifetime.Inferrence);
 
             LlamaToken? lastToken = enumerator.Enumerated.LastOrDefault();
 
             if (lastToken is not null && lastToken.Id == 13)
             {
-                enumerator.SetLogit(13, 0, LogitBiasLifeTime.Temporary);
+                enumerator.SetBias(13, float.NegativeInfinity, LogitRuleLifetime.Token);
             }
 
             LlamaToken[] banTokens = new LlamaToken[]
@@ -33,7 +34,7 @@ namespace ChieApi.Samplers
 
             foreach (LlamaToken t in banTokens)
             {
-                enumerator.SetLogit(t.Id, 0, LogitBiasLifeTime.Inferrence);
+                enumerator.SetBias(t.Id, float.NegativeInfinity, LogitRuleLifetime.Inferrence);
             }
         }
     }

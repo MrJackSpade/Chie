@@ -61,13 +61,10 @@ namespace ChieApi.Services
 
         private LlamaContextModel _contextModel;
 
-        private readonly DictionaryService _dictionaryService;
-
         private Task<SummaryResponse>? _summaryTask;
 
         public LlamaService(SummarizationService summarizationService, DictionaryService dictionaryService, ICharacterFactory characterFactory, LlamaContextClient client, LlamaContextModel contextModel, LlamaTokenCache llamaTokenCache, ILogger logger, ChatService chatService, LogitService logitService)
         {
-            this._dictionaryService = dictionaryService;
             this._summarizationService = summarizationService;
             this._client = client;
             this._characterFactory = characterFactory;
@@ -76,6 +73,7 @@ namespace ChieApi.Services
             this._chatService = chatService ?? throw new ArgumentNullException(nameof(chatService));
             this._contextModel = contextModel;
             this._tokenCache = llamaTokenCache;
+
             logger.LogInformation("Constructing Llama Service");
 
             _ = this.SetState(AiState.Initializing);
@@ -90,7 +88,7 @@ namespace ChieApi.Services
             {
                 new SpaceStartTransformer(),
                 new NewlineTransformer(),
-                new TextTruncationTransformer(1000, 250, 150, ".!?", dictionaryService),
+                new TextTruncationTransformer(1000, 250, 150, ".!?…", dictionaryService),
                 new TextExtensionTransformer(100, 150),
                 new RepetitionBlockingTransformer(3),
                 new InvalidCharacterBlockingTransformer()
@@ -100,7 +98,7 @@ namespace ChieApi.Services
             {
                 new SpellingCleaner(dictionaryService),
                 new DanglingQuoteCleaner(),
-                new CommaPadCleaner()
+                new PunctuationCleaner()
             };
 
             this.Initialization = Task.Run(this.Init);
@@ -257,10 +255,10 @@ namespace ChieApi.Services
         {
             InferenceEnumerator enumerator = this._client.Infer();
 
-            enumerator.SetLogit(LlamaToken.EOS.Id, 0, LogitBiasLifeTime.Temporary);
-            enumerator.SetLogit(LlamaToken.NewLine.Id, 0, LogitBiasLifeTime.Temporary);
+            enumerator.SetBias(LlamaToken.EOS.Id, float.NegativeInfinity, LogitRuleLifetime.Token);
+            enumerator.SetBias(LlamaToken.NewLine.Id, float.NegativeInfinity, LogitRuleLifetime.Token);
 
-            enumerator.SetLogits(this._characterConfiguration.LogitOverrides, LogitBiasLifeTime.Inferrence);
+            enumerator.SetBias(this._characterConfiguration.LogitBias, LogitRuleLifetime.Inferrence);
 
             while (await enumerator.MoveNextAsync())
             {
@@ -362,6 +360,14 @@ namespace ChieApi.Services
                         RepeatTokenPenaltyWindow = this._characterConfiguration.RepeatPenaltyWindow,
                     };
                 }
+
+                c.ComplexPresencePenaltySettings = new ComplexPresencePenaltySettings()
+                {
+                    LengthScale = 1.1f,
+                    GroupScale = 1.3f,
+                    MinGroupLength = 3,
+                    RepeatTokenPenaltyWindow = -1
+                };
             });
 
             this._logger.LogInformation("Connected to client.");
@@ -452,7 +458,7 @@ namespace ChieApi.Services
                 return;
             }
 
-            string cleanedContent = this._responseCleaners.Clean(content);
+            string cleanedContent = " " + this._responseCleaners.Clean(content).Trim();
 
             if (cleanedContent != content)
             {

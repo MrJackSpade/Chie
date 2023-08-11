@@ -5,25 +5,40 @@ using Llama.Data.Models;
 using LlamaApi.Models;
 using LlamaApi.Models.Request;
 using LlamaApi.Models.Response;
+using LlamaApi.Shared.Converters;
 using LlamaApi.Shared.Models.Request;
 using LlamaApi.Shared.Models.Response;
 using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace LlamaApiClient
 {
     public class LlamaClient
     {
-        private readonly HttpClient _httpClient = new();
+        private readonly HttpClient _httpClient;
 
         private readonly Guid _modelGuid = Guid.Empty;
 
         private readonly LlamaClientSettings _settings;
 
+        private readonly JsonSerializerOptions _serializerOptions;
+
         public LlamaClient(LlamaClientSettings settings)
         {
             this._settings = settings;
+            this._httpClient = new HttpClient()
+            {
+                Timeout = TimeSpan.FromDays(1)
+            };
+
+            _serializerOptions = new JsonSerializerOptions()
+            {
+                NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
+            };
+
+            _serializerOptions.Converters.Add(new LogitRuleConverter());
         }
 
         public async Task DisposeContext(Guid contextId)
@@ -44,12 +59,25 @@ namespace LlamaApiClient
             Debug.WriteLine("Evaluated: " + response.Evaluated);
         }
 
-        public InferenceEnumerator Infer(Guid contextId)
+        public InferenceEnumerator Infer(Guid contextId, LogitRuleCollection? logitRules)
         {
             return new InferenceEnumerator(
                 (b) => this.Predict(contextId, b),
-                (t) => this.Write(contextId, t)
+                (t) => this.Write(contextId, t),
+                logitRules
             );
+        }
+
+        public async Task<float[]> GetLogits(Guid contextId)
+        {
+            GetLogitsRequest request = new()
+            {
+                ContextId = contextId
+            };
+
+            GetLogitsResponse response = await this.WaitForResponse<GetLogitsResponse>("/Llama/getlogits", request);
+
+            return response.GetValue().ToArray();
         }
 
         public virtual async Task<ContextState> LoadContext(LlamaContextSettings settings, Action<ContextRequest> settingsAction)
@@ -76,16 +104,16 @@ namespace LlamaApiClient
             });
         }
 
-        public async Task<ResponseLlamaToken> Predict(Guid contextId, Dictionary<int, float>? bias = null)
+        public async Task<ResponseLlamaToken> Predict(Guid contextId, LogitRuleCollection? ruleCollection = null)
         {
             PredictRequest request = new()
             {
                 ContextId = contextId
             };
 
-            if (bias != null)
+            if (ruleCollection != null)
             {
-                request.LogitBias = bias;
+                request.LogitRules = ruleCollection;
             }
 
             PredictResponse response = await this.WaitForResponse<PredictResponse>("/Llama/predict", request);
@@ -169,12 +197,12 @@ namespace LlamaApiClient
 
         private async Task<TValue> Post<TValue>(string url, object data)
         {
-            string responseStr = await this.Request(() => this._httpClient.PostAsync(this._settings.Host + url, JsonContent.Create(data)));
+            string responseStr = await this.Request(() => this._httpClient.PostAsync(this._settings.Host + url, JsonContent.Create(data, options: this._serializerOptions)));
 
             return JsonSerializer.Deserialize<TValue>(responseStr);
         }
 
-        private async Task Post(string url, object data) => await this.Request(() => this._httpClient.PostAsync(this._settings.Host + url, JsonContent.Create(data)));
+        private async Task Post(string url, object data) => await this.Request(() => this._httpClient.PostAsync(this._settings.Host + url, JsonContent.Create(data, options: this._serializerOptions)));
 
         private async Task<string> Request(Func<Task<HttpResponseMessage>> toInvoke)
         {

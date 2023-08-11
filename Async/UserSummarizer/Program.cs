@@ -2,6 +2,7 @@
 using ChieApi.Interfaces;
 using ChieApi.Models;
 using ChieApi.Shared.Services;
+using Llama.Data.Interfaces;
 using LlamaApiClient;
 using Logging;
 using Microsoft.Extensions.Configuration;
@@ -28,11 +29,14 @@ namespace UserSummarizer
             serviceCollection.RegisterSecret<SummaryApiClientSettings>(configuration);
 
             _ = serviceCollection.AddSingleton<ChatService>();
+            _ = serviceCollection.AddSingleton<DictionaryCache>();
+
             _ = serviceCollection.AddSingleton<ILogger, LoggingApiClient>();
             _ = serviceCollection.AddSingleton<SummaryApiClient>();
 
             _ = serviceCollection.AddSingleton<UserDataService>();
             _ = serviceCollection.AddSingleton<LlamaContextClient>();
+            _ = serviceCollection.AddSingleton<IDictionaryService, DictionaryService>();
 
             _ = serviceCollection.AddSingleton<IHasConnectionString>(s => s.GetService<IOptions<UserSummarizerSettings>>().Value);
 

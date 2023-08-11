@@ -65,6 +65,8 @@ namespace Llama.Native
             lparams.Embedding = modelSettings.GenerateEmbedding;
             lparams.RopeFreqBase = modelSettings.RopeFrequencyBase;
             lparams.RopeFreqScale = modelSettings.RopeFrequencyScaling;
+            lparams.MulMatQ = true;
+
             SetTensors(ref lparams, new float[16]);
 
             IntPtr ctx_ptr = LlamaCppApi.NewContextWithModel(model, lparams);
@@ -104,6 +106,8 @@ namespace Llama.Native
             lparams.Embedding = modelSettings.GenerateEmbedding;
             lparams.RopeFreqBase = modelSettings.RopeFrequencyBase;
             lparams.RopeFreqScale = modelSettings.RopeFrequencyScaling;
+            lparams.MulMatQ = true;
+
             SetTensors(ref lparams, new float[16]);
 
             if (!File.Exists(modelSettings.Model))

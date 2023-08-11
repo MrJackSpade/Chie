@@ -9,6 +9,9 @@ namespace LlamaApi.Models.Request
     [RequiresAny(nameof(MirostatSamplerSettings), nameof(TemperatureSamplerSettings))]
     public class ContextRequest
     {
+        [JsonPropertyName("ComplexPresence")]
+        public ComplexPresencePenaltySettings? ComplexPresencePenaltySettings { get; set; }
+
         [JsonPropertyName("contextId")]
         public Guid? ContextId { get; set; }
 

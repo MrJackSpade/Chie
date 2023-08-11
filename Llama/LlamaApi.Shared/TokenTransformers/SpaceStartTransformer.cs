@@ -1,4 +1,5 @@
 ﻿using ChieApi.Interfaces;
+using Llama.Data.Extensions;
 using Llama.Data.Models;
 using LlamaApiClient;
 using System.Diagnostics;
@@ -30,7 +31,7 @@ namespace ChieApi.TokenTransformers
                 else
                 {
                     Debug.WriteLine($"Skipping: {token}");
-                    enumerator.SetLogit(token.Id, 0, LogitBiasLifeTime.Temporary);
+                    enumerator.SetBias(token.Id, float.NegativeInfinity, LogitRuleLifetime.Token);
                 }
             }
         }

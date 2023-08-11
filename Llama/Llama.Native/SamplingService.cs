@@ -9,11 +9,11 @@ namespace Llama.Native
         /// </summary>
         /// <param name="ctx"></param>
         /// <param name="candidates">Pointer to LlamaTokenDataArray</param>
-        /// <param name="last_tokens"></param>
+        /// <param name="check_tokens"></param>
         /// <param name="last_tokens_size"></param>
         /// <param name="alpha_frequency"></param>
         /// <param name="alpha_presence"></param>
-        public static void FrequencyAndPresencePenalties(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, int[] last_tokens, ulong last_tokens_size, float alpha_frequency, float alpha_presence)
+        public static void FrequencyAndPresencePenalties(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, int[] check_tokens, float alpha_frequency, float alpha_presence)
         {
             System.Buffers.MemoryHandle handle = candidates.data.Pin();
             LlamaTokenDataArrayNative st = new()
@@ -23,7 +23,7 @@ namespace Llama.Native
                 sorted = candidates.sorted
             };
 
-            LlamaCppApi.SampleFrequencyAndPresencePenalties(ctx, new IntPtr(&st), last_tokens, last_tokens_size, alpha_frequency, alpha_presence);
+            LlamaCppApi.SampleFrequencyAndPresencePenalties(ctx, new IntPtr(&st), check_tokens, (ulong)check_tokens.Length, alpha_frequency, alpha_presence);
         }
 
         /// <summary>
@@ -34,7 +34,7 @@ namespace Llama.Native
         /// <param name="last_tokens"></param>
         /// <param name="last_tokens_size"></param>
         /// <param name="penalty"></param>
-        public static void RepetitionPenalty(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, int[] last_tokens, ulong last_tokens_size, float penalty)
+        public static void RepetitionPenalty(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, int[] check_tokens, float penalty)
         {
             System.Buffers.MemoryHandle handle = candidates.data.Pin();
             LlamaTokenDataArrayNative st = new()
@@ -43,7 +43,29 @@ namespace Llama.Native
                 size = candidates.size,
                 sorted = candidates.sorted
             };
-            LlamaCppApi.SampleRepetitionPenalty(ctx, new IntPtr(&st), last_tokens, last_tokens_size, penalty);
+
+            LlamaCppApi.SampleRepetitionPenalty(ctx, new IntPtr(&st), check_tokens, (ulong)check_tokens.Length, penalty);
+        }
+
+        /// <summary>
+        /// Repetition penalty described in CTRL academic paper https://arxiv.org/abs/1909.05858, with negative logit fix.
+        /// </summary>
+        /// <param name="ctx"></param>
+        /// <param name="candidates">Pointer to LlamaTokenDataArray</param>
+        /// <param name="last_tokens"></param>
+        /// <param name="last_tokens_size"></param>
+        /// <param name="penalty"></param>
+        public static void ComplexPresencePenalty(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, int[] check_tokens, int minGroupLength, float scalePerGroup, float scalePerLength)
+        {
+            System.Buffers.MemoryHandle handle = candidates.data.Pin();
+            LlamaTokenDataArrayNative st = new()
+            {
+                data = new IntPtr(handle.Pointer),
+                size = candidates.size,
+                sorted = candidates.sorted
+            };
+
+            LlamaCppApi.ComplexPresencePenalty(ctx, new IntPtr(&st), check_tokens, (ulong)check_tokens.Length, minGroupLength, scalePerGroup, scalePerLength);
         }
 
         /// <summary>

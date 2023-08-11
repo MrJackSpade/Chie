@@ -9,6 +9,7 @@ using Llama.Data.Interfaces;
 using Llama.Data.Models;
 using Llama.Data.Native;
 using Llama.Data.Scheduler;
+using Llama.Extensions;
 using Llama.Native;
 using LlamaApi.Exceptions;
 using LlamaApi.Interfaces;
@@ -28,18 +29,15 @@ namespace LlamaApi.Controllers
     {
         private readonly IExecutionScheduler _contextExecutionScheduler;
 
-        private readonly IContextService _contextService;
-
         private readonly IJobService _jobService;
 
         private readonly LoadedModel _loadedModel;
 
-        public LlamaController(IExecutionScheduler contextExecutionScheduler, LoadedModel loadedModel, IJobService jobService, IContextService contextService)
+        public LlamaController(IExecutionScheduler contextExecutionScheduler, LoadedModel loadedModel, IJobService jobService)
         {
             this._contextExecutionScheduler = contextExecutionScheduler;
             this._loadedModel = loadedModel;
             this._jobService = jobService;
-            this._contextService = contextService;
         }
 
         [HttpPost("buffer")]
@@ -47,7 +45,7 @@ namespace LlamaApi.Controllers
         {
             return this._jobService.Enqueue(() =>
             {
-                ContextEvaluator context = this._loadedModel.GetContext(request.ContextId);
+                ContextInstance context = this._loadedModel.GetContext(request.ContextId);
 
                 return new ContextSnapshotResponse()
                 {
@@ -72,7 +70,7 @@ namespace LlamaApi.Controllers
 
                     if (request.ContextId.HasValue && this._loadedModel.Evaluator.ContainsKey(request.ContextId.Value))
                     {
-                        ContextEvaluator contextEvaluator = this._loadedModel.GetContext(request.ContextId.Value);
+                        ContextInstance contextEvaluator = this._loadedModel.GetContext(request.ContextId.Value);
 
                         return new ContextResponse()
                         {
@@ -95,7 +93,7 @@ namespace LlamaApi.Controllers
                                                        this.GetFinalSampler(request)
                                                        );
 
-                    ContextEvaluator evaluator = new(wrapper);
+                    ContextInstance evaluator = new(wrapper);
 
                     ContextResponse response = new()
                     {
@@ -122,7 +120,7 @@ namespace LlamaApi.Controllers
         [HttpPost("context/dispose")]
         public IActionResult ContextDispose(ContextDisposeRequest request)
         {
-            ContextEvaluator context = this._loadedModel.GetContext(request.ContextId);
+            ContextInstance context = this._loadedModel.GetContext(request.ContextId);
 
             context.Dispose();
 
@@ -134,7 +132,7 @@ namespace LlamaApi.Controllers
         {
             return this._jobService.Enqueue(() =>
             {
-                ContextEvaluator context = this._loadedModel.GetContext(request.ContextId);
+                ContextInstance context = this._loadedModel.GetContext(request.ContextId);
 
                 int evaluated = context.Evaluate(request.Priority);
 
@@ -145,7 +143,6 @@ namespace LlamaApi.Controllers
                     IsLoaded = true,
                     Evaluated = evaluated
                 };
-
             }, request.Priority);
         }
 
@@ -154,13 +151,30 @@ namespace LlamaApi.Controllers
         {
             return this._jobService.Enqueue(() =>
             {
-                ContextEvaluator context = this._loadedModel.GetContext(request.ContextId);
+                ContextInstance context = this._loadedModel.GetContext(request.ContextId);
 
                 return new ContextSnapshotResponse()
                 {
                     Tokens = context.Context.Evaluated.Select(t => new ResponseLlamaToken(t)).ToArray()
                 };
             }, ExecutionPriority.Immediate);
+        }
+
+        [HttpPost("getlogits")]
+        public Job GetLogits(GetLogitsRequest request)
+        {
+            return this._jobService.Enqueue(() =>
+            {
+                ContextInstance context = this._loadedModel.GetContext(request.ContextId);
+
+                Span<float> logits = context.Context.GetLogits();
+
+                GetLogitsResponse response = new();
+
+                response.SetValue(logits);
+
+                return response;
+            }, request.Priority);
         }
 
         [HttpGet("job/{id}")]
@@ -238,9 +252,9 @@ namespace LlamaApi.Controllers
         {
             return this._jobService.Enqueue(() =>
             {
-                ContextEvaluator context = this._loadedModel.GetContext(request.ContextId);
+                ContextInstance context = this._loadedModel.GetContext(request.ContextId);
 
-                LlamaToken predicted = context.Predict(request.Priority, request.LogitBias);
+                LlamaToken predicted = context.Predict(request.Priority, request.LogitRules);
 
                 return new PredictResponse()
                 {
@@ -257,7 +271,7 @@ namespace LlamaApi.Controllers
         {
             return this._jobService.Enqueue(() =>
             {
-                ContextEvaluator context = this._loadedModel.GetContext(request.ContextId);
+                ContextInstance context = this._loadedModel.GetContext(request.ContextId);
 
                 List<int> tokens = NativeApi.LlamaTokenize(context.Context.Handle, request.Content!, false, System.Text.Encoding.UTF8);
 
@@ -285,7 +299,7 @@ namespace LlamaApi.Controllers
                     throw new NotImplementedException();
                 }
 
-                ContextEvaluator context = this._loadedModel.GetContext(request.ContextId);
+                ContextInstance context = this._loadedModel.GetContext(request.ContextId);
 
                 LlamaTokenCollection toWrite = new();
 
@@ -354,6 +368,11 @@ namespace LlamaApi.Controllers
             if (request.FrequencyAndPresenceSamplerSettings != null)
             {
                 yield return new FrequencyAndPresenceSampler(request.FrequencyAndPresenceSamplerSettings);
+            }
+
+            if (request.ComplexPresencePenaltySettings != null)
+            {
+                yield return new ComplexPresenceSampler(request.ComplexPresencePenaltySettings);
             }
         }
     }

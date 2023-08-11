@@ -1,4 +1,5 @@
 ﻿using ChieApi.Interfaces;
+using Llama.Data.Extensions;
 using Llama.Data.Models;
 using LlamaApiClient;
 using System.Diagnostics;
@@ -15,7 +16,7 @@ namespace ChieApi.TokenTransformers
                 {
                     Debug.WriteLine($"Blocking token [{token.Id}]...");
 
-                    enumerator.SetLogit(token.Id, 0, LogitBiasLifeTime.Inferrence);
+                    enumerator.SetBias(token.Id, float.NegativeInfinity, LogitRuleLifetime.Inferrence);
 
                     continue;
                 }

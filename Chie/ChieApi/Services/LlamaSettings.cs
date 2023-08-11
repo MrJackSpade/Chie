@@ -31,7 +31,7 @@ namespace ChieApi.Services
 
         public int GpuLayers { get; set; } = 0;
 
-        public Dictionary<int, string> LogitOverrides { get; set; } = new Dictionary<int, string>();
+        public Dictionary<int, string> LogitBias { get; set; } = new Dictionary<int, string>();
 
         public MemoryMode MemoryMode { get; set; }
 

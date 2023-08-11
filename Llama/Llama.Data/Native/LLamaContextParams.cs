@@ -31,6 +31,11 @@ namespace Llama.Data.Native
         public int NGqa;
 
         /// <summary>
+        /// rms norm epsilon (TEMP - will be moved to model hparams).
+        /// </summary>
+        public int RmsNormEps;
+
+        /// <summary>
         /// Number of layers to store in VRAM.
         /// </summary>
         public int NGpuLayers;
@@ -70,6 +75,12 @@ namespace Llama.Data.Native
         /// </summary>
         [MarshalAs(UnmanagedType.I1)]
         public bool LowVram;
+
+        /// <summary>
+        /// if true, use experimental mul_mat_q kernels
+        /// </summary>
+        [MarshalAs(UnmanagedType.I1)]
+        public bool MulMatQ;
 
         /// <summary>
         /// Use fp16 for KV cache.

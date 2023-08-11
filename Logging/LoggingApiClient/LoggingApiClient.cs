@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net.Http.Json;
+using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace Logging
 {
@@ -60,18 +62,31 @@ namespace Logging
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
+            string content = formatter.Invoke(state, exception);
+
+            string message = content;
+            string? data = null;
+
+            if(content.Contains('\x02'))
+            {
+                string[] parts = content.Split('\x02');
+                message = parts[0];
+                data = parts[1];
+            }
+
             LogEntry logEntry = new()
             {
                 Level = logLevel,
                 EventId = eventId.Id,
                 EventName = eventId.Name,
-                Content = formatter.Invoke(state, exception),
+                Data = data,
+                Message = message,
                 DateCreated = DateTime.UtcNow,
                 Scope = string.Join(".", this._scopes.Select(s => s.State.ToString())),
                 ApplicationName = this._settings.ApplicationName
             };
 
-            Debug.WriteLine(logEntry.Content);
+            Debug.WriteLine(logEntry.Message);
 
             this._toSend.Enqueue(logEntry);
 
