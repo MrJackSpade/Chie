@@ -1,7 +1,6 @@
 using Llama.Data.Scheduler;
 using LlamaApi.Extensions;
 using LlamaApi.Interfaces;
-using LlamaApi.Middleware;
 using LlamaApi.Models;
 using LlamaApi.Services;
 using LlamaApi.Shared.Converters;
@@ -45,7 +44,7 @@ namespace LlamaApi
                 Host = "http://127.0.0.1:10020",
                 ApplicationName = "LlamaApi"
             });
-            
+
             builder.Services.AddSingleton<ILogger>(loggingClient);
 
             WebApplication app = builder.Build();
@@ -54,7 +53,7 @@ namespace LlamaApi
 
             app.MapControllers();
 
-            app.UseMiddleware<RequestLoggingMiddleware>();
+            //app.UseMiddleware<RequestLoggingMiddleware>();
 
             app.Run();
 

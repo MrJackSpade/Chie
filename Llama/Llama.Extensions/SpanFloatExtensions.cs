@@ -1,4 +1,5 @@
 ﻿using Llama.Data.Models;
+using System.Diagnostics;
 
 namespace Llama.Extensions
 {
@@ -10,6 +11,18 @@ namespace Llama.Extensions
             {
                 target[bias.LogitId] += bias.Value;
             }
+        }
+
+        public static Dictionary<LlamaToken, float> Extract(this Span<float> source, IEnumerable<LlamaToken> list)
+        {
+            Dictionary<LlamaToken, float> toReturn = new();
+
+            foreach (LlamaToken llamaToken in list)
+            {
+                toReturn.Add(llamaToken, source[llamaToken.Id]);
+            }
+
+            return toReturn;
         }
 
         public static void Update(this Span<float> target, IEnumerable<KeyValuePair<int, string>> list)
@@ -35,23 +48,15 @@ namespace Llama.Extensions
             }
         }
 
-        public static Dictionary<LlamaToken, float> Extract(this Span<float> source, IEnumerable<LlamaToken> list)
-        {
-            Dictionary<LlamaToken, float> toReturn = new();
-
-            foreach (LlamaToken llamaToken in list)
-            {
-                toReturn.Add(llamaToken, source[llamaToken.Id]);
-            }
-
-            return toReturn;
-        }
-
         public static void Update(this Span<float> target, IEnumerable<KeyValuePair<LlamaToken, float>> list)
         {
             foreach (KeyValuePair<LlamaToken, float> llamaToken in list)
             {
-                target[llamaToken.Key.Id] = llamaToken.Value;
+                if (target[llamaToken.Key.Id] != llamaToken.Value)
+                {
+                    Debug.Write($"Adjusting logit [{llamaToken.Key.Id}]; '{target[llamaToken.Key.Id]}' => '{llamaToken.Value}'");
+                    target[llamaToken.Key.Id] = llamaToken.Value;
+                }
             }
         }
     }

@@ -11,6 +11,8 @@
 
         public static void Enqueue<T>(this List<T> list, T item) => list.Add(item);
 
+        public static T Peek<T>(this List<T> list) => list[^1];
+
         public static T Pop<T>(this List<T> list)
         {
             T item = list[^1];
@@ -19,7 +21,5 @@
         }
 
         public static void Push<T>(this List<T> list, T item) => list.Add(item);
-
-        public static T Peek<T>(this List<T> list) => list[^1];
     }
 }

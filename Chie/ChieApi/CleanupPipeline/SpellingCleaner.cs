@@ -30,7 +30,6 @@ namespace ChieApi.CleanupPipeline
 
                     if (possibleCorrections.Count > 1)
                     {
-
                         List<WordDrift> drifts = possibleCorrections.Select(b => this._dictionaryService.GetDrift(word, b.Word)).ToList();
 
                         WordDrift bestMatch = drifts.OrderBy(d => d.Drift).First();

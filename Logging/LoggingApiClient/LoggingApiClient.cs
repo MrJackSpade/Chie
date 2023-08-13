@@ -4,28 +4,26 @@ using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net.Http.Json;
-using System.Linq;
-using System.Runtime.CompilerServices;
 
 namespace Logging
 {
     public class LoggingApiClient : ILogger, IDisposable
     {
+        private readonly AutoResetEvent _exitGate = new(false);
+
         private readonly HttpClient _httpClient = new();
 
         private readonly AutoResetEvent _logGate = new(false);
 
         private readonly Thread _processingThread;
 
-        private readonly AutoResetEvent _exitGate = new(false);
-
-        private bool _disposed = false;
-
         private readonly Stack<ILoggingScope> _scopes = new();
 
         private readonly LoggingApiClientSettings _settings;
 
         private readonly ConcurrentQueue<LogEntry> _toSend = new();
+
+        private bool _disposed = false;
 
         public LoggingApiClient(LoggingApiClientSettings settings)
         {
@@ -58,6 +56,7 @@ namespace Logging
             this._logGate.Set();
             this._exitGate.WaitOne();
         }
+
         public bool IsEnabled(LogLevel logLevel) => this._settings.LogLevel <= logLevel;
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
@@ -67,7 +66,7 @@ namespace Logging
             string message = content;
             string? data = null;
 
-            if(content.Contains('\x02'))
+            if (content.Contains('\x02'))
             {
                 string[] parts = content.Split('\x02');
                 message = parts[0];

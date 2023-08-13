@@ -4,10 +4,10 @@ namespace Summary.Models
 {
     public class SummaryRequest
     {
-        [JsonPropertyName("textData")]
-        public string TextData { get; set; }
-
         [JsonPropertyName("maxLength")]
         public int MaxLength { get; set; }
+
+        [JsonPropertyName("textData")]
+        public string TextData { get; set; }
     }
 }

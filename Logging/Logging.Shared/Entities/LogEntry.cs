@@ -9,9 +9,6 @@ namespace ChieApi.Shared.Entities
         [JsonPropertyName("applicationName")]
         public string? ApplicationName { get; set; }
 
-        [JsonPropertyName("content")]
-        public string? Message { get; set; }
-
         [JsonPropertyName("data")]
         public string? Data { get; set; }
 
@@ -30,6 +27,9 @@ namespace ChieApi.Shared.Entities
 
         [JsonPropertyName("level")]
         public LogLevel Level { get; set; }
+
+        [JsonPropertyName("content")]
+        public string? Message { get; set; }
 
         [JsonPropertyName("scope")]
         public string? Scope { get; set; }

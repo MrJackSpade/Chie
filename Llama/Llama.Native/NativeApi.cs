@@ -1,6 +1,5 @@
 ﻿using Llama.Data;
 using Llama.Data.Exceptions;
-using Llama.Data.Extensions;
 using Llama.Data.Models;
 using Llama.Data.Native;
 using System.Runtime.InteropServices;
@@ -125,6 +124,16 @@ namespace Llama.Native
             return new(new(model_ptr, (p) => LlamaCppApi.FreeModel(p)));
         }
 
+        public static int NVocab(SafeLlamaContextHandle handle) => LlamaCppApi.NVocab(handle);
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0022:Use expression body for method", Justification = "<Pending>")]
+        public static unsafe string PtrToStringUTF8(IntPtr ptr)
+        {
+            return Marshal.PtrToStringUTF8(ptr);
+        }
+
+        public static string TokenToStr(SafeLlamaContextHandle handle, int id) => PtrToStringUTF8(LlamaCppApi.TokenToStr(handle, id));
+
         private static void SetTensors(ref LlamaContextParams param, float[] values)
         {
             // Populate your array.
@@ -142,14 +151,5 @@ namespace Llama.Native
             // Now you can set the pointer in your structure.
             param.TensorSplit = tensorSplitPtr;
         }
-        public static int NVocab(SafeLlamaContextHandle handle) => LlamaCppApi.NVocab(handle);
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0022:Use expression body for method", Justification = "<Pending>")]
-        public static unsafe string PtrToStringUTF8(IntPtr ptr)
-        {
-            return Marshal.PtrToStringUTF8(ptr);
-        }
-
-        public static string TokenToStr(SafeLlamaContextHandle handle, int id) => PtrToStringUTF8(LlamaCppApi.TokenToStr(handle, id));
     }
 }

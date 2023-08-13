@@ -12,10 +12,10 @@ namespace LlamaApi.Models.Request
         [JsonPropertyName("logitBias")]
         public LogitRuleCollection LogitRules { get; set; } = new();
 
-        [JsonPropertyName("priority")]
-        public ExecutionPriority Priority { get; set; }
-
         [JsonPropertyName("newPrediction")]
         public bool NewPrediction { get; set; }
+
+        [JsonPropertyName("priority")]
+        public ExecutionPriority Priority { get; set; }
     }
 }

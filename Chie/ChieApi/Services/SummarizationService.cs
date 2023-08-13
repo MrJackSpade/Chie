@@ -5,12 +5,6 @@ using System.Text;
 
 namespace ChieApi.Services
 {
-    public class SummaryResponse
-    {
-        public string Summary { get; set; }
-
-        public long FirstId { get; set; }
-    }
     public partial class SummarizationService
     {
         private const string DIR_SUMMARIZATION = "SummarizationData";
@@ -18,6 +12,7 @@ namespace ChieApi.Services
         private const int MAX_TOKENS = 1000;
 
         private readonly ISummaryApiClient _summaryApiClient;
+
         public SummarizationService(ISummaryApiClient summaryApiClient)
         {
             if (!Directory.Exists(DIR_SUMMARIZATION))
@@ -69,7 +64,6 @@ namespace ChieApi.Services
                 }
 
                 toAppend.Add(message);
-
             } while (true);
 
             toAppend.Reverse();
@@ -89,5 +83,12 @@ namespace ChieApi.Services
 
             return summarization;
         }
+    }
+
+    public class SummaryResponse
+    {
+        public long FirstId { get; set; }
+
+        public string Summary { get; set; }
     }
 }

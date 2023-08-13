@@ -1,6 +1,4 @@
 ﻿using ChieApi.Interfaces;
-using ChieApi.Models;
-using ChieApi.Shared.Entities;
 using ChieApi.Shared.Models;
 using Loxifi.Extensions;
 using System.Data.SqlClient;
@@ -21,7 +19,7 @@ namespace ChieApi.Shared.Services
             using SqlConnection connection = new(this._connectionString);
 
             Model? model = connection.Query<Model>($"select * from Model where Name = '{name}'").SingleOrDefault();
-            
+
             return model;
         }
     }

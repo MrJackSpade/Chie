@@ -13,12 +13,19 @@ namespace LlamaApi.Shared.Converters
             if (doc.RootElement.TryGetProperty(nameof(LogitRule.RuleType), out JsonElement ruleTypeProperty))
             {
                 LogitRuleType ruleType = (LogitRuleType)ruleTypeProperty.GetInt32();
+
+                string text = doc.RootElement.GetRawText();
+
                 switch (ruleType)
                 {
                     case LogitRuleType.Bias:
-                        return JsonSerializer.Deserialize<LogitBias>(doc.RootElement.GetRawText(), options);
+                        return JsonSerializer.Deserialize<LogitBias>(text, options);
+
                     case LogitRuleType.Clamp:
-                        return JsonSerializer.Deserialize<LogitClamp>(doc.RootElement.GetRawText(), options);
+                        return JsonSerializer.Deserialize<LogitClamp>(text, options);
+
+                    case LogitRuleType.Penalty:
+                        return JsonSerializer.Deserialize<LogitPenalty>(text, options);
                 }
             }
 

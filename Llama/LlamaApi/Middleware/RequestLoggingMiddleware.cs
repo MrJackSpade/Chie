@@ -4,8 +4,9 @@ namespace LlamaApi.Middleware
 {
     public class RequestLoggingMiddleware
     {
-        private readonly RequestDelegate _next;
         private readonly ILogger _logger;
+
+        private readonly RequestDelegate _next;
 
         public RequestLoggingMiddleware(RequestDelegate next, ILogger logger)
         {

@@ -35,7 +35,7 @@ namespace ChieApi.Models
                 yield return token;
             }
 
-            for(int i = 0; i < this.Messages.Count; i++) 
+            for (int i = 0; i < this.Messages.Count; i++)
             {
                 ITokenCollection message = this.Messages[i];
 

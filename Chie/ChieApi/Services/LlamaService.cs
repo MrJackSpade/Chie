@@ -20,7 +20,6 @@ using LlamaApi.Shared.Models.Response;
 using LlamaApiClient;
 using Loxifi;
 using Loxifi.AsyncExtensions;
-using System.ComponentModel.Design.Serialization;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -43,11 +42,13 @@ namespace ChieApi.Services
 
         private readonly LogitService _logitService;
 
+        private readonly List<IPostAccept> _postAccept;
+
         private readonly AutoResetEventWithData<ProcessInputData> _processingInput = new(false);
 
-        private readonly List<ISimpleSampler> _simpleSamplers;
-
         private readonly List<IResponseCleaner> _responseCleaners;
+
+        private readonly List<ISimpleSampler> _simpleSamplers;
 
         private readonly SummarizationService _summarizationService;
 
@@ -98,7 +99,14 @@ namespace ChieApi.Services
             {
                 new SpellingCleaner(dictionaryService),
                 new DanglingQuoteCleaner(),
-                new PunctuationCleaner()
+                new PunctuationCleaner(),
+                new UnbrokenWordsCleaner(dictionaryService)
+            };
+
+            this._postAccept = new List<IPostAccept>()
+            {
+                new RoleplayEnforcingTransformer(0.1f),
+                //new InferenceRepetitionPenalty(1.2f)
             };
 
             this.Initialization = Task.Run(this.Init);
@@ -120,6 +128,20 @@ namespace ChieApi.Services
 
         private long LastMessageId { get; set; }
 
+        public static string StripNonASCII(string input)
+        {
+            StringBuilder sb = new();
+            foreach (char c in input)
+            {
+                if (c is >= (char)0 and <= (char)127) // ASCII range
+                {
+                    sb.Append(c);
+                }
+            }
+
+            return sb.ToString();
+        }
+
         public LlamaClientResponseState CheckIfResponding(string channel)
         {
             LlamaClientResponseState responseState = new()
@@ -133,6 +155,44 @@ namespace ChieApi.Services
             }
 
             return responseState;
+        }
+
+        public IEnumerable<string> GetMessagesReversed(long before)
+        {
+            do
+            {
+                ChatEntry ce = this._chatService.GetBefore(before);
+
+                if (ce is null)
+                {
+                    yield break;
+                }
+
+                if (ce.Type == LlamaTokenType.Temporary)
+                {
+                    continue;
+                }
+
+                string c = StripNonASCII(ce.Content);
+
+                if (string.IsNullOrWhiteSpace(ce.UserId))
+                {
+                    yield return $"[{c}]";
+                }
+                else
+                {
+                    string n = ce.DisplayName;
+
+                    if (string.IsNullOrWhiteSpace(n))
+                    {
+                        n = ce.UserId;
+                    }
+
+                    yield return $"{n}: {c}";
+                }
+
+                before = ce.Id;
+            } while (true);
         }
 
         public ChatEntry[] GetResponses(string channelId, long after) => this._chatService.GetMessages(channelId, after, this.CharacterName);
@@ -234,6 +294,35 @@ namespace ChieApi.Services
             return false;
         }
 
+        private async Task CleanLastResponse()
+        {
+            TryGetLastBotMessage r = await this.TryGetLastMessageIsBot();
+
+            if (!r.Success)
+            {
+                return;
+            }
+
+            string? content = await r.Message.Content.Value;
+
+            if (content is null)
+            {
+                return;
+            }
+
+            string cleanedContent = " " + this._responseCleaners.Clean(content).Trim();
+
+            if (cleanedContent != content)
+            {
+                IReadOnlyLlamaTokenCollection newContent = await this._client.Tokenize(cleanedContent);
+
+                LlamaMessage newMessage = new(r.Message.UserName, newContent, r.Message.Type, this._tokenCache);
+
+                this._contextModel.Messages.Pop();
+                this._contextModel.Messages.Push(newMessage);
+            }
+        }
+
         private async Task Cleanup()
         {
             LlamaTokenCollection contextState = await this._contextModel.GetState();
@@ -281,6 +370,11 @@ namespace ChieApi.Services
                     }
 
                     await enumerator.Accept(llamaToken);
+
+                    foreach (IPostAccept postAccept in this._postAccept)
+                    {
+                        postAccept.PostAccept(enumerator);
+                    }
 
                     this.CurrentResponse += llamaToken.Value;
 
@@ -363,7 +457,7 @@ namespace ChieApi.Services
 
                 c.ComplexPresencePenaltySettings = new ComplexPresencePenaltySettings()
                 {
-                    LengthScale = 1.1f,
+                    LengthScale = 1.2f,
                     GroupScale = 1.3f,
                     MinGroupLength = 3,
                     RepeatTokenPenaltyWindow = -1
@@ -392,7 +486,9 @@ namespace ChieApi.Services
 
                 if (!string.IsNullOrWhiteSpace(this._characterConfiguration.Prompt))
                 {
-                    this._contextModel.Instruction = new LlamaTokenBlock(FileService.GetStringOrContent(this._characterConfiguration.Prompt), LlamaTokenType.Prompt, this._tokenCache);
+                    string prompt = FileService.GetStringOrContent(this._characterConfiguration.Prompt);
+                    prompt = prompt.Replace("\r", "");
+                    this._contextModel.Instruction = new LlamaTokenBlock(prompt, LlamaTokenType.Prompt, this._tokenCache);
                 }
             }
 
@@ -412,7 +508,7 @@ namespace ChieApi.Services
                 TryGetLastBotMessage r = await this.TryGetLastMessageIsBot();
                 bool continuation = processingData.Continuation && r.Success;
 
-                await this.PrepRemoteContext(continuation);              
+                await this.PrepRemoteContext(continuation);
 
                 await this.ReadNextResponse(r);
 
@@ -424,51 +520,6 @@ namespace ChieApi.Services
 
                 await this.Save();
             } while (true);
-        }
-
-        private async Task<TryGetLastBotMessage> TryGetLastMessageIsBot()
-        {
-            TryGetLastBotMessage toReturn = new();
-
-            if (!this._contextModel.Messages.Any() ||  this._contextModel.Messages.Peek() is not LlamaMessage lastMessage || await lastMessage.UserName.Value != this._characterConfiguration.CharacterName)
-            {
-                toReturn.Success = false;
-            } else
-            {
-                toReturn.Success = true;
-                toReturn.Message = lastMessage;
-            }
-
-            return toReturn;
-        }
-
-        private async Task CleanLastResponse()
-        {
-            TryGetLastBotMessage r = await this.TryGetLastMessageIsBot();
-
-            if(!r.Success)
-            {
-                return;
-            } 
-
-            string? content = await r.Message.Content.Value;
-
-            if (content is null)
-            {
-                return;
-            }
-
-            string cleanedContent = " " + this._responseCleaners.Clean(content).Trim();
-
-            if (cleanedContent != content)
-            {
-                IReadOnlyLlamaTokenCollection newContent = await this._client.Tokenize(cleanedContent);
-
-                LlamaMessage newMessage = new(r.Message.UserName, newContent, r.Message.Type, this._tokenCache);
-
-                this._contextModel.Messages.Pop();
-                this._contextModel.Messages.Push(newMessage);
-            }
         }
 
         private async Task PrepRemoteContext(bool continuation)
@@ -491,13 +542,13 @@ namespace ChieApi.Services
 
             long existingId = 0;
 
-            if(shouldAppend.Success)
+            if (shouldAppend.Success)
             {
                 LlamaTokenCollection collection = new();
                 await collection.Append(shouldAppend.Message.Content);
                 collection.Append(thisInference);
                 thisInference = collection;
-                _contextModel.Messages.Remove(shouldAppend.Message);
+                this._contextModel.Messages.Remove(shouldAppend.Message);
                 existingId = shouldAppend.Message.Id;
             }
 
@@ -571,7 +622,7 @@ namespace ChieApi.Services
 
             if (!string.IsNullOrWhiteSpace(chatEntry.DisplayName))
             {
-                this._contextModel.Messages.Enqueue(new LlamaMessage(chatEntry.DisplayName, chatEntry.Content, chatEntry.Type, this._tokenCache) { Id = thisMessageId});
+                this._contextModel.Messages.Enqueue(new LlamaMessage(chatEntry.DisplayName, chatEntry.Content, chatEntry.Type, this._tokenCache) { Id = thisMessageId });
             }
             else
             {
@@ -596,6 +647,23 @@ namespace ChieApi.Services
             return false;
         }
 
+        private async Task<TryGetLastBotMessage> TryGetLastMessageIsBot()
+        {
+            TryGetLastBotMessage toReturn = new();
+
+            if (!this._contextModel.Messages.Any() || this._contextModel.Messages.Peek() is not LlamaMessage lastMessage || await lastMessage.UserName.Value != this._characterConfiguration.CharacterName)
+            {
+                toReturn.Success = false;
+            }
+            else
+            {
+                toReturn.Success = true;
+                toReturn.Message = lastMessage;
+            }
+
+            return toReturn;
+        }
+
         private bool TryLock()
         {
             this._chatLock.Wait();
@@ -617,8 +685,9 @@ namespace ChieApi.Services
             if (this._summaryTask != null && gtQuart)
             {
                 SummaryResponse summary = await this._summaryTask;
-
-                IReadOnlyLlamaTokenCollection tokens = await this._tokenCache.Get(summary.Summary, false);
+                string strSummary = summary.Summary;
+                strSummary = strSummary.Replace("\r", "");
+                IReadOnlyLlamaTokenCollection tokens = await this._tokenCache.Get($"[{strSummary}]", false);
 
                 this._contextModel.Summary = new LlamaTokenBlock(tokens, LlamaTokenType.Undefined);
 
@@ -662,58 +731,6 @@ namespace ChieApi.Services
 
                 this._summaryTask = this._summarizationService.Summarize(summary, lastMessageId, this.GetMessagesReversed(lastMessageId));
             }
-        }
-
-        public IEnumerable<string> GetMessagesReversed(long before)
-        {
-            do
-            {
-                ChatEntry ce = this._chatService.GetBefore(before);
-
-                if (ce is null)
-                {
-                    yield break;
-                }
-
-                if (ce.Type == LlamaTokenType.Temporary)
-                {
-                    continue;
-                }
-
-                string c = StripNonASCII(ce.Content);
-
-                if (string.IsNullOrWhiteSpace(ce.UserId))
-                {
-                    yield return $"[{c}]";
-                }
-                else
-                {
-                    string n = ce.DisplayName;
-
-                    if (string.IsNullOrWhiteSpace(n))
-                    {
-                        n = ce.UserId;
-                    }
-
-                    yield return $"{n}: {c}";
-                }
-
-                before = ce.Id;
-            } while (true);
-        }
-
-        public static string StripNonASCII(string input)
-        {
-            StringBuilder sb = new();
-            foreach (char c in input)
-            {
-                if (c is >= (char)0 and <= (char)127) // ASCII range
-                {
-                    sb.Append(c);
-                }
-            }
-
-            return sb.ToString();
         }
 
         private void Unlock() => _ = this._chatLock.Release();

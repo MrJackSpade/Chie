@@ -24,7 +24,9 @@ namespace Llama.Data.Models
     {
         Bias,
 
-        Clamp
+        Clamp,
+
+        Penalty
     }
 
     public class LogitBias : LogitRule
@@ -73,6 +75,26 @@ namespace Llama.Data.Models
         public void SetStart(float value) => this._startValue = value;
 
         public override string ToString() => $"[Clamp] {this.RuleType}";
+    }
+
+    public class LogitPenalty : LogitRule
+    {
+        public LogitPenalty(int id, float value, LogitRuleLifetime lifeTime)
+        {
+            this.LifeTime = lifeTime;
+            this.LogitId = id;
+            this.Value = value;
+        }
+
+        [JsonConstructor]
+        public LogitPenalty()
+        { }
+
+        public override LogitRuleType RuleType => LogitRuleType.Penalty;
+
+        public float Value { get; set; }
+
+        public override string ToString() => $"[Penalty] {this.Value}";
     }
 
     public abstract class LogitRule

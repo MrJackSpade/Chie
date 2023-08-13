@@ -1,6 +1,6 @@
-﻿using Summary.Interfaces;
+﻿using Loxifi;
+using Summary.Interfaces;
 using Summary.Models;
-using Loxifi;
 
 namespace Summary
 {

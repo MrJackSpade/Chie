@@ -4,6 +4,12 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Llama.Core.Extensions
 {
+    public static class ISimpleSamplerExtensions
+    {
+        [SuppressMessage("Style", "IDE0060:Remove unused parameter")]
+        public static LastTokens GetLastTokens(this ISimpleSampler sampler, IReadOnlyLlamaTokenCollection collection, int tryTake) => new(collection, tryTake);
+    }
+
     public class LastTokens
     {
         public LastTokens(IReadOnlyLlamaTokenCollection collection, int tryTake)
@@ -21,11 +27,7 @@ namespace Llama.Core.Extensions
         }
 
         public int[] Ids { get; set; }
+
         public int Length { get; set; }
-    }
-    public static class ISimpleSamplerExtensions
-    {
-        [SuppressMessage("Style", "IDE0060:Remove unused parameter")]
-        public static LastTokens GetLastTokens(this ISimpleSampler sampler, IReadOnlyLlamaTokenCollection collection, int tryTake) => new(collection, tryTake);
     }
 }

@@ -4,27 +4,11 @@ using System.Text.RegularExpressions;
 namespace ChieApi.CleanupPipeline
 {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0022:Use expression body for method", Justification = "<Pending>")]
-
     public class PunctuationCleaner : IResponseCleaner
     {
-        public static string PadCommas(string input)
-        {
-            return Regex.Replace(input, @"([a-zA-Z]{2}),([a-zA-Z])", "$1, $2");
-        }
-
         public static string IncreaseAndSpacePeriod(string input)
         {
             return Regex.Replace(input, @"([a-zA-Z]{2})\.{2,3} ?([a-zA-Z]|$)", "$1... $2");
-        }
-
-        public static string ReduceAndSpace(string input, char c)
-        {
-            return Regex.Replace(input, $@"([a-zA-Z]{{2}})\{c}\{c} ?([a-zA-Z])", $"$1{c} $2");
-        }
-
-        public static string ReduceApostrophe(string input)
-        {
-            return Regex.Replace(input, @"([a-zA-Z]{2})''([a-zA-Z])", "$1'$2");
         }
 
         public static string Misc(string input)
@@ -40,6 +24,21 @@ namespace ChieApi.CleanupPipeline
             }
 
             return s;
+        }
+
+        public static string PadCommas(string input)
+        {
+            return Regex.Replace(input, @"([a-zA-Z]{2}),([a-zA-Z])", "$1, $2");
+        }
+
+        public static string ReduceAndSpace(string input, char c)
+        {
+            return Regex.Replace(input, $@"([a-zA-Z]{{2}})\{c}\{c} ?([a-zA-Z])", $"$1{c} $2");
+        }
+
+        public static string ReduceApostrophe(string input)
+        {
+            return Regex.Replace(input, @"([a-zA-Z]{2})''([a-zA-Z])", "$1'$2");
         }
 
         public string Clean(string content)

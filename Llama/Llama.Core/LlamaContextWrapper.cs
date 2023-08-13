@@ -2,8 +2,8 @@
 using Llama.Core.Interfaces;
 using Llama.Data;
 using Llama.Data.Collections;
-using Llama.Data.Enums;
 using Llama.Data.Exceptions;
+using Llama.Data.Extensions;
 using Llama.Data.Interfaces;
 using Llama.Data.Models;
 using Llama.Data.Native;
@@ -172,8 +172,8 @@ namespace Llama.Core
                 ContextTokens = Evaluated
             };
 
-            foreach(LogitClamp clamp in logitRules.OfType<LogitClamp>()) 
-            { 
+            foreach (LogitClamp clamp in logitRules.OfType<LogitClamp>())
+            {
                 clamp.SetStart(sampleContext.GetProbability(clamp.LogitId));
             }
 
@@ -182,7 +182,19 @@ namespace Llama.Core
                 simpleSampler.SampleNext(sampleContext);
             }
 
-            logits.Update(no_penalize);
+            //Apply penalty
+            foreach (LogitPenalty bias in logitRules.OfType<LogitPenalty>())
+            {
+                sampleContext.SetPenalty(bias.LogitId, bias.Value);
+            }
+
+            sampleContext.Update(no_penalize);
+
+            //Apply bias
+            foreach (LogitBias bias in logitRules.OfType<LogitBias>())
+            {
+                sampleContext.SetBias(bias.LogitId, bias.Value);
+            }
 
             //Apply clamping
             foreach (LogitClamp clamp in logitRules.OfType<LogitClamp>())
@@ -190,7 +202,7 @@ namespace Llama.Core
                 float nv = sampleContext.GetProbability(clamp.LogitId);
                 float cv = clamp.GetValue(nv);
 
-                if(cv != nv)
+                if (cv != nv)
                 {
                     sampleContext.SetProbability(clamp.LogitId, cv);
                 }
@@ -275,9 +287,50 @@ namespace Llama.Core
         private LlamaTokenCollection NoPenalize()
         {
             LlamaTokenCollection collection = new();
-            collection.Append(this.GetToken(13)); //NL
-            collection.Append(this.GetToken(334)); // *
-            collection.Append(this.GetToken(29930)); //*
+            collection.Append(this.GetToken(13));//NL
+            collection.Append(this.GetToken(334));// *
+            collection.Append(this.GetToken(29930));//*
+            collection.Append(this.GetToken(590));//my
+            collection.Append(this.GetToken(368));//ly
+            collection.Append(this.GetToken(297));//in
+            collection.Append(this.GetToken(591));//we
+            collection.Append(this.GetToken(411));//with
+            collection.Append(this.GetToken(373));//on
+            collection.Append(this.GetToken(596));//your
+            collection.Append(this.GetToken(445));//this
+            collection.Append(this.GetToken(1048));//about
+            collection.Append(this.GetToken(408));//as
+            collection.Append(this.GetToken(367));//be
+            collection.Append(this.GetToken(338));//is
+            collection.Append(this.GetToken(470));//or
+            collection.Append(this.GetToken(727));//there
+            collection.Append(this.GetToken(267));//es
+            collection.Append(this.GetToken(1749));//our
+            collection.Append(this.GetToken(541));//but
+            collection.Append(this.GetToken(769));//then
+            collection.Append(this.GetToken(515));//from
+            collection.Append(this.GetToken(451));//not
+            collection.Append(this.GetToken(491));//by
+            collection.Append(this.GetToken(577));//so
+            collection.Append(this.GetToken(502));//us
+            collection.Append(this.GetToken(526));//are
+            collection.Append(this.GetToken(437));//do
+            collection.Append(this.GetToken(565));//if
+            collection.Append(this.GetToken(471));//was
+            collection.Append(this.GetToken(2086));//too
+            collection.Append(this.GetToken(304));//to
+            collection.Append(this.GetToken(29892));//,
+            collection.Append(this.GetToken(322));//and
+            collection.Append(this.GetToken(306));//I
+            collection.Append(this.GetToken(310));//of
+            collection.Append(this.GetToken(29879));//s
+            collection.Append(this.GetToken(29991));//!
+            collection.Append(this.GetToken(278));//the
+            collection.Append(this.GetToken(592));//me
+            collection.Append(this.GetToken(263));//a
+            collection.Append(this.GetToken(363));//for
+            collection.Append(this.GetToken(372));//it
+            collection.Append(this.GetToken(393));//that
             return collection;
         }
     }

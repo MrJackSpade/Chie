@@ -1,6 +1,4 @@
 ﻿using Llama.Data.Collections;
-using Llama.Data.Enums;
-using Llama.Data.Extensions;
 using Llama.Data.Interfaces;
 using Llama.Data.Models;
 using Llama.Data.Scheduler;

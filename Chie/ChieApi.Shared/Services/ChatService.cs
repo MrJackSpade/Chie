@@ -11,9 +11,27 @@ namespace ChieApi.Shared.Services
     {
         private readonly string _connectionString;
 
+        private readonly object _databaseLock = new();
+
         public ChatService(IHasConnectionString connectionString)
         {
             this._connectionString = connectionString.ConnectionString;
+        }
+
+        public ChatEntry GetBefore(long id, bool includeHidden = false)
+        {
+            using SqlConnection connection = new(this._connectionString);
+
+            string query = $"select top 1 * from chatentry where id < {id}";
+
+            if (!includeHidden)
+            {
+                query += $" and IsVisible = 1 ";
+            }
+
+            query += $"  order by id desc";
+
+            return connection.Query<ChatEntry>(query).SingleOrDefault();
         }
 
         public float[]? GetEmbeddings(Model model, long chatEntryId)
@@ -77,22 +95,6 @@ namespace ChieApi.Shared.Services
             query += $"  order by id desc";
 
             return connection.Query<ChatEntry>(query).Take(100).ToArray();
-        }
-
-        public ChatEntry GetBefore(long id, bool includeHidden = false)
-        {
-            using SqlConnection connection = new(this._connectionString);
-
-            string query = $"select top 1 * from chatentry where id < {id}";
-
-            if (!includeHidden)
-            {
-                query += $" and IsVisible = 1 ";
-            }
-
-            query += $"  order by id desc";
-
-            return connection.Query<ChatEntry>(query).SingleOrDefault();
         }
 
         public ChatEntry[] GetMessages(string? channelId = null, long after = 0, string userId = null, bool includeHidden = false, bool includeTemporary = false)
@@ -176,15 +178,14 @@ namespace ChieApi.Shared.Services
             if (chatEntry.Id == 0)
             {
                 connection.Insert(chatEntry);
-            } else
+            }
+            else
             {
                 connection.Update(chatEntry);
             }
 
             return chatEntry.Id;
         }
-
-        private readonly object _databaseLock = new();    
 
         public void SaveEmbeddings(Model model, long id, float[] embeddings)
         {

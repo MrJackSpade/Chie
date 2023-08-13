@@ -3,6 +3,7 @@
     public class AutoResetEventWithData<T>
     {
         private readonly AutoResetEvent _event;
+
         private T _data;
 
         public AutoResetEventWithData(bool v = false)

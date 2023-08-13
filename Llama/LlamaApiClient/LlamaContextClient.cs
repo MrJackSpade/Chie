@@ -8,9 +8,9 @@ namespace LlamaApiClient
 {
     public class LlamaContextClient : LlamaClient
     {
-        private Guid _contextGuid = Guid.NewGuid();
-
         private readonly LogitRuleCollection _logitRules = new();
+
+        private Guid _contextGuid = Guid.NewGuid();
 
         public LlamaContextClient(LlamaClientSettings settings) : base(settings)
         {
@@ -18,7 +18,7 @@ namespace LlamaApiClient
 
         public void AddRule(LogitRule rule)
         {
-            if(rule.LifeTime != LogitRuleLifetime.Context)
+            if (rule.LifeTime != LogitRuleLifetime.Context)
             {
                 throw new InvalidOperationException($"Only context lifetime rules can be added to {nameof(LlamaContextClient)}");
             }

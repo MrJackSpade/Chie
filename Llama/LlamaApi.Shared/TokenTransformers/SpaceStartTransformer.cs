@@ -10,9 +10,9 @@ namespace ChieApi.TokenTransformers
     {
         public async IAsyncEnumerable<LlamaToken> TransformToken(InferenceEnumerator enumerator, IAsyncEnumerable<LlamaToken> selectedTokens)
         {
-            if(enumerator.Enumerated.Count > 0)
+            if (enumerator.Enumerated.Count > 0)
             {
-                await foreach(LlamaToken t in selectedTokens)
+                await foreach (LlamaToken t in selectedTokens)
                 {
                     yield return t;
                 }
@@ -24,8 +24,8 @@ namespace ChieApi.TokenTransformers
             {
                 string? tstring = token?.ToString();
 
-                if(tstring != null && tstring.StartsWith(" "))
-                { 
+                if (tstring != null && tstring.StartsWith(" "))
+                {
                     yield return token;
                 }
                 else

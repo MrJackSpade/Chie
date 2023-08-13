@@ -2,7 +2,8 @@
 {
     public class DictionaryEntry
     {
-        public string Word { get; set; }
         public string Fingerprint { get; set; }
+
+        public string Word { get; set; }
     }
 }

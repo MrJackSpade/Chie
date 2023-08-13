@@ -4,10 +4,11 @@ namespace ChieApi.Services
 {
     public partial class LlamaService
     {
-        class TryGetLastBotMessage
+        private class TryGetLastBotMessage
         {
-            public bool Success { get; set; }
             public LlamaMessage Message { get; set; }
+
+            public bool Success { get; set; }
         }
     }
 }

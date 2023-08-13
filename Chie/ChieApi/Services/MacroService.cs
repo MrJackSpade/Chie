@@ -19,7 +19,7 @@ namespace ChieApi.Services
                 //Vicuna prompt short circuit
                 if (line.StartsWith("###"))
                 {
-                    outputLines.Add(line); 
+                    outputLines.Add(line);
                     continue;
                 }
 

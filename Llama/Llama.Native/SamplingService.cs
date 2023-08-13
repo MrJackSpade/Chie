@@ -5,6 +5,27 @@ namespace Llama.Native
     public unsafe class SamplingApi
     {
         /// <summary>
+        /// Repetition penalty described in CTRL academic paper https://arxiv.org/abs/1909.05858, with negative logit fix.
+        /// </summary>
+        /// <param name="ctx"></param>
+        /// <param name="candidates">Pointer to LlamaTokenDataArray</param>
+        /// <param name="last_tokens"></param>
+        /// <param name="last_tokens_size"></param>
+        /// <param name="penalty"></param>
+        public static void ComplexPresencePenalty(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, int[] check_tokens, int minGroupLength, float scalePerGroup, float scalePerLength)
+        {
+            System.Buffers.MemoryHandle handle = candidates.data.Pin();
+            LlamaTokenDataArrayNative st = new()
+            {
+                data = new IntPtr(handle.Pointer),
+                size = candidates.size,
+                sorted = candidates.sorted
+            };
+
+            LlamaCppApi.ComplexPresencePenalty(ctx, new IntPtr(&st), check_tokens, (ulong)check_tokens.Length, minGroupLength, scalePerGroup, scalePerLength);
+        }
+
+        /// <summary>
         /// Frequency and presence penalties described in OpenAI API https://platform.openai.com/docs/api-reference/parameter-details.
         /// </summary>
         /// <param name="ctx"></param>
@@ -45,27 +66,6 @@ namespace Llama.Native
             };
 
             LlamaCppApi.SampleRepetitionPenalty(ctx, new IntPtr(&st), check_tokens, (ulong)check_tokens.Length, penalty);
-        }
-
-        /// <summary>
-        /// Repetition penalty described in CTRL academic paper https://arxiv.org/abs/1909.05858, with negative logit fix.
-        /// </summary>
-        /// <param name="ctx"></param>
-        /// <param name="candidates">Pointer to LlamaTokenDataArray</param>
-        /// <param name="last_tokens"></param>
-        /// <param name="last_tokens_size"></param>
-        /// <param name="penalty"></param>
-        public static void ComplexPresencePenalty(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, int[] check_tokens, int minGroupLength, float scalePerGroup, float scalePerLength)
-        {
-            System.Buffers.MemoryHandle handle = candidates.data.Pin();
-            LlamaTokenDataArrayNative st = new()
-            {
-                data = new IntPtr(handle.Pointer),
-                size = candidates.size,
-                sorted = candidates.sorted
-            };
-
-            LlamaCppApi.ComplexPresencePenalty(ctx, new IntPtr(&st), check_tokens, (ulong)check_tokens.Length, minGroupLength, scalePerGroup, scalePerLength);
         }
 
         /// <summary>

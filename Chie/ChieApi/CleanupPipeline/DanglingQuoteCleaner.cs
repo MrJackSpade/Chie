@@ -6,18 +6,6 @@ namespace ChieApi.CleanupPipeline
     {
         private const string END_CHARS = ".!?";
 
-        private bool HasValidEnd(string content)
-        {
-            foreach (char c in END_CHARS)
-            {
-                if (content.EndsWith($"{c}\""))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
         public string Clean(string content)
         {
             content = content.Replace("”", "\"");
@@ -30,6 +18,19 @@ namespace ChieApi.CleanupPipeline
             }
 
             return content;
+        }
+
+        private bool HasValidEnd(string content)
+        {
+            foreach (char c in END_CHARS)
+            {
+                if (content.EndsWith($"{c}\""))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

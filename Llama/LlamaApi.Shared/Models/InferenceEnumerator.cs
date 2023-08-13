@@ -1,10 +1,8 @@
 ﻿using Llama.Data.Collections;
-using Llama.Data.Extensions;
 using Llama.Data.Interfaces;
 using Llama.Data.Models;
 using LlamaApi.Models.Request;
 using LlamaApi.Shared.Models.Response;
-using System.Runtime.CompilerServices;
 
 namespace LlamaApiClient
 {
@@ -14,9 +12,9 @@ namespace LlamaApiClient
 
         private readonly LlamaTokenCollection _enumerated = new();
 
-        private readonly Func<LogitRuleCollection, Task<ResponseLlamaToken>> _moveNext;
-
         private readonly LogitRuleCollection _logitRuleCollection = new();
+
+        private readonly Func<LogitRuleCollection, Task<ResponseLlamaToken>> _moveNext;
 
         private int _moveBack = 0;
 
@@ -24,8 +22,8 @@ namespace LlamaApiClient
         {
             this._moveNext = moveNext;
             this._accept = accept;
-            
-            foreach(LogitRule rule in ruleCollection)
+
+            foreach (LogitRule rule in ruleCollection)
             {
                 this.AddLogitRule(rule);
             }
@@ -76,6 +74,16 @@ namespace LlamaApiClient
             }
         }
 
+        public void AddLogitRule(LogitRule rule)
+        {
+            if (rule.LifeTime == LogitRuleLifetime.Context)
+            {
+                throw new ArgumentException("Can not add logit rule lifetime of context to inferrence enumerator");
+            }
+
+            this._logitRuleCollection.AddOrUpdate(rule);
+        }
+
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
         public void MoveBack()
@@ -105,16 +113,6 @@ namespace LlamaApiClient
             this.Current = await this._moveNext.Invoke(this._logitRuleCollection);
 
             return this.Current.Id > 2;
-        }
-
-        public void AddLogitRule(LogitRule rule)
-        {
-            if(rule.LifeTime  == LogitRuleLifetime.Context)
-            {
-                throw new ArgumentException("Can not add logit rule lifetime of context to inferrence enumerator");
-            }
-
-            this._logitRuleCollection.AddOrUpdate(rule);
         }
     }
 }

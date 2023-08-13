@@ -21,9 +21,9 @@ namespace LlamaApiClient
 
         private readonly Guid _modelGuid = Guid.Empty;
 
-        private readonly LlamaClientSettings _settings;
-
         private readonly JsonSerializerOptions _serializerOptions;
+
+        private readonly LlamaClientSettings _settings;
 
         public LlamaClient(LlamaClientSettings settings)
         {
@@ -59,15 +59,6 @@ namespace LlamaApiClient
             Debug.WriteLine("Evaluated: " + response.Evaluated);
         }
 
-        public InferenceEnumerator Infer(Guid contextId, LogitRuleCollection? logitRules)
-        {
-            return new InferenceEnumerator(
-                (b) => this.Predict(contextId, b),
-                (t) => this.Write(contextId, t),
-                logitRules
-            );
-        }
-
         public async Task<float[]> GetLogits(Guid contextId)
         {
             GetLogitsRequest request = new()
@@ -78,6 +69,15 @@ namespace LlamaApiClient
             GetLogitsResponse response = await this.WaitForResponse<GetLogitsResponse>("/Llama/getlogits", request);
 
             return response.GetValue().ToArray();
+        }
+
+        public InferenceEnumerator Infer(Guid contextId, LogitRuleCollection? logitRules)
+        {
+            return new InferenceEnumerator(
+                (b) => this.Predict(contextId, b),
+                (t) => this.Write(contextId, t),
+                logitRules
+            );
         }
 
         public virtual async Task<ContextState> LoadContext(LlamaContextSettings settings, Action<ContextRequest> settingsAction)

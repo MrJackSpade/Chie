@@ -35,18 +35,6 @@ namespace ChieApi.Models
             }
         }
 
-        private async Task<string?> GetValue()
-        {
-            if (this._value == null)
-            {
-                IReadOnlyLlamaTokenCollection tc = await this.Tokens;
-
-                this._value = tc?.ToString();
-            }
-
-            return this._value;
-        }
-
         public Task<string?> Value => this.GetValue();
 
         public async IAsyncEnumerator<LlamaToken> GetAsyncEnumerator(CancellationToken cancellationToken = default)
@@ -57,6 +45,18 @@ namespace ChieApi.Models
             {
                 yield return token;
             }
+        }
+
+        private async Task<string?> GetValue()
+        {
+            if (this._value == null)
+            {
+                IReadOnlyLlamaTokenCollection tc = await this.Tokens;
+
+                this._value = tc?.ToString();
+            }
+
+            return this._value;
         }
     }
 }

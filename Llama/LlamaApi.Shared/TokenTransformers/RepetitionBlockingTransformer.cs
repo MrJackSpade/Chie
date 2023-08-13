@@ -90,7 +90,7 @@ namespace ChieApi.TokenTransformers
 
                 //if the end of the existing string plus the beginning
                 //of the new string exceed the max, its banned
-                if (firstCountNew + endCountWritten > this._max && _stringComparer.Equals(firstCharNew, endCharWritten))
+                if (firstCountNew + endCountWritten > this._max && this._stringComparer.Equals(firstCharNew, endCharWritten))
                 {
                     enumerator.SetBias(tVal.Id, float.NegativeInfinity, LogitRuleLifetime.Token);
                     continue;
