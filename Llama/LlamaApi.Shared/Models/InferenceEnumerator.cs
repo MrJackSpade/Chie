@@ -6,7 +6,7 @@ using LlamaApi.Shared.Models.Response;
 
 namespace LlamaApiClient
 {
-    public class InferenceEnumerator
+    public partial class InferenceEnumerator
     {
         private readonly Func<RequestLlamaToken, Task> _accept;
 

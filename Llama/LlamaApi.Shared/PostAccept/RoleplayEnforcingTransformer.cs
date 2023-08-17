@@ -16,12 +16,20 @@ namespace ChieApi.TokenTransformers
 
         public void PostAccept(InferenceEnumerator enumerator)
         {
-            string? writtenTrimmed = enumerator.Enumerated.ToString()?.Trim();
+            string writtenTrimmed = enumerator.Enumerated.ToString()?.Trim() ?? string.Empty;
 
-            if (writtenTrimmed != null && !writtenTrimmed.Contains('*'))
+            int asteriskCount = writtenTrimmed.Count(c => c == '*');
+            bool endsWith = writtenTrimmed.EndsWith("*");
+
+            if (asteriskCount == 0)
             {
                 float mod = writtenTrimmed.Length * this._slope;
                 enumerator.SetBias(334, mod, LogitRuleLifetime.Token);
+            }
+
+            if((asteriskCount >= 4 && asteriskCount % 2 == 0) || endsWith) 
+            {
+                enumerator.SetBias(334, float.NegativeInfinity, LogitRuleLifetime.Token);
             }
         }
     }

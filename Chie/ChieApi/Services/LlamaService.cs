@@ -100,12 +100,13 @@ namespace ChieApi.Services
                 new SpellingCleaner(dictionaryService),
                 new DanglingQuoteCleaner(),
                 new PunctuationCleaner(),
-                new UnbrokenWordsCleaner(dictionaryService)
+                new UnbrokenWordsCleaner(dictionaryService, 2),
+                new BrokenWordsCleaner(dictionaryService, 3)
             };
 
             this._postAccept = new List<IPostAccept>()
             {
-                new RoleplayEnforcingTransformer(0.1f),
+                new RoleplayEnforcingTransformer(0.01f),
                 //new InferenceRepetitionPenalty(1.2f)
             };
 
@@ -458,7 +459,7 @@ namespace ChieApi.Services
                 c.ComplexPresencePenaltySettings = new ComplexPresencePenaltySettings()
                 {
                     LengthScale = 1.2f,
-                    GroupScale = 1.3f,
+                    GroupScale = 1.575f,
                     MinGroupLength = 3,
                     RepeatTokenPenaltyWindow = -1
                 };

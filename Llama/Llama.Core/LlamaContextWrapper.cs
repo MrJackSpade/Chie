@@ -1,5 +1,6 @@
 ﻿using Llama.Core.Exceptions;
 using Llama.Core.Interfaces;
+using Llama.Core.Samplers.FrequencyAndPresence;
 using Llama.Data;
 using Llama.Data.Collections;
 using Llama.Data.Exceptions;
@@ -177,7 +178,8 @@ namespace Llama.Core
                 clamp.SetStart(sampleContext.GetProbability(clamp.LogitId));
             }
 
-            foreach (ISimpleSampler simpleSampler in this._simpleSamplers)
+            //TODO: Fix cheap hack
+            foreach (ISimpleSampler simpleSampler in this._simpleSamplers.Where(s => s.GetType() != typeof(ComplexPresenceSampler)))
             {
                 simpleSampler.SampleNext(sampleContext);
             }
@@ -189,6 +191,12 @@ namespace Llama.Core
             }
 
             sampleContext.Update(no_penalize);
+
+            //TODO: Fix cheap hack
+            foreach (ISimpleSampler simpleSampler in this._simpleSamplers.Where(s => s.GetType() == typeof(ComplexPresenceSampler)))
+            {
+                simpleSampler.SampleNext(sampleContext);
+            }
 
             //Apply bias
             foreach (LogitBias bias in logitRules.OfType<LogitBias>())

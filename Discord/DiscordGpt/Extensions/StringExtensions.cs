@@ -4,7 +4,14 @@ namespace DiscordGpt.Extensions
 {
     public static class StringExtensions
     {
-        private const string ESCAPE_CHARS = @"*\~`_";
+        private static readonly Dictionary<char, string> _escapeSequences = new()
+        {
+            ['*'] = "**",
+            ['\\'] = "\\", 
+            ['~'] = "\\",
+            ['`'] = "\\",
+            ['_'] = "\\"
+        };
 
         public static string DiscordEscape(this string str)
         {
@@ -12,15 +19,15 @@ namespace DiscordGpt.Extensions
 
             foreach (char c in str)
             {
-                if (ESCAPE_CHARS.Contains(c))
+                if (_escapeSequences.TryGetValue(c, out string sq))
                 {
-                    _ = sb.Append('\\');
+                    _ = sb.Append(sq);
                 }
 
                 _ = sb.Append(c);
             }
 
-            return sb.ToString();
+            return sb.ToString().Trim();
         }
     }
 }

@@ -9,8 +9,11 @@ namespace ChieApi.CleanupPipeline
 
         private readonly Dictionary<char, string[]> _wordsByLetter = new();
 
-        public UnbrokenWordsCleaner(DictionaryService dictionaryService)
+        private readonly int _maxCount;
+        public UnbrokenWordsCleaner(DictionaryService dictionaryService, int maxCount)
         {
+            _maxCount = maxCount;
+
             _dictionaryService = dictionaryService;
 
             string[] words = dictionaryService.GetWords().Where(w => w.ToUpper() != w).ToArray();
@@ -62,19 +65,28 @@ namespace ChieApi.CleanupPipeline
                 return true;
             }
 
+            if(currentList.Count >= _maxCount)
+            {
+                return false;
+            }
+
             char startChar = char.ToLower(sequence[index]);
 
-            foreach (string subsequence in _wordsByLetter[startChar])
+            if (_wordsByLetter.TryGetValue(startChar, out string[] words))
             {
-                if (sequence[index..].StartsWith(subsequence, StringComparison.OrdinalIgnoreCase))
+                foreach (string subsequence in words)
                 {
-                    currentList.Add(subsequence);
-                    if (this.FindSubsequencesHelper(sequence, index + subsequence.Length, currentList))
+                    if (sequence[index..].StartsWith(subsequence, StringComparison.OrdinalIgnoreCase))
                     {
-                        return true;
-                    }
+                        currentList.Add(subsequence);
 
-                    currentList.RemoveAt(currentList.Count - 1);
+                        if (this.FindSubsequencesHelper(sequence, index + subsequence.Length, currentList))
+                        {
+                            return true;
+                        }
+
+                        currentList.RemoveAt(currentList.Count - 1);
+                    }
                 }
             }
 
