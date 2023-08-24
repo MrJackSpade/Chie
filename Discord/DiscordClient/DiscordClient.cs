@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -57,6 +58,8 @@ namespace Chie
                 _ = await _discordReady.Task;
 
                 this.Connected = true;
+
+                await _client.CurrentUser.ModifyAsync(c => c.Username = this._settings.UserName);
 
                 _client.MessageReceived += (s) => OnMessageReceived?.Invoke(s);
                 _client.ReactionAdded += (a, b, c) => OnReactionAdded?.Invoke(a, b, c);

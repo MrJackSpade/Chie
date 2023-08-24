@@ -1,4 +1,4 @@
-using Blip.Shared.Models;
+using Blip.Models;
 using ImageRecognition;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.RegularExpressions;

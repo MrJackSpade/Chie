@@ -16,7 +16,9 @@ namespace ChieApi.Models
         public ContextSaveState()
         { }
 
-        public List<LlamaTokenState> Instruct { get; set; } = new();
+        public List<LlamaTokenState> AssistantBlock { get; set; } = new();
+
+        public List<LlamaTokenState> InstructionBlock { get; set; } = new();
 
         public List<TokenBlockState> MessageStates { get; set; } = new();
 
@@ -24,9 +26,14 @@ namespace ChieApi.Models
 
         public async Task LoadFrom(LlamaContextModel model)
         {
-            if (model.Instruction is not null)
+            if (model.InstructionBlock is not null)
             {
-                this.Instruct = await model.Instruction.ToStateList();
+                this.InstructionBlock = await model.InstructionBlock.ToStateList();
+            }
+
+            if (model.AssistantBlock is not null)
+            {
+                this.AssistantBlock = await model.AssistantBlock.ToStateList();
             }
 
             if (model.Summary is not null)
@@ -68,7 +75,8 @@ namespace ChieApi.Models
 
             ContextSaveState state = JsonSerializer.Deserialize<ContextSaveState>(content);
 
-            this.Instruct = state.Instruct;
+            this.InstructionBlock = state.InstructionBlock;
+            this.AssistantBlock = state.AssistantBlock;
             this.Summary = state.Summary;
             this.MessageStates = state.MessageStates;
         }
@@ -87,9 +95,14 @@ namespace ChieApi.Models
         {
             LlamaContextModel toReturn = new(cache);
 
-            if (this.Instruct != null)
+            if (this.InstructionBlock != null)
             {
-                toReturn.Instruction = new LlamaTokenBlock(this.Instruct.ToCollection(), LlamaTokenType.Undefined);
+                toReturn.InstructionBlock = new LlamaTokenBlock(this.InstructionBlock.ToCollection(), LlamaTokenType.Undefined);
+            }
+
+            if (this.AssistantBlock != null)
+            {
+                toReturn.AssistantBlock = new LlamaTokenBlock(this.AssistantBlock.ToCollection(), LlamaTokenType.Undefined);
             }
 
             if (this.Summary != null)

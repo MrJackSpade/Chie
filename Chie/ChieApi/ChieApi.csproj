@@ -24,14 +24,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Ai\Camel_13B\Prompt.bak" />
     <None Remove="logits.log" />
     <None Remove="TempFile.png" />
     <None Remove="tempStart.txt" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="Ai\Camel_13B\Prompt.bak" />
   </ItemGroup>
 	
   <ItemGroup>

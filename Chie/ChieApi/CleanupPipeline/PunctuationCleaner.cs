@@ -4,43 +4,19 @@ using System.Text.RegularExpressions;
 namespace ChieApi.CleanupPipeline
 {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0022:Use expression body for method", Justification = "<Pending>")]
-    public class PunctuationCleaner : IResponseCleaner
+    public class PunctuationCleaner : ITextCleaner
     {
         public static string IncreaseAndSpacePeriod(string input)
         {
             return Regex.Replace(input, @"([a-zA-Z]{2})\.{2,3} ?([a-zA-Z]|$)", "$1... $2");
         }
 
-        public static string AdjustAsteriskSpacing(string input)
-        {
-            if (!input.Contains('*'))
-            {
-                return input;
-            }
-
-            // Split the string by asterisk
-            string[] parts = input.Split('*');
-
-            // If the number of parts is odd (meaning there are even number of asterisks)
-            if (parts.Length % 2 == 0)
-            {
-                return input;  // Early exit if there's an odd number of asterisks or none
-            }
-
-            for (int i = 1; i < parts.Length; i += 2)
-            {
-                // Trim the spaces of the inside content
-                parts[i] = parts[i].Trim();
-            }
-
-            // Join the parts back using asterisk
-            return string.Join("*", parts);
-        }
-
         public static string Misc(string input)
         {
             string s = input;
 
+            s = s.Replace(" ?", "?");
+            s = s.Replace(" !", "!");
             s = s.Replace("..?", "?");
             s = s.Replace("...", "…");
 
@@ -62,12 +38,10 @@ namespace ChieApi.CleanupPipeline
                 s = s.Replace("\"\"", "\"");
             }
 
-            while(s.Contains("* *"))
+            while (s.Contains("* *"))
             {
                 s = s.Replace("* *", "*");
             }
-
-            s = AdjustAsteriskSpacing(s);
 
             s = RemoveTrailingAsterisk(s);
 
@@ -91,7 +65,7 @@ namespace ChieApi.CleanupPipeline
 
         public static string RemoveTrailingAsterisk(string input)
         {
-            if(input.Count(c => c == '*') % 2 == 1)
+            if (input.Count(c => c == '*') % 2 == 1)
             {
                 return input.TrimEnd('*').Trim();
             }

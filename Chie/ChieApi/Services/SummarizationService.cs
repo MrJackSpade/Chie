@@ -9,9 +9,11 @@ namespace ChieApi.Services
     {
         private const string DIR_SUMMARIZATION = "SummarizationData";
 
-        private const int MAX_TOKENS = 1000;
+        private const int MAX_IN_TOKENS = 250;
 
         private readonly ISummaryApiClient _summaryApiClient;
+
+        private readonly Dictionary<string, int> _cachedTokenCount = new();
 
         public SummarizationService(ISummaryApiClient summaryApiClient)
         {
@@ -23,57 +25,114 @@ namespace ChieApi.Services
             this._summaryApiClient = summaryApiClient;
         }
 
-        public async Task<SummaryResponse> Summarize(string previousSummary, long firstId, IEnumerable<string> messagesReversed)
+        public async Task<int> GetTokenCount(string message)
+        {
+            if(!_cachedTokenCount.TryGetValue(message, out int count))
+            {
+                TokenizeResponse response = await this._summaryApiClient.Tokenize(message + "\n");
+
+                count = response.Content.Length;
+
+                _cachedTokenCount.Add(message, count);
+            }
+
+            return count;
+        }
+
+        public async Task<SummaryResponse> Summarize(long firstId, int maxOutTokens, IEnumerable<string> messagesReversed)
         {
             int tokenCount = 0;
 
             StringBuilder toSummarize = new();
 
-            if (!string.IsNullOrWhiteSpace(previousSummary))
-            {
-                TokenizeResponse previousResponse = await this._summaryApiClient.Tokenize(previousSummary + "\n");
-
-                tokenCount += previousResponse.Content.Length;
-
-                toSummarize.AppendLine(previousSummary);
-            }
+            //Messages go back in time so we're going to keep track of which
+            //ones weve tested so we know what we need to keep in the cache for the next run.
+            //Since the window will always move forward, there shouldn't be a scenario where 
+            //a message isn't checked on one run, and IS checked on the next run
+            HashSet<string> checkedMessages = new();
 
             IEnumerator<string> messages = messagesReversed.GetEnumerator();
 
-            List<string> toAppend = new();
-            do
+            //If no available messages we exit
+            if (!messages.MoveNext())
             {
-                if (!messages.MoveNext())
+                return new SummaryResponse()
                 {
-                    break;
-                }
-
-                string message = messages.Current;
-
-                Debug.WriteLine("Requesting Tokens: " + message);
-
-                TokenizeResponse response = await this._summaryApiClient.Tokenize(message + "\n");
-
-                tokenCount += response.Content.Length;
-
-                Debug.WriteLine("Token Count: " + tokenCount);
-
-                if (tokenCount >= MAX_TOKENS)
-                {
-                    break;
-                }
-
-                toAppend.Add(message);
-            } while (true);
-
-            toAppend.Reverse();
-
-            foreach (string message in toAppend)
-            {
-                toSummarize.AppendLine(message);
+                    FirstId = firstId,
+                    Summary = string.Empty
+                };
             }
 
-            string summaryResponse = (await this._summaryApiClient.Summarize(toSummarize.ToString())).Content;
+            bool completeSummarization = false;
+
+            string summaryResponse = string.Empty;
+
+            //Outer loop to track response length;
+            do
+            {
+                List<string> toAppend = new();
+
+                //inner loop to ensure request is smaller than
+                //summarization max
+                do
+                {
+                    string message = messages.Current;
+
+                    Debug.WriteLine("Requesting Tokens: " + message);
+
+                    tokenCount += await this.GetTokenCount(message);
+
+                    Debug.WriteLine("Token Count: " + tokenCount);
+
+                    if (tokenCount >= MAX_IN_TOKENS)
+                    {
+                        break;
+                    }
+
+                    toAppend.Add(message);
+                    checkedMessages.Add(message);
+
+                    //If no available messages we exit
+                    if (!messages.MoveNext())
+                    {
+                        completeSummarization = true;
+                        break;
+                    }
+                } while (true);
+
+                toAppend.Reverse();
+
+                foreach (string message in toAppend)
+                {
+                    toSummarize.AppendLine(message);
+                }
+
+                //Append new block to beginning since order is reversed
+                summaryResponse = (await this._summaryApiClient.Summarize(toSummarize.ToString())).Content + " " + summaryResponse;
+
+                //This should be done with the LlamaApi but this is a cheap hack that will mostly work for now
+                int summaryResponseTokens = (await this._summaryApiClient.Tokenize(summaryResponse)).Content.Length;
+
+                //Once we've exceeded the max response tokens we return
+                if (summaryResponseTokens >= maxOutTokens)
+                {
+                    completeSummarization = true;
+                }
+
+                tokenCount = 0;
+                toSummarize.Clear();
+                toAppend.Clear();
+            } while (!completeSummarization);
+
+            //Before we exist we need to check all the cached messages to make sure 
+            //we actually used them, and if not, remove them from the cache
+            foreach(string key in _cachedTokenCount.Keys.ToList())
+            {
+                if(!checkedMessages.Contains(key))
+                {
+                    _cachedTokenCount.Remove(key);
+                }
+            }
 
             SummaryResponse summarization = new()
             {

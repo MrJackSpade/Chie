@@ -28,6 +28,8 @@ namespace ChieApi.Services
 {
     public partial class LlamaService
     {
+        private const int SUMMARY_CHUNKS = 12;
+
         private readonly AutoResetEvent _acceptingInput = new(false);
 
         private readonly ICharacterFactory _characterFactory;
@@ -38,6 +40,8 @@ namespace ChieApi.Services
 
         private readonly LlamaContextClient _client;
 
+        private readonly List<ITextCleaner> _inputCleaner;
+
         private readonly ILogger _logger;
 
         private readonly LogitService _logitService;
@@ -46,7 +50,7 @@ namespace ChieApi.Services
 
         private readonly AutoResetEventWithData<ProcessInputData> _processingInput = new(false);
 
-        private readonly List<IResponseCleaner> _responseCleaners;
+        private readonly List<ITextCleaner> _responseCleaners;
 
         private readonly List<ISimpleSampler> _simpleSamplers;
 
@@ -56,6 +60,8 @@ namespace ChieApi.Services
 
         private readonly List<ITokenTransformer> _transformers;
 
+        private readonly UserDataService _userDataService;
+
         private CharacterConfiguration _characterConfiguration;
 
         private LlamaTokenCollection _context;
@@ -64,8 +70,9 @@ namespace ChieApi.Services
 
         private Task<SummaryResponse>? _summaryTask;
 
-        public LlamaService(SummarizationService summarizationService, DictionaryService dictionaryService, ICharacterFactory characterFactory, LlamaContextClient client, LlamaContextModel contextModel, LlamaTokenCache llamaTokenCache, ILogger logger, ChatService chatService, LogitService logitService)
+        public LlamaService(UserDataService userDataService, SummarizationService summarizationService, DictionaryService dictionaryService, ICharacterFactory characterFactory, LlamaContextClient client, LlamaContextModel contextModel, LlamaTokenCache llamaTokenCache, ILogger logger, ChatService chatService, LogitService logitService)
         {
+            this._userDataService = userDataService;
             this._summarizationService = summarizationService;
             this._client = client;
             this._characterFactory = characterFactory;
@@ -95,19 +102,29 @@ namespace ChieApi.Services
                 new InvalidCharacterBlockingTransformer()
             };
 
-            this._responseCleaners = new List<IResponseCleaner>()
+            this._inputCleaner = new List<ITextCleaner>()
             {
+                new AsteriskSpacingCleaner()
+            };
+
+            this._responseCleaners = new List<ITextCleaner>()
+            {
+                new InvalidContractionsCleaner(),
                 new SpellingCleaner(dictionaryService),
                 new DanglingQuoteCleaner(),
                 new PunctuationCleaner(),
                 new UnbrokenWordsCleaner(dictionaryService, 2),
-                new BrokenWordsCleaner(dictionaryService, 3)
+                new BrokenWordsCleaner(dictionaryService, 3),
+                new SentenceLevelPunctuationCleaner(),
+                new DuplicateSentenceRemover(),
+                new AsteriskSpacingCleaner()
             };
 
             this._postAccept = new List<IPostAccept>()
             {
-                new RoleplayEnforcingTransformer(0.01f),
-                //new InferenceRepetitionPenalty(1.2f)
+                new RoleplayEnforcingTransformer(0.1f, 0.5f, 2.5f),
+                new CumulativeInferrenceRepetitionBias(1.5f, 3),
+                new TabNewlineOnly()
             };
 
             this.Initialization = Task.Run(this.Init);
@@ -248,7 +265,13 @@ namespace ChieApi.Services
 
                 this._logger.LogInformation("Sending messages to client...");
 
-                LlamaSafeString[] cleanedMessages = chatEntries.Select(LlamaSafeString.Parse).ToArray();
+                foreach (ChatEntry chat in chatEntries)
+                {
+                    chat.Content = this._inputCleaner.Clean(chat.Content).Trim();
+                }
+
+                LlamaSafeString[] cleanedMessages = chatEntries.Select(LlamaSafeString.Parse)
+                                                               .ToArray();
 
                 if (cleanedMessages.Length != 0)
                 {
@@ -356,6 +379,8 @@ namespace ChieApi.Services
 
                 LlamaToken selected = new(enumerator.Current.Id, enumerator.Current.Value);
 
+                Debug.WriteLine($"Predict: {enumerator.Current.Id} ({enumerator.Current.EscapedValue})");
+
                 await foreach (LlamaToken llamaToken in this._transformers.Transform(enumerator, selected))
                 {
                     //Neither of these need to be accepted because the local
@@ -417,7 +442,9 @@ namespace ChieApi.Services
                 Model = this._characterConfiguration.ModelPath,
                 ThreadCount = this._characterConfiguration.Threads ?? System.Environment.ProcessorCount / 2,
                 UseMemoryMap = !this._characterConfiguration.NoMemoryMap,
-                UseMemoryLock = true
+                UseMemoryLock = true,
+                RopeFrequencyScaling = this._characterConfiguration.RopeScale,
+                RopeFrequencyBase = this._characterConfiguration.RopeBase
             });
 
             await this._client.LoadContext(new LlamaContextSettings()
@@ -458,7 +485,7 @@ namespace ChieApi.Services
 
                 c.ComplexPresencePenaltySettings = new ComplexPresencePenaltySettings()
                 {
-                    LengthScale = 1.2f,
+                    LengthScale = 1.8f,
                     GroupScale = 1.575f,
                     MinGroupLength = 3,
                     RepeatTokenPenaltyWindow = -1
@@ -485,12 +512,23 @@ namespace ChieApi.Services
                     this._contextModel.Messages.Add(message);
                 }
 
-                if (!string.IsNullOrWhiteSpace(this._characterConfiguration.Prompt))
+                if (!string.IsNullOrWhiteSpace(this._characterConfiguration.InstructionBlock))
                 {
-                    string prompt = FileService.GetStringOrContent(this._characterConfiguration.Prompt);
+                    string prompt = FileService.GetStringOrContent(this._characterConfiguration.InstructionBlock);
                     prompt = prompt.Replace("\r", "");
-                    this._contextModel.Instruction = new LlamaTokenBlock(prompt, LlamaTokenType.Prompt, this._tokenCache);
+                    this._contextModel.InstructionBlock = new LlamaTokenBlock(prompt, LlamaTokenType.Prompt, this._tokenCache);
                 }
+
+                if (!string.IsNullOrWhiteSpace(this._characterConfiguration.AssistantBlock))
+                {
+                    string prompt = FileService.GetStringOrContent(this._characterConfiguration.AssistantBlock);
+                    prompt = prompt.Replace("\r", "");
+                    this._contextModel.AssistantBlock = new LlamaTokenBlock(prompt, LlamaTokenType.Prompt, this._tokenCache);
+                }
+            }
+            else
+            {
+                await this.ValidateUserSummaries();
             }
 
             this._context = await this._contextModel.GetState();
@@ -508,6 +546,8 @@ namespace ChieApi.Services
                 ProcessInputData processingData = this.WaitForNext();
                 TryGetLastBotMessage r = await this.TryGetLastMessageIsBot();
                 bool continuation = processingData.Continuation && r.Success;
+
+                await this.ValidateUserSummaries();
 
                 await this.PrepRemoteContext(continuation);
 
@@ -679,37 +719,56 @@ namespace ChieApi.Services
 
         private async Task TrySummarize()
         {
+            float start_f = 1 - (1 / (float)(SUMMARY_CHUNKS - 2));
+            float end_f = 1 - (1 / (float)(SUMMARY_CHUNKS - 1));
+
             int c = (await this._contextModel.ToCollection()).Count;
-            bool gtHalf = c > this._characterConfiguration.ContextLength * .5;
-            bool gtQuart = c > this._characterConfiguration.ContextLength * .75;
+            bool startSummary = c > this._characterConfiguration.ContextLength * start_f || (await this._contextModel.Summary.ToCollection()).Count == 0;
+            bool endSummary = c > this._characterConfiguration.ContextLength * end_f;
 
-            if (this._summaryTask != null && gtQuart)
+            if(this._summaryTask?.IsCanceled ?? false)
             {
-                SummaryResponse summary = await this._summaryTask;
-                string strSummary = summary.Summary;
-                strSummary = strSummary.Replace("\r", "");
-                IReadOnlyLlamaTokenCollection tokens = await this._tokenCache.Get($"[{strSummary}]", false);
-
-                this._contextModel.Summary = new LlamaTokenBlock(tokens, LlamaTokenType.Undefined);
-
-                while (this._contextModel.Messages.First().Id <= summary.FirstId)
-                {
-                    this._contextModel.Messages.Dequeue();
-                }
-
                 this._summaryTask = null;
-
-                c = (await this._contextModel.ToCollection()).Count;
-                gtHalf = c > this._characterConfiguration.ContextLength * .5;
             }
 
-            if (this._summaryTask is null && gtHalf)
+            if (this._summaryTask != null)
+            {
+                if (endSummary)
+                {
+                    await this._summaryTask;
+                }
+
+                if (_summaryTask.Status == TaskStatus.RanToCompletion)
+                {
+                    SummaryResponse summary = await this._summaryTask;
+                    string strSummary = summary.Summary;
+                    strSummary = strSummary.Replace("\r", "");
+                    IReadOnlyLlamaTokenCollection tokens = await this._tokenCache.Get(strSummary, false);
+
+                    this._contextModel.Summary = new LlamaTokenBlock(tokens, LlamaTokenType.Undefined);
+
+                    while (this._contextModel.Messages.First().Id <= summary.FirstId)
+                    {
+                        this._contextModel.Messages.Dequeue();
+                    }
+
+                    this._summaryTask = null;
+
+                    c = (await this._contextModel.ToCollection()).Count;
+                    startSummary = c > this._characterConfiguration.ContextLength * start_f;
+                }
+            }
+
+            if (this._summaryTask is null && startSummary)
             {
                 int tokenCount = 0;
                 long lastMessageId = 0;
                 int i = 0;
 
-                while (tokenCount < this._characterConfiguration.ContextLength / 4)
+                int toRemove = this._characterConfiguration.ContextLength / SUMMARY_CHUNKS;
+                int summaryTarget = 2000;
+
+                while (tokenCount < toRemove && this._contextModel.Messages.Count > i)
                 {
                     ITokenCollection block = this._contextModel.Messages[i];
 
@@ -723,18 +782,41 @@ namespace ChieApi.Services
                     i++;
                 }
 
-                string summary = null;
-
-                if (this._contextModel.Summary != null)
+                if (lastMessageId != 0)
                 {
-                    summary = (await this._contextModel.Summary.ToCollection()).ToString().Trim('[').Trim(']').Trim();
+                    this._summaryTask = this._summarizationService.Summarize(lastMessageId, summaryTarget, this.GetMessagesReversed(lastMessageId));
                 }
-
-                this._summaryTask = this._summarizationService.Summarize(summary, lastMessageId, this.GetMessagesReversed(lastMessageId));
             }
         }
 
         private void Unlock() => _ = this._chatLock.Release();
+
+        private async Task ValidateUserSummaries()
+        {
+            List<string> activeUsers = await this._contextModel.GetActiveUsers();
+
+            List<string> existingSummaries = this._contextModel.UserSummaries.Keys.ToList();
+
+            foreach (string user in existingSummaries)
+            {
+                if (!activeUsers.Contains(user))
+                {
+                    this._contextModel.UserSummaries.Remove(user);
+                }
+
+                activeUsers.Remove(user);
+            }
+
+            foreach (string user in activeUsers)
+            {
+                UserData ud = this._userDataService.GetByDisplayName(user);
+
+                if (ud != null)
+                {
+                    this._contextModel.UserSummaries.Add(user, new LlamaUserSummary(user, ud.UserSummary, this._tokenCache));
+                }
+            }
+        }
 
         private ProcessInputData WaitForNext()
         {

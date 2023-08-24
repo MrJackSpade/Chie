@@ -19,49 +19,10 @@ using LlamaApi.Models.Response;
 using LlamaApi.Shared.Models.Request;
 using LlamaApi.Shared.Models.Response;
 using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Nodes;
 
 namespace LlamaApi.Controllers
 {
-    [SuppressMessage("Style", "IDE0059:Unnecessary assignment of a value", Justification = "<Pending>")]
-    public partial class LlamaController
-    {
-        private static readonly object _requestLock = new();
-
-        private static int _requestCount = 1;
-
-        private void LockAction(int ex, int mod)
-        {
-            bool debug = true;
-            bool enterLock = Monitor.TryEnter(_requestLock);
-            int? foundCount = null;
-
-            if (enterLock)
-            {
-                foundCount = _requestCount;
-
-                if (_requestCount == ex)
-                {
-                    _requestCount += mod;
-                    debug = false;
-                }
-
-                Monitor.Exit(_requestLock);
-            }
-
-            if (debug)
-            {
-                Debugger.Break();
-            }
-        }
-
-        private partial void Release() => this.LockAction(0, 1);
-
-        private partial void Wait() => this.LockAction(1, -1);
-    }
-
     [ApiController]
     [Route("[controller]")]
     public partial class LlamaController : ControllerBase
@@ -82,8 +43,6 @@ namespace LlamaApi.Controllers
         [HttpPost("buffer")]
         public Job Buffer(ContextSnapshotRequest request)
         {
-            this.Wait();
-
             return this._jobService.Enqueue(() =>
             {
                 ContextInstance context = this._loadedModel.GetContext(request.ContextId);
@@ -98,8 +57,6 @@ namespace LlamaApi.Controllers
         [HttpPost("context")]
         public Job Context(ContextRequest request)
         {
-            this.Wait();
-
             return this._jobService.Enqueue(() =>
             {
                 this._loadedModel.Lock();
@@ -173,8 +130,6 @@ namespace LlamaApi.Controllers
         [HttpPost("eval")]
         public Job Eval(EvaluateRequest request)
         {
-            this.Wait();
-
             return this._jobService.Enqueue(() =>
             {
                 ContextInstance context = this._loadedModel.GetContext(request.ContextId);
@@ -194,8 +149,6 @@ namespace LlamaApi.Controllers
         [HttpPost("evaluated")]
         public Job Evaluated(ContextSnapshotRequest request)
         {
-            this.Wait();
-
             return this._jobService.Enqueue(() =>
             {
                 ContextInstance context = this._loadedModel.GetContext(request.ContextId);
@@ -210,8 +163,6 @@ namespace LlamaApi.Controllers
         [HttpPost("getlogits")]
         public Job GetLogits(GetLogitsRequest request)
         {
-            this.Wait();
-
             return this._jobService.Enqueue(() =>
             {
                 ContextInstance context = this._loadedModel.GetContext(request.ContextId);
@@ -248,11 +199,6 @@ namespace LlamaApi.Controllers
                 result = JsonNode.Parse(j.Result);
             }
 
-            if (j.State is JobState.Failure or JobState.Success)
-            {
-                this.Release();
-            }
-
             return new JobResponse()
             {
                 State = j.State,
@@ -264,8 +210,6 @@ namespace LlamaApi.Controllers
         [HttpPost("model")]
         public Job Model(ModelRequest request)
         {
-            this.Wait();
-
             return this._jobService.Enqueue(() =>
             {
                 this._loadedModel.Lock();
@@ -304,22 +248,20 @@ namespace LlamaApi.Controllers
         }
 
         [HttpPost("predict")]
-        public Job Predict(PredictRequest request)
+        public PredictResponse Predict(PredictRequest request)
         {
-            this.Wait();
+            ContextInstance context = this._loadedModel.GetContext(request.ContextId);
 
-            return this._jobService.Enqueue(() =>
+            LlamaToken predicted = context.Predict(request.Priority, request.LogitRules);
+
+            return new PredictResponse()
             {
-                ContextInstance context = this._loadedModel.GetContext(request.ContextId);
-
-                LlamaToken predicted = context.Predict(request.Priority, request.LogitRules);
-
-                return new PredictResponse()
-                {
-                    Predicted = new ResponseLlamaToken(predicted)
-                };
-            }, request.Priority);
+                Predicted = new ResponseLlamaToken(predicted)
+            };
         }
+
+        [HttpPost("predictasync")]
+        public Job PredictAsync(PredictRequest request) => this._jobService.Enqueue(() => this.Predict(request), request.Priority);
 
         [HttpGet("/")]
         public IActionResult State() => this.Content("OK");
@@ -327,8 +269,6 @@ namespace LlamaApi.Controllers
         [HttpPost("tokenize")]
         public Job Tokenize(TokenizeRequest request)
         {
-            this.Wait();
-
             return this._jobService.Enqueue(() =>
             {
                 ContextInstance context = this._loadedModel.GetContext(request.ContextId);
@@ -350,48 +290,44 @@ namespace LlamaApi.Controllers
         }
 
         [HttpPost("write")]
-        public Job Write(WriteTokenRequest request)
+        public WriteTokenResponse Write(WriteTokenRequest request)
         {
-            this.Wait();
-
-            return this._jobService.Enqueue(() =>
+            if (request.WriteTokenType == WriteTokenType.Insert)
             {
-                if (request.WriteTokenType == WriteTokenType.Insert)
+                throw new NotImplementedException();
+            }
+
+            ContextInstance context = this._loadedModel.GetContext(request.ContextId);
+
+            LlamaTokenCollection toWrite = new();
+
+            foreach (RequestLlamaToken token in request.Tokens)
+            {
+                string value = NativeApi.TokenToStr(context.Context.Handle, token.TokenId);
+                toWrite.Append(new LlamaToken(token.TokenId, value));
+            }
+
+            if (request.StartIndex >= 0)
+            {
+                context.Context.SetBufferPointer(request.StartIndex);
+            }
+
+            context.Write(toWrite);
+
+            return new WriteTokenResponse()
+            {
+                State = new ContextState()
                 {
-                    throw new NotImplementedException();
+                    Id = Guid.NewGuid(),
+                    AvailableBuffer = context.Context.AvailableBuffer,
+                    IsLoaded = true,
+                    Size = context.Context.Size
                 }
-
-                ContextInstance context = this._loadedModel.GetContext(request.ContextId);
-
-                LlamaTokenCollection toWrite = new();
-
-                foreach (RequestLlamaToken token in request.Tokens)
-                {
-                    string value = NativeApi.TokenToStr(context.Context.Handle, token.TokenId);
-                    toWrite.Append(new LlamaToken(token.TokenId, value));
-                }
-
-                if (request.StartIndex >= 0)
-                {
-                    context.Context.SetBufferPointer(request.StartIndex);
-                }
-
-                context.Write(toWrite);
-
-                WriteTokenResponse response = new()
-                {
-                    State = new ContextState()
-                    {
-                        Id = Guid.NewGuid(),
-                        AvailableBuffer = context.Context.AvailableBuffer,
-                        IsLoaded = true,
-                        Size = context.Context.Size
-                    }
-                };
-
-                return response;
-            }, request.Priority);
+            };
         }
+
+        [HttpPost("writeasync")]
+        public Job WriteAsync(WriteTokenRequest request) => this._jobService.Enqueue(() => this.Write(request), request.Priority);
 
         private ITokenSelector GetFinalSampler(ContextRequest request)
         {
@@ -437,9 +373,5 @@ namespace LlamaApi.Controllers
                 yield return new ComplexPresenceSampler(request.ComplexPresencePenaltySettings);
             }
         }
-
-        private partial void Release();
-
-        private partial void Wait();
     }
 }

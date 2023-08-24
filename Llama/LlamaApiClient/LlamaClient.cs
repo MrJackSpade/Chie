@@ -116,7 +116,16 @@ namespace LlamaApiClient
                 request.LogitRules = ruleCollection;
             }
 
-            PredictResponse response = await this.WaitForResponse<PredictResponse>("/Llama/predict", request);
+            PredictResponse response;
+
+            if (this._settings.Async)
+            {
+                response = await this.WaitForResponse<PredictResponse>("/Llama/predictasync", request);
+            }
+            else
+            {
+                response = await this.Post<PredictResponse>("/Llama/predict", request);
+            }
 
             return response.Predicted;
         }
@@ -139,16 +148,12 @@ namespace LlamaApiClient
 
         public async Task<ContextState> Write(Guid contextId, RequestLlamaToken requestLlamaToken, int startIndex = -1)
         {
-            WriteTokenRequest request = new()
+            List<RequestLlamaToken> tokens = new()
             {
-                ContextId = contextId,
-                Tokens = new List<RequestLlamaToken> { requestLlamaToken },
-                StartIndex = startIndex
+                requestLlamaToken
             };
 
-            WriteTokenResponse response = await this.WaitForResponse<WriteTokenResponse>("/Llama/write", request);
-
-            return response.State;
+            return await this.Write(contextId, tokens, startIndex);
         }
 
         public async Task<ContextState> Write(Guid contextId, IEnumerable<RequestLlamaToken> requestLlamaTokens, int startIndex = -1)
@@ -160,7 +165,16 @@ namespace LlamaApiClient
                 StartIndex = startIndex
             };
 
-            WriteTokenResponse response = await this.WaitForResponse<WriteTokenResponse>("/Llama/write", request);
+            WriteTokenResponse response;
+
+            if (this._settings.Async)
+            {
+                response = await this.WaitForResponse<WriteTokenResponse>("/Llama/writeasync", request);
+            }
+            else
+            {
+                response = await this.Post<WriteTokenResponse>("/Llama/write", request);
+            }
 
             return response.State;
         }
@@ -169,23 +183,7 @@ namespace LlamaApiClient
         {
             IReadOnlyLlamaTokenCollection tokens = await this.Tokenize(contextId, s);
 
-            WriteTokenRequest request = new()
-            {
-                ContextId = contextId,
-                StartIndex = startIndex,
-            };
-
-            foreach (LlamaToken token in tokens)
-            {
-                request.Tokens.Add(new RequestLlamaToken()
-                {
-                    TokenId = token.Id
-                });
-            }
-
-            WriteTokenResponse response = await this.WaitForResponse<WriteTokenResponse>("/Llama/write", request);
-
-            return response.State;
+            return await this.Write(contextId, tokens.Select(r => new RequestLlamaToken() { TokenId = r.Id }), startIndex);
         }
 
         private async Task<TValue> Get<TValue>(string url)

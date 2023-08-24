@@ -1,4 +1,5 @@
 ﻿using Loxifi;
+using System.Diagnostics;
 using System.Text;
 
 namespace ImageRecognition
@@ -43,6 +44,8 @@ namespace ImageRecognition
                     uint r = await ProcessRunner.StartAsync(settings);
 
                     string result = resultBuilder.ToString();
+
+                    Debug.WriteLine(errorBuilder.ToString());
 
                     return result.Trim();
                 }

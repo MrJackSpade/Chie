@@ -48,7 +48,8 @@ namespace ChieApi.Services
                 this._characterConfiguration.Threads = System.Environment.ProcessorCount / 2;
             }
 
-            this._characterConfiguration.Prompt = await GetTransformedPromptPath(this._characterConfiguration.Prompt, "prompt.temp");
+            this._characterConfiguration.AssistantBlock = await GetTransformedPromptPath(this._characterConfiguration.AssistantBlock, "assistant.temp");
+            this._characterConfiguration.InstructionBlock = await GetTransformedPromptPath(this._characterConfiguration.InstructionBlock, "instruction.temp");
             this._characterConfiguration.Start = await GetTransformedPromptPath(this._characterConfiguration.Start, "start.temp");
             return this._characterConfiguration;
         }
@@ -112,7 +113,8 @@ namespace ChieApi.Services
             string characterDirectory = Path.Combine(AppContext.BaseDirectory, ROOT_PATH, characterName);
 
             CharacterConfiguration characterConfiguration = this.BuildJson(characterDirectory);
-            characterConfiguration.Prompt = this.FindFiles(characterDirectory, "Prompt.txt").First();
+            characterConfiguration.InstructionBlock = this.FindFiles(characterDirectory, "Instruction.txt").First();
+            characterConfiguration.AssistantBlock = this.FindFiles(characterDirectory, "Assistant.txt").First();
             characterConfiguration.Start = this.FindFiles(characterDirectory, "Start.txt").First();
 
             return characterConfiguration;

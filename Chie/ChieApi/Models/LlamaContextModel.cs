@@ -15,22 +15,53 @@ namespace ChieApi.Models
             this._cache = cache;
         }
 
-        public ITokenCollection Instruction { get; set; } = new LlamaTokenBlock();
+        public ITokenCollection AssistantBlock { get; set; } = new LlamaTokenBlock();
+
+        public ITokenCollection InstructionBlock { get; set; } = new LlamaTokenBlock();
 
         public List<ITokenCollection> Messages { get; } = new List<ITokenCollection>();
 
         public ITokenCollection Summary { get; set; } = new LlamaTokenBlock();
 
+        public Dictionary<string, LlamaUserSummary> UserSummaries { get; } = new();
+
         private Task<IReadOnlyLlamaTokenCollection> NewLine => this._cache.Get("\n");
+
+        public async Task<List<string>> GetActiveUsers()
+        {
+            HashSet<string> users = new();
+
+            foreach (LlamaMessage lm in this.Messages.OfType<LlamaMessage>())
+            {
+                string n_string = (await lm.UserName.Tokens).ToString();
+
+                users.Add(n_string);
+            }
+
+            return users.ToList();
+        }
 
         public async IAsyncEnumerator<LlamaToken> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
-            await foreach (LlamaToken token in this.GetAllTokens(this.Instruction))
+            await foreach (LlamaToken token in this.GetAllTokens(this.InstructionBlock))
             {
                 yield return token;
             }
 
+            foreach (KeyValuePair<string, LlamaUserSummary> kvp in this.UserSummaries.OrderBy(k => k.Key))
+            {
+                await foreach (LlamaToken token in this.GetAllTokens(kvp.Value, true))
+                {
+                    yield return token;
+                }
+            }
+
             await foreach (LlamaToken token in this.GetAllTokens(this.Summary))
+            {
+                yield return token;
+            }
+
+            await foreach (LlamaToken token in this.GetAllTokens(this.AssistantBlock))
             {
                 yield return token;
             }

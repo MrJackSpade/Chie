@@ -2,7 +2,7 @@
 
 namespace ChieApi.CleanupPipeline
 {
-    public class DanglingQuoteCleaner : IResponseCleaner
+    public class DanglingQuoteCleaner : ITextCleaner
     {
         private const string END_CHARS = ".!?";
 

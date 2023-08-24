@@ -23,6 +23,8 @@ namespace ChieApi.Services
             }
         }
 
+        public string? AssistantBlock { get; set; }
+
         public int BatchSize { get; set; } = 512;
 
         public int ContextLength { get; set; } = 2048;
@@ -30,6 +32,8 @@ namespace ChieApi.Services
         public bool GenerateEmbedding { get; set; }
 
         public int GpuLayers { get; set; } = 0;
+
+        public string? InstructionBlock { get; set; }
 
         public Dictionary<int, string> LogitBias { get; set; } = new Dictionary<int, string>();
 
@@ -47,13 +51,15 @@ namespace ChieApi.Services
 
         public string? PrimaryReversePrompt { get; set; }
 
-        public string? Prompt { get; set; }
-
         public float RepeatPenalty { get; set; } = 1.1f;
 
         public int RepeatPenaltyWindow { get; set; } = 64;
 
         public bool ReturnOnNewLine { get; set; }
+
+        public float RopeBase { get; set; } = 10_000;
+
+        public float RopeScale { get; set; } = 1.0f;
 
         public string? Start { get; set; }
 

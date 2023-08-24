@@ -3,13 +3,14 @@ using ChieApi.Shared.Services;
 
 namespace ChieApi.CleanupPipeline
 {
-    public class UnbrokenWordsCleaner : IResponseCleaner
+    public class UnbrokenWordsCleaner : ITextCleaner
     {
         private readonly DictionaryService _dictionaryService;
 
+        private readonly int _maxCount;
+
         private readonly Dictionary<char, string[]> _wordsByLetter = new();
 
-        private readonly int _maxCount;
         public UnbrokenWordsCleaner(DictionaryService dictionaryService, int maxCount)
         {
             _maxCount = maxCount;
@@ -65,7 +66,7 @@ namespace ChieApi.CleanupPipeline
                 return true;
             }
 
-            if(currentList.Count >= _maxCount)
+            if (currentList.Count >= _maxCount)
             {
                 return false;
             }

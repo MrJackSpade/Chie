@@ -4,7 +4,7 @@ using ChieApi.Shared.Services;
 
 namespace ChieApi.CleanupPipeline
 {
-    public class SpellingCleaner : IResponseCleaner
+    public class SpellingCleaner : ITextCleaner
     {
         private readonly DictionaryService _dictionaryService;
 

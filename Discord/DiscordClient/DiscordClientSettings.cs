@@ -9,5 +9,8 @@ namespace Chie
 
         [JsonPropertyName("token")]
         public string Token { get; set; }
+
+        [JsonPropertyName("userName")]
+        public string UserName { get; set; }
     }
 }

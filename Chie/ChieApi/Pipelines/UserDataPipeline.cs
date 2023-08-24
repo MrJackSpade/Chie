@@ -2,7 +2,6 @@
 using ChieApi.Models;
 using ChieApi.Shared.Entities;
 using ChieApi.Shared.Services;
-using Loxifi;
 using System.Text.RegularExpressions;
 
 namespace ChieApi.Pipelines
@@ -119,11 +118,7 @@ namespace ChieApi.Pipelines
 
                 if (minutes > 60)
                 {
-                    return new TextResult($"[{displayName} returns. {userData.UserSummary}]", LlamaTokenType.Input);
-                }
-                else
-                {
-                    return new TextResult($"[{userData.UserSummary.To(". ")}]", LlamaTokenType.Temporary);
+                    return new TextResult($"[{displayName} returns]", LlamaTokenType.Input);
                 }
             }
 

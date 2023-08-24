@@ -185,9 +185,9 @@ namespace Llama.Core
             }
 
             //Apply penalty
-            foreach (LogitPenalty bias in logitRules.OfType<LogitPenalty>())
+            foreach (LogitPenalty penalty in logitRules.OfType<LogitPenalty>())
             {
-                sampleContext.SetPenalty(bias.LogitId, bias.Value);
+                sampleContext.SetPenalty(penalty.LogitId, penalty.Value);
             }
 
             sampleContext.Update(no_penalize);

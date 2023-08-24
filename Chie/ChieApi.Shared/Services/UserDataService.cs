@@ -31,6 +31,14 @@ namespace ChieApi.Shared.Services
             return connection.Query<UserData>(query).FirstOrDefault();
         }
 
+        public UserData? GetByDisplayName(string displayName)
+        {
+            using SqlConnection connection = new(this._connectionString);
+            //TODO: FixMe
+            string query = $"select * from UserData where DisplayName = '{displayName}' or (DisplayName is null and userid = '{displayName}')";
+            return connection.Query<UserData>(query).FirstOrDefault();
+        }
+
         public async Task<UserData> GetOrCreate(string userId)
         {
             if (string.IsNullOrWhiteSpace(userId))

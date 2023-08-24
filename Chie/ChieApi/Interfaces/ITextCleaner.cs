@@ -1,6 +1,6 @@
 ﻿namespace ChieApi.Interfaces
 {
-    public interface IResponseCleaner
+    public interface ITextCleaner
     {
         string Clean(string content);
     }

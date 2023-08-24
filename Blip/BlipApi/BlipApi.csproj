@@ -4,11 +4,12 @@
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>b8ed9f6b-3cfa-48e2-be24-40a0dc034c56</UserSecretsId>
+    <UserSecretsId>b982bb65-b1e7-4226-8bf5-54c7feda7344</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Blip.Shared\Blip.Shared.csproj" />
+    <ProjectReference Include="..\BlipClient\BlipClient.csproj" />
   </ItemGroup>
 
 </Project>
