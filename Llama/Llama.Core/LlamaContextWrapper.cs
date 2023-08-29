@@ -101,6 +101,8 @@ namespace Llama.Core
 
             LlamaTokenCollection toEvaluate = new(this._buffer.Skip(start).Take(end - start));
 
+            Debug.WriteLine($"Evaluating: {toEvaluate.Count}");
+
             // evaluate tokens in batches
             // embed is typically prepared beforehand to fit within a batch, but not always
             for (int i = 0; i < toEvaluate.Count; i += this._settings.BatchSize)
@@ -201,7 +203,7 @@ namespace Llama.Core
             //Apply bias
             foreach (LogitBias bias in logitRules.OfType<LogitBias>())
             {
-                sampleContext.SetBias(bias.LogitId, bias.Value);
+                sampleContext.SetBias(bias.LogitId, bias.Value, bias.LogitBiasType);
             }
 
             //Apply clamping
@@ -298,7 +300,6 @@ namespace Llama.Core
             collection.Append(this.GetToken(13));//NL
             collection.Append(this.GetToken(334));// *
             collection.Append(this.GetToken(29930));//*
-            collection.Append(this.GetToken(590));//my
             collection.Append(this.GetToken(368));//ly
             collection.Append(this.GetToken(297));//in
             collection.Append(this.GetToken(591));//we
@@ -327,12 +328,17 @@ namespace Llama.Core
             collection.Append(this.GetToken(471));//was
             collection.Append(this.GetToken(2086));//too
             collection.Append(this.GetToken(304));//to
-            collection.Append(this.GetToken(29892));//,
-            collection.Append(this.GetToken(322));//and
+            collection.Append(this.GetToken(590));//my
+			collection.Append(this.GetToken(902));//her
+			collection.Append(this.GetToken(1075));//him
+			collection.Append(this.GetToken(670));//his
+            collection.Append(this.GetToken(7955));//hers
+			//collection.Append(this.GetToken(29892));//,
+			collection.Append(this.GetToken(322));//and
             collection.Append(this.GetToken(306));//I
             collection.Append(this.GetToken(310));//of
             collection.Append(this.GetToken(29879));//s
-            collection.Append(this.GetToken(29991));//!
+            //collection.Append(this.GetToken(29991));//!
             collection.Append(this.GetToken(278));//the
             collection.Append(this.GetToken(592));//me
             collection.Append(this.GetToken(263));//a

@@ -16,7 +16,7 @@ namespace ChieApi.TokenTransformers
                 {
                     Debug.WriteLine($"Blocking token [{token.Id}]...");
 
-                    enumerator.SetBias(token.Id, float.NegativeInfinity, LogitRuleLifetime.Inferrence);
+                    enumerator.SetBias(token.Id, float.NegativeInfinity, LogitRuleLifetime.Inferrence, LogitBiasType.Additive);
 
                     continue;
                 }

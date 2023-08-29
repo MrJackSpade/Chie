@@ -17,13 +17,13 @@ namespace ChieApi.Samplers
 
         public async Task SampleNext(InferenceEnumerator enumerator)
         {
-            enumerator.SetBias(30004, float.NegativeInfinity, LogitRuleLifetime.Inferrence);
+            enumerator.SetBias(30004, float.NegativeInfinity, LogitRuleLifetime.Inferrence, LogitBiasType.Additive);
 
             LlamaToken? lastToken = enumerator.Enumerated.LastOrDefault();
 
             if (lastToken is not null && lastToken.Id == 13)
             {
-                enumerator.SetBias(13, float.NegativeInfinity, LogitRuleLifetime.Token);
+                enumerator.SetBias(13, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
             }
 
             LlamaToken[] banTokens = new LlamaToken[]
@@ -34,7 +34,7 @@ namespace ChieApi.Samplers
 
             foreach (LlamaToken t in banTokens)
             {
-                enumerator.SetBias(t.Id, float.NegativeInfinity, LogitRuleLifetime.Inferrence);
+                enumerator.SetBias(t.Id, float.NegativeInfinity, LogitRuleLifetime.Inferrence, LogitBiasType.Additive);
             }
         }
     }

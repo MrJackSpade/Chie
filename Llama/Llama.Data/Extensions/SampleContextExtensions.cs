@@ -13,17 +13,28 @@ namespace Llama.Data.Extensions
             return existing.logit;
         }
 
-        public static void SetBias(this SampleContext context, int tokenId, float probability)
+        public static void SetBias(this SampleContext context, int tokenId, float probability, LogitBiasType logitBiasType)
         {
             Span<LlamaTokenData> span = context.Candidates.data.Span;
             LlamaTokenData existing = span[tokenId];
-            span[tokenId] = new LlamaTokenData()
-            {
-                id = existing.id,
-                logit = existing.logit + probability,
-                p = existing.p + probability
-            };
-        }
+
+			span[tokenId] = logitBiasType switch
+			{
+				LogitBiasType.Additive => new LlamaTokenData()
+				{
+					id = existing.id,
+					logit = existing.logit + probability,
+					p = existing.p + probability
+				},
+				LogitBiasType.Multiplicative => new LlamaTokenData()
+				{
+					id = existing.id,
+					logit = existing.logit * probability,
+					p = existing.p * probability
+				},
+				_ => throw new NotImplementedException(),
+			};
+		}
 
         public static void SetPenalty(this SampleContext context, int tokenId, float probability)
         {

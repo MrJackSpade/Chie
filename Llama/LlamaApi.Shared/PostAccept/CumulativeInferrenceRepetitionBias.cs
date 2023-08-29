@@ -37,7 +37,7 @@ namespace ChieApi.TokenTransformers
             {
                 if (token.Value >= this._minCount)
                 {
-                    enumerator.SetBias(token.Key, 0 - (float)Math.Pow(_penalty, token.Value), LogitRuleLifetime.Token);
+                    enumerator.SetBias(token.Key, 0 - (float)Math.Pow(_penalty, token.Value), LogitRuleLifetime.Token, LogitBiasType.Additive);
                 }
             }
         }

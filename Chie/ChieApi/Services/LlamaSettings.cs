@@ -22,8 +22,9 @@ namespace ChieApi.Services
                 }
             }
         }
+		public int TopK { get; set; }
 
-        public string? AssistantBlock { get; set; }
+		public string? AssistantBlock { get; set; }
 
         public int BatchSize { get; set; } = 512;
 

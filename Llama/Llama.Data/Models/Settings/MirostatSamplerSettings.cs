@@ -3,6 +3,11 @@
     public class MirostatSamplerSettings
     {
         /// <summary>
+        /// If true, Mirostat will only use TOPK sampling for new words
+        /// </summary>
+        public bool PreserveWords { get; set; } = true;
+
+        /// <summary>
         /// 100
         /// </summary>
         public readonly int M = 100;

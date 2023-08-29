@@ -36,8 +36,8 @@ namespace ChieApi.TokenTransformers
                 }
                 else
                 {
-                    enumerator.SetBias(LlamaToken.EOS.Id, float.NegativeInfinity, LogitRuleLifetime.Token);
-                    enumerator.SetBias(LlamaToken.NewLine.Id, float.NegativeInfinity, LogitRuleLifetime.Token);
+                    enumerator.SetBias(LlamaToken.EOS.Id, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
+                    enumerator.SetBias(LlamaToken.NewLine.Id, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
                 }
             }
         }

@@ -20,7 +20,7 @@ namespace ChieApi.TokenTransformers
 
             if(enumerator.Enumerated.Last().Id != 13)
             {
-                enumerator.SetBias(12, float.NegativeInfinity, LogitRuleLifetime.Token);
+                enumerator.SetBias(12, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
             }
         }
     }

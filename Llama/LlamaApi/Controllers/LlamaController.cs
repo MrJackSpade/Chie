@@ -353,6 +353,11 @@ namespace LlamaApi.Controllers
                 };
             }
 
+            if(request.MirostatTempSamplerSettings != null)
+            {
+                return new MirostatTempSampler(request.MirostatTempSamplerSettings); 
+            }
+
             throw new NotImplementedException();
         }
 

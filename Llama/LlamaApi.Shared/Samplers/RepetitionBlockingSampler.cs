@@ -29,7 +29,7 @@ namespace ChieApi.Samplers
                 {
                     int single = dist[0];
 
-                    enumerator.SetBias(single, float.NegativeInfinity, LogitRuleLifetime.Token);
+                    enumerator.SetBias(single, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
                 }
             }
 

@@ -1,4 +1,5 @@
-﻿using Llama.Data;
+﻿using Llama.Core.Samplers.Mirostat;
+using Llama.Data;
 using Llama.Data.Models.Settings;
 using Llama.Data.Scheduler;
 using LlamaApi.Attributes;
@@ -6,7 +7,7 @@ using System.Text.Json.Serialization;
 
 namespace LlamaApi.Models.Request
 {
-    [RequiresAny(nameof(MirostatSamplerSettings), nameof(TemperatureSamplerSettings))]
+    [RequiresAny(nameof(MirostatSamplerSettings), nameof(TemperatureSamplerSettings), nameof(MirostatTempSamplerSettings))]
     public class ContextRequest
     {
         [JsonPropertyName("ComplexPresence")]
@@ -21,7 +22,10 @@ namespace LlamaApi.Models.Request
         [JsonPropertyName("mirostat")]
         public MirostatSamplerSettings? MirostatSamplerSettings { get; set; }
 
-        [JsonPropertyName("modelId")]
+		[JsonPropertyName("mirostatTemp")]
+		public MirostatTempSamplerSettings? MirostatTempSamplerSettings { get; set; }
+
+		[JsonPropertyName("modelId")]
         public Guid ModelId { get; set; }
 
         [JsonPropertyName("priority")]

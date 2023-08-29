@@ -84,7 +84,7 @@ namespace ChieApi.TokenTransformers
                 //if this one token alone exceeds the count, ban it for the entire inference
                 if (firstCountNew > this._max)
                 {
-                    enumerator.SetBias(tVal.Id, float.NegativeInfinity, LogitRuleLifetime.Inferrence);
+                    enumerator.SetBias(tVal.Id, float.NegativeInfinity, LogitRuleLifetime.Inferrence, LogitBiasType.Additive);
                     continue;
                 }
 
@@ -92,7 +92,7 @@ namespace ChieApi.TokenTransformers
                 //of the new string exceed the max, its banned
                 if (firstCountNew + endCountWritten > this._max && this._stringComparer.Equals(firstCharNew, endCharWritten))
                 {
-                    enumerator.SetBias(tVal.Id, float.NegativeInfinity, LogitRuleLifetime.Token);
+                    enumerator.SetBias(tVal.Id, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
                     continue;
                 }
 

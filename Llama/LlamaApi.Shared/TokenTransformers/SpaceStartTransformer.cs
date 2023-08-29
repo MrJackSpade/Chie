@@ -31,7 +31,7 @@ namespace ChieApi.TokenTransformers
                 else
                 {
                     Debug.WriteLine($"Skipping: {token}");
-                    enumerator.SetBias(token.Id, float.NegativeInfinity, LogitRuleLifetime.Token);
+                    enumerator.SetBias(token.Id, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
                 }
             }
         }
