@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>2007d4c2-78cf-4ed2-b9e6-a2642e73b8a7</UserSecretsId>
+  </PropertyGroup>
+
+ <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Chie\ChieApi.Shared\ChieApi.Shared.csproj" />
+    <ProjectReference Include="..\..\Llama\LlamaApi.Shared\LlamaApi.Shared.csproj" />
+    <ProjectReference Include="..\..\Llama\LlamaApiClient\LlamaApiClient.csproj" />
+    <ProjectReference Include="..\..\Logging\LoggingApiClient\LoggingApiClient.csproj" />
+    <ProjectReference Include="..\..\Summary\SummaryApi.Shared\SummaryApi.Shared.csproj" />
+    <ProjectReference Include="..\..\Summary\SummaryApiClient\SummaryApiClient.csproj" />
+    <ProjectReference Include="..\..\Utils\Ai.Utils\Ai.Utils.csproj" />
+  </ItemGroup>
+
+</Project>

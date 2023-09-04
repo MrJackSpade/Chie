@@ -7,18 +7,18 @@ using System.Data.SqlClient;
 
 namespace ChieApi.Shared.Services
 {
-    public class ChatService
+    public class ChatRepository
     {
         private readonly string _connectionString;
 
         private readonly object _databaseLock = new();
 
-        public ChatService(IHasConnectionString connectionString)
+        public ChatRepository(IHasConnectionString connectionString)
         {
             this._connectionString = connectionString.ConnectionString;
         }
 
-        public ChatEntry GetBefore(long id, bool includeHidden = false)
+        public ChatEntry? GetBefore(long id, bool includeHidden = false)
         {
             using SqlConnection connection = new(this._connectionString);
 
@@ -34,7 +34,23 @@ namespace ChieApi.Shared.Services
             return connection.Query<ChatEntry>(query).SingleOrDefault();
         }
 
-        public float[]? GetEmbeddings(Model model, long chatEntryId)
+		public ChatEntry? GetAfter(long id, bool includeHidden = false)
+		{
+			using SqlConnection connection = new(this._connectionString);
+
+			string query = $"select top 1 * from chatentry where id > {id}";
+
+			if (!includeHidden)
+			{
+				query += $" and IsVisible = 1 ";
+			}
+
+			query += $"  order by id asc";
+
+			return connection.Query<ChatEntry>(query).SingleOrDefault();
+		}
+
+		public float[]? GetEmbeddings(Model model, long chatEntryId)
         {
             using SqlConnection connection = new(this._connectionString);
 

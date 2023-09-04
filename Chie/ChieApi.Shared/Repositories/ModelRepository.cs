@@ -5,11 +5,11 @@ using System.Data.SqlClient;
 
 namespace ChieApi.Shared.Services
 {
-    public class ModelService
+    public class ModelRepository
     {
         private readonly string _connectionString;
 
-        public ModelService(IHasConnectionString connectionString)
+        public ModelRepository(IHasConnectionString connectionString)
         {
             this._connectionString = connectionString.ConnectionString;
         }

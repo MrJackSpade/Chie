@@ -1,5 +1,5 @@
-﻿using ChieApi.Shared.Entities;
-using Logging.Interfaces;
+﻿using Logging.Interfaces;
+using Logging.Shared.Entities;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -7,7 +7,7 @@ using System.Net.Http.Json;
 
 namespace Logging
 {
-    public class LoggingApiClient : ILogger, IDisposable
+	public class LoggingApiClient : ILogger, IDisposable
     {
         private readonly AutoResetEvent _exitGate = new(false);
 

@@ -9,20 +9,35 @@ namespace ImageRecognition
 
         private const string TEMP_DIRECTORY = "Temp";
 
+        private const string LOG_DIRECTORY = "Logs";
+
         private readonly EmbeddingClientSettings _settings;
 
         public EmbeddingClient(EmbeddingClientSettings settings)
         {
-            this._settings = settings;
-        }
-
-        public async Task<float[][]> Generate(string[] data)
-        {
-            if (!Directory.Exists(TEMP_DIRECTORY))
+            if(!Directory.Exists(LOG_DIRECTORY))
             {
-                Directory.CreateDirectory(TEMP_DIRECTORY);
+                Directory.CreateDirectory(LOG_DIRECTORY);
             }
 
+			if (!Directory.Exists(TEMP_DIRECTORY))
+			{
+				Directory.CreateDirectory(TEMP_DIRECTORY);
+			}
+
+			this._settings = settings;
+        }
+
+        private static void WriteString(string source, string toWrite)
+        {
+            if (!string.IsNullOrWhiteSpace(toWrite))
+            {
+                File.WriteAllText($"{DateTime.Now.Ticks}_{source}.log", toWrite);
+            }
+        }
+
+		public async Task<float[][]> Generate(string[] data)
+        {
             foreach (string file in Directory.EnumerateFiles(TEMP_DIRECTORY))
             {
                 File.Delete(file);
@@ -62,6 +77,10 @@ namespace ImageRecognition
                     uint r = await ProcessRunner.StartAsync(settings);
 
                     string result = resultBuilder.ToString();
+                    string error = errorBuilder.ToString(); 
+
+                    WriteString("STDOUT", result);
+                    WriteString("STDERR", errorBuilder.ToString());
 
                     List<float[]> toReturn = new();
                     for (int e = 0; e < data.Length; e++)
@@ -74,7 +93,7 @@ namespace ImageRecognition
                     {
                         if (embeddings.Length == 0)
                         {
-                            throw new Exception(errorBuilder.ToString());
+                            throw new Exception(error);
                         }
                     }
 

@@ -19,7 +19,7 @@ namespace EmbeddingApi.Controllers
         }
 
         [HttpPost("Generate")]
-        public async Task<TokenizeResponse> Generate(TokenizeRequest request)
+        public async Task<EmbeddingResponse> Generate(EmbeddingRequest request)
         {
             _gate.WaitOne();
 
@@ -27,7 +27,7 @@ namespace EmbeddingApi.Controllers
             {
                 float[][] response = await this._client.Generate(request.TextData);
 
-                return new TokenizeResponse()
+                return new EmbeddingResponse()
                 {
                     Content = response,
                     Success = true
@@ -35,7 +35,7 @@ namespace EmbeddingApi.Controllers
             }
             catch (Exception ex)
             {
-                return new TokenizeResponse()
+                return new EmbeddingResponse()
                 {
                     Exception = ex.Message,
                     Success = false
