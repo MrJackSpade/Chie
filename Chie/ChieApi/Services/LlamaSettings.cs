@@ -34,7 +34,9 @@ namespace ChieApi.Services
 
         public int GpuLayers { get; set; } = 0;
 
-        public string? InstructionBlock { get; set; }
+		public float LearningRate { get; set; }
+
+		public string? InstructionBlock { get; set; }
 
         public Dictionary<int, string> LogitBias { get; set; } = new Dictionary<int, string>();
 

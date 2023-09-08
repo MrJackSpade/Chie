@@ -99,7 +99,7 @@ namespace ChieApi.Services
                 new SpaceStartTransformer(),
                 new NewlineTransformer(),
                 new TextTruncationTransformer(1000, 500, 150, ".!?…", dictionaryService),
-                new TextExtensionTransformer(100, 150),
+                //new TextExtensionTransformer(100, 150),
                 new RepetitionBlockingTransformer(3),
                 new InvalidCharacterBlockingTransformer()
             };
@@ -378,7 +378,10 @@ namespace ChieApi.Services
             enumerator.SetBias(LlamaToken.EOS.Id, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
             enumerator.SetBias(LlamaToken.NewLine.Id, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
 
-            enumerator.SetBias(this._characterConfiguration.LogitBias, LogitRuleLifetime.Inferrence, LogitBiasType.Additive);
+            // "
+			enumerator.SetBias(376, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
+
+			enumerator.SetBias(this._characterConfiguration.LogitBias, LogitRuleLifetime.Inferrence, LogitBiasType.Additive);
 
             while (await enumerator.MoveNextAsync())
             {
@@ -470,6 +473,7 @@ namespace ChieApi.Services
 						c.MirostatTempSamplerSettings = new MirostatTempSamplerSettings()
 						{
 							Target = this._characterConfiguration.MiroStatEntropy,
+                            LearningRate = this._characterConfiguration.LearningRate,
 							InitialTemperature = this._characterConfiguration.Temperature,
 							TopK = this._characterConfiguration.TopK
 						};

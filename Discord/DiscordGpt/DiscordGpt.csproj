@@ -20,6 +20,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Chie\ChieApi.Shared\ChieApi.Shared.csproj" />
     <ProjectReference Include="..\..\Chie\ChieApiClient\ChieApiClient.csproj" />
+    <ProjectReference Include="..\..\Embedding\EmbeddingApi.Shared\EmbeddingApi.Shared.csproj" />
+    <ProjectReference Include="..\..\Embedding\EmbeddingApiClient\EmbeddingApiClient.csproj" />
     <ProjectReference Include="..\..\Logging\Logging.Shared\Logging.Shared.csproj" />
     <ProjectReference Include="..\..\Logging\LoggingApiClient\LoggingApiClient.csproj" />
     <ProjectReference Include="..\..\Utils\Ai.Utils\Ai.Utils.csproj" />

@@ -193,7 +193,7 @@ namespace Llama.Core.Samplers.Mirostat
 			if (!this._isWords.TryGetValue(id, out bool word))
 			{
 				string value = NativeApi.TokenToStr(ctx, id);
-				word = !string.IsNullOrWhiteSpace(value) && value[0] == ' ';
+				word = !string.IsNullOrWhiteSpace(value) && !char.IsLetter(value[0]);
 				this._isWords.Add(id, word);
 			}
 

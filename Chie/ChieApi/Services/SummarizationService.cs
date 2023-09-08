@@ -45,6 +45,8 @@ namespace ChieApi.Services
 
             StringBuilder toSummarize = new();
 
+            HashSet<string> distinctResponses = new();
+
             //Messages go back in time so we're going to keep track of which
             //ones weve tested so we know what we need to keep in the cache for the next run.
             //Since the window will always move forward, there shouldn't be a scenario where 
@@ -84,7 +86,7 @@ namespace ChieApi.Services
 
                     Debug.WriteLine("Token Count: " + tokenCount);
 
-                    if (tokenCount >= MAX_IN_TOKENS)
+                    if (tokenCount >= MAX_IN_TOKENS && toAppend.Count > 0)
                     {
                         break;
                     }
@@ -108,15 +110,20 @@ namespace ChieApi.Services
                 }
 
                 //Append new block to beginning since order is reversed
-                summaryResponse = (await this._summaryApiClient.Summarize(toSummarize.ToString())).Content + " " + summaryResponse;
+                string summarized = (await this._summaryApiClient.Summarize(toSummarize.ToString())).Content;
 
-                //This should be done with the LlamaApi but this is a cheap hack that will mostly work for now
-                int summaryResponseTokens = (await this._summaryApiClient.Tokenize(summaryResponse)).Content.Length;
-
-                //Once we've exceeded the max response tokens we return
-                if (summaryResponseTokens >= maxOutTokens)
+                if (distinctResponses.Add(summarized))
                 {
-                    completeSummarization = true;
+                    summaryResponse = summarized + " " + summaryResponse;
+
+                    //This should be done with the LlamaApi but this is a cheap hack that will mostly work for now
+                    int summaryResponseTokens = (await this._summaryApiClient.Tokenize(summaryResponse)).Content.Length;
+
+                    //Once we've exceeded the max response tokens we return
+                    if (summaryResponseTokens >= maxOutTokens)
+                    {
+                        completeSummarization = true;
+                    }
                 }
 
                 tokenCount = 0;

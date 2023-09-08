@@ -14,6 +14,9 @@ using DiscordGpt.Interfaces;
 using DiscordGpt.Models;
 using DiscordGpt.Services;
 using DiscordGpt.Utils;
+using Embedding;
+using Embedding.Models;
+using Llama.Data.Models;
 using Logging.Shared.Extensions;
 using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
@@ -44,12 +47,15 @@ namespace DiscordGpt
 
         private readonly StartInfo _startInfo;
 
+        private readonly EmbeddingApiClient _embeddingApiClient;
+
         private Task? _receiveTask;
 
         private Task? _typingTask;
 
-        public DiscordIntegrationService(IChieClient chieClient, IActiveMessageContainer activeMessagecontainer, IEnumerable<IReactionAction> reactionActions, ActiveChannelCollection activeChannelCollection, NameService nameService, ChieMessageService messageService, StartInfo startInfo, DiscordClient discordClient, ILogger logger, DiscordIntegrationSettings settings)
+        public DiscordIntegrationService(IChieClient chieClient, EmbeddingApiClient embeddingApiClient, IActiveMessageContainer activeMessagecontainer, IEnumerable<IReactionAction> reactionActions, ActiveChannelCollection activeChannelCollection, NameService nameService, ChieMessageService messageService, StartInfo startInfo, DiscordClient discordClient, ILogger logger, DiscordIntegrationSettings settings)
         {
+            this._embeddingApiClient = embeddingApiClient;
             this._activeMessageContainer = activeMessagecontainer;
             this._chieClient = chieClient;
             this._nameService = nameService;
@@ -71,11 +77,56 @@ namespace DiscordGpt
             }
         }
 
-        public async Task ProcessIncomingMessage(ChatEntry messageResponse)
+        private float[] _lastEmbedding = null;
+
+		public static float CosineSimilarity(float[] vector1, float[] vector2)
+		{
+			float dotProduct = 0.0f;
+			float normA = 0.0f;
+			float normB = 0.0f;
+			for (int i = 0; i < vector1.Length; i++)
+			{
+				dotProduct += vector1[i] * vector2[i];
+				normA += vector1[i] * vector1[i];
+				normB += vector2[i] * vector2[i];
+			}
+
+			return dotProduct / (float)(Math.Sqrt(normA) * Math.Sqrt(normB));
+		}
+
+
+		public static float EuclideanDistance(float[] vector1, float[] vector2)
+		{
+			float sum = 0.0f;
+			for (int i = 0; i < vector1.Length; i++)
+			{
+				sum += (vector1[i] - vector2[i]) * (vector1[i] - vector2[i]);
+			}
+
+			return (float)Math.Sqrt(sum);
+		}
+
+		public async Task ProcessIncomingMessage(ChatEntry messageResponse)
         {
             this._logger.LogInformation("Response Received. Cleaning...");
 
             string cleanedMessage = messageResponse.Content;
+
+            this._logger.LogInformation($"Generating Embedding");
+
+            EmbeddingResponse thisEmbeddingResponse = await this._embeddingApiClient.Generate(new EmbeddingRequest() { TextData = new string[] { cleanedMessage } });
+            
+            float[] thisEmbedding = thisEmbeddingResponse.Content[0];
+
+            if(_lastEmbedding != null)
+            {
+				float similarity = CosineSimilarity(thisEmbedding, _lastEmbedding);
+				float distance = EuclideanDistance(thisEmbedding, _lastEmbedding);
+
+                cleanedMessage = $"[Cos: {similarity:0.0000}; Euc: {distance:0.0000}] {cleanedMessage}"; 
+			}
+
+            _lastEmbedding = thisEmbedding;
 
             ActiveChannel activeChannel = this._activeChannels[messageResponse.SourceChannel];
 

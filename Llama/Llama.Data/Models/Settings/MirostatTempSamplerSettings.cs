@@ -22,7 +22,7 @@
         /// <summary>
         /// Default 0.1
         /// </summary>
-        public float LearningRate { get; set; } = 0.10f;
+        public float LearningRate { get; set; } = 0.25f;
 
         /// <summary>
         /// Tau * 2
@@ -42,7 +42,7 @@
 		/// <summary>
 		/// Default 0.01
 		/// </summary>
-		public float MinP { get; set; } = 0.1f;
+		public float MinP { get; set; } = 0.05f;
 
 		/// <summary>
 		/// Default 40
@@ -52,6 +52,6 @@
 		/// <summary>
 		/// Default 40
 		/// </summary>
-		public float TemperatureLearningRate { get; set; } = 0.02f;
+		public float TemperatureLearningRate { get; set; } = 0.05f;
 	}
 }

@@ -25,6 +25,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ChieApiClient", "Chie\ChieA
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Loxifi.AsyncExtensions", "Utils\Loxifi.AsyncExtensions\Loxifi.AsyncExtensions.csproj", "{C71D5834-F029-4E2B-8E0A-6AED6EF7F23E}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Embedding", "Embedding", "{9289AECE-20A4-40F5-99B2-187E9F260628}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EmbeddingApiClient", "Embedding\EmbeddingApiClient\EmbeddingApiClient.csproj", "{DCBFBF9F-F709-495B-B5F5-35F05175E322}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EmbeddingApi.Shared", "Embedding\EmbeddingApi.Shared\EmbeddingApi.Shared.csproj", "{A04EE671-C879-476A-888A-A64BE2AADB18}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -63,6 +69,14 @@ Global
 		{C71D5834-F029-4E2B-8E0A-6AED6EF7F23E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C71D5834-F029-4E2B-8E0A-6AED6EF7F23E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C71D5834-F029-4E2B-8E0A-6AED6EF7F23E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DCBFBF9F-F709-495B-B5F5-35F05175E322}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DCBFBF9F-F709-495B-B5F5-35F05175E322}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DCBFBF9F-F709-495B-B5F5-35F05175E322}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DCBFBF9F-F709-495B-B5F5-35F05175E322}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A04EE671-C879-476A-888A-A64BE2AADB18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A04EE671-C879-476A-888A-A64BE2AADB18}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A04EE671-C879-476A-888A-A64BE2AADB18}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A04EE671-C879-476A-888A-A64BE2AADB18}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -74,6 +88,8 @@ Global
 		{ACCA2B21-68BD-4C68-82E5-C7A468830C0B} = {778468E7-5066-432A-816B-4F551D6E26AA}
 		{F28009BD-709D-4F18-8D0D-B9ECCD1E780E} = {778468E7-5066-432A-816B-4F551D6E26AA}
 		{C71D5834-F029-4E2B-8E0A-6AED6EF7F23E} = {71BCCF92-76DE-423A-AFEA-4A6DD10FF9D7}
+		{DCBFBF9F-F709-495B-B5F5-35F05175E322} = {9289AECE-20A4-40F5-99B2-187E9F260628}
+		{A04EE671-C879-476A-888A-A64BE2AADB18} = {9289AECE-20A4-40F5-99B2-187E9F260628}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {92C1A929-95D1-4E53-AEC4-B97AF3EF7C96}
