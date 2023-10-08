@@ -4,35 +4,35 @@ using Loxifi;
 
 namespace Embedding
 {
-    public class EmbeddingApiClient : IEmbeddingApiClient
-    {
-        private readonly EmbeddingApiClientSettings _settings;
+	public class EmbeddingApiClient : IEmbeddingApiClient
+	{
+		private readonly EmbeddingApiClientSettings _settings;
 
-        public EmbeddingApiClient(EmbeddingApiClientSettings settings)
-        {
-            this._settings = settings;
-        }
+		public EmbeddingApiClient(EmbeddingApiClientSettings settings)
+		{
+			this._settings = settings;
+		}
 
-        public async Task<EmbeddingResponse> Generate(string[] data)
-        {
-            return await this.Generate(new EmbeddingRequest()
-            {
-                TextData = data
-            });
-        }
+		public async Task<EmbeddingResponse> Generate(string[] data)
+		{
+			return await this.Generate(new EmbeddingRequest()
+			{
+				TextData = data
+			});
+		}
 
-        public async Task<EmbeddingResponse> Generate(EmbeddingRequest request)
-        {
-            JsonClient client = new(new Loxifi.Settings.JsonClientSettings()
-            {
-                HttpClient = new HttpClient() { Timeout = TimeSpan.FromDays(1) }
-            });
+		public async Task<EmbeddingResponse> Generate(EmbeddingRequest request)
+		{
+			JsonClient client = new(new Loxifi.Settings.JsonClientSettings()
+			{
+				HttpClient = new HttpClient() { Timeout = TimeSpan.FromDays(1) }
+			});
 
-            string url = $"{this._settings.RootUrl}/Embedding/Generate";
+			string url = $"{this._settings.RootUrl}/Embedding/Generate";
 
-            EmbeddingResponse response = await client.PostJsonAsync<EmbeddingResponse>(url, request);
+			EmbeddingResponse response = await client.PostJsonAsync<EmbeddingResponse>(url, request);
 
-            return response;
-        }
-    }
+			return response;
+		}
+	}
 }

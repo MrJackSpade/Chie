@@ -8,7 +8,7 @@ namespace Llama.Data
 
         public int ContextSize { get; set; }
 
-        public bool GenerateEmbedding { get; set; }
+        public bool GenerateEmbedding { get; set; } = true;
 
         public int GpuLayerCount { get; set; } = 0;
 

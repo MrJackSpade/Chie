@@ -2,6 +2,7 @@
 using Llama.Data.Exceptions;
 using Llama.Data.Models;
 using Llama.Data.Native;
+using System.Dynamic;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -35,17 +36,32 @@ namespace Llama.Native
             return new Span<float>(logits, length);
         }
 
-        public static List<int> LlamaTokenize(SafeLlamaContextHandle ctx, string text, bool add_bos, Encoding encoding)
+        public static List<int> LlamaTokenize(SafeLlamaContextHandle ctx, string text, bool add_bos, Encoding encoding, bool useLegacy = true)
         {
-            int cnt = encoding.GetByteCount(text);
+            if(text == "\n")
+            {
+                return new List<int>() { 13 };
+            }
+
+            int cnt = encoding.GetByteCount(text + 1);
+
             int[] res = new int[cnt + (add_bos ? 1 : 0)];
+            
             int n = LlamaCppApi.Tokenize(ctx, text, encoding, res, res.Length, add_bos);
+
             if (n < 0)
             {
                 throw new LlamaCppRuntimeError("Error happened during tokenization. It's possibly caused by wrong encoding. Please try to specify the encoding.");
             }
 
-            return res.Take(n).ToList();
+            res = res.Take(n).ToArray();
+
+            if(useLegacy && res[0] == 29871)
+            {
+                res = res.Skip(1).ToArray();
+            }
+
+            return res.ToList();
         }
 
         public static SafeLlamaContextHandle LoadContext(SafeLlamaModelHandle model, LlamaModelSettings modelSettings, LlamaContextSettings contextSettings)
@@ -56,7 +72,6 @@ namespace Llama.Native
             lparams.NGpuLayers = modelSettings.GpuLayerCount;
             lparams.NBatch = contextSettings.BatchSize;
             lparams.Seed = modelSettings.Seed;
-            lparams.NGqa = modelSettings.UseGqa ? 8 : 1;
             lparams.F16Kv = modelSettings.MemoryMode == Llama.Data.Enums.MemoryMode.Float16;
             lparams.UseMmap = modelSettings.UseMemoryMap;
             lparams.UseMlock = modelSettings.UseMemoryLock;
@@ -89,7 +104,30 @@ namespace Llama.Native
             return ctx;
         }
 
-        public static LlamaModel LoadModel(LlamaModelSettings modelSettings)
+		public static string TokenToPiece(this SafeLlamaContextHandle ctx, int token)
+		{
+			// Assuming a buffer size of 256, adjust as needed.
+			char[] buffer = new char[256];
+
+			int result = LlamaCppApi.TokenToPiece(ctx, token, buffer, buffer.Length);
+
+			// Assuming a successful result is indicated by a non-negative value.
+			// Adjust the condition based on the actual behavior of the C++ function.
+			if (result < 0)
+			{
+				throw new InvalidOperationException($"Failed to convert token to piece. Error code: {result}");
+			}
+
+			string toReturn = new(buffer, 0, result);
+
+			byte[] dataAsWindows1252 = Encoding.GetEncoding("Windows-1252").GetBytes(toReturn);
+
+			string correctlyInterpretedString = Encoding.UTF8.GetString(dataAsWindows1252);
+
+			return correctlyInterpretedString;
+		}
+
+		public static LlamaModel LoadModel(LlamaModelSettings modelSettings)
         {
             LlamaContextParams lparams = LlamaCppApi.ContextDefaultParams();
 
@@ -97,7 +135,6 @@ namespace Llama.Native
             lparams.NGpuLayers = modelSettings.GpuLayerCount;
             lparams.NBatch = modelSettings.BatchSize;
             lparams.Seed = modelSettings.Seed;
-            lparams.NGqa = modelSettings.UseGqa ? 8 : 1;
             lparams.F16Kv = modelSettings.MemoryMode == Llama.Data.Enums.MemoryMode.Float16;
             lparams.UseMmap = modelSettings.UseMemoryMap;
             lparams.UseMlock = modelSettings.UseMemoryLock;
@@ -125,14 +162,6 @@ namespace Llama.Native
         }
 
         public static int NVocab(SafeLlamaContextHandle handle) => LlamaCppApi.NVocab(handle);
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0022:Use expression body for method", Justification = "<Pending>")]
-        public static unsafe string PtrToStringUTF8(IntPtr ptr)
-        {
-            return Marshal.PtrToStringUTF8(ptr);
-        }
-
-        public static string TokenToStr(SafeLlamaContextHandle handle, int id) => PtrToStringUTF8(LlamaCppApi.TokenToStr(handle, id));
 
         private static void SetTensors(ref LlamaContextParams param, float[] values)
         {

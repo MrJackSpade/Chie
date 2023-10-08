@@ -279,7 +279,7 @@ namespace LlamaApi.Controllers
 
                 foreach (int token in tokens)
                 {
-                    toReturn.Add(new LlamaToken(token, NativeApi.TokenToStr(context.Context.Handle, token)));
+                    toReturn.Add(new LlamaToken(token, NativeApi.TokenToPiece(context.Context.Handle, token)));
                 }
 
                 return new TokenizeResponse()
@@ -303,7 +303,7 @@ namespace LlamaApi.Controllers
 
             foreach (RequestLlamaToken token in request.Tokens)
             {
-                string value = NativeApi.TokenToStr(context.Context.Handle, token.TokenId);
+                string value = NativeApi.TokenToPiece(context.Context.Handle, token.TokenId);
                 toWrite.Append(new LlamaToken(token.TokenId, value));
             }
 

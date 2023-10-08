@@ -5,24 +5,17 @@ namespace ChieApi.Pipelines
 {
     public class BootUpPipeline : IRequestPipeline
     {
-        private readonly ICharacterFactory _characterFactory;
-
-        private string? _characterName;
+        private readonly string _characterName;
 
         private bool _firstMessage = true;
 
-        public BootUpPipeline(ICharacterFactory characterFactory)
+        public BootUpPipeline(CharacterConfiguration characterConfiguration)
         {
-            this._characterFactory = characterFactory;
+            this._characterName = characterConfiguration.CharacterName;
         }
 
         public async IAsyncEnumerable<ChatEntry> Process(ChatEntry chatEntry)
         {
-            if (string.IsNullOrWhiteSpace(this._characterName))
-            {
-                this._characterName = (await this._characterFactory.Build()).CharacterName;
-            }
-
             if (this._firstMessage)
             {
                 yield return new ChatEntry()

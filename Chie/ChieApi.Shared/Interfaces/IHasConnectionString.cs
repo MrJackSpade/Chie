@@ -1,7 +1,7 @@
 ﻿namespace ChieApi.Interfaces
 {
-    public interface IHasConnectionString
-    {
-        public string ConnectionString { get; }
-    }
+	public interface IHasConnectionString
+	{
+		public string ConnectionString { get; }
+	}
 }

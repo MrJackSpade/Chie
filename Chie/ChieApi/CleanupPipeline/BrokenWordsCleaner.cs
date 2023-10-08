@@ -6,11 +6,11 @@ namespace ChieApi.CleanupPipeline
 {
     public class BrokenWordsCleaner : ITextCleaner
     {
-        private readonly DictionaryService _dictionaryService;
+        private readonly DictionaryRepository _dictionaryService;
 
         private readonly int _distance;
 
-        public BrokenWordsCleaner(DictionaryService dictionaryService, int distance)
+        public BrokenWordsCleaner(DictionaryRepository dictionaryService, int distance)
         {
             _distance = distance;
 

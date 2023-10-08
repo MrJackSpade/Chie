@@ -49,7 +49,7 @@ namespace Llama.Core.Samplers.Mirostat
 			return $"{token.GetEscapedValue()} ({data.p:0.00})";
 		}
 
-		public LlamaToken GetToken(SampleContext ctx, int id) => new(id, NativeApi.TokenToStr(ctx.ContextHandle, id));
+		public LlamaToken GetToken(SampleContext ctx, int id) => new(id, NativeApi.TokenToPiece(ctx.ContextHandle, id));
 
 		private void Copy(Span<LlamaTokenData> sampleContext)
 		{
@@ -179,8 +179,14 @@ namespace Llama.Core.Samplers.Mirostat
 
 				// Update mu using the learning rate and error
 				float adj = eta * e;
-				this._mu -= adj;
-				this._temp -= adj * this._settings.TemperatureLearningRate;
+				float nuMu = this._mu - adj;
+				float nuTemp = this._temp - adj * this._settings.TemperatureLearningRate;
+
+				if(nuTemp > 0 && !float.IsNaN(nuTemp) && !float.IsInfinity(nuTemp) && !float.IsNaN(nuMu) && !float.IsInfinity(nuMu))
+				{
+					this._temp = nuTemp;
+					this._mu = nuMu;
+				}
 			}
 
 			Debug.WriteLine($"mu: {this._mu}");
@@ -192,7 +198,7 @@ namespace Llama.Core.Samplers.Mirostat
 		{
 			if (!this._isWords.TryGetValue(id, out bool word))
 			{
-				string value = NativeApi.TokenToStr(ctx, id);
+				string value = NativeApi.TokenToPiece(ctx, id);
 				word = !string.IsNullOrWhiteSpace(value) && !char.IsLetter(value[0]);
 				this._isWords.Add(id, word);
 			}

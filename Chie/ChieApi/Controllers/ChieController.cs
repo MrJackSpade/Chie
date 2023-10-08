@@ -9,79 +9,91 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ChieApi.Controllers
 {
-    [ApiController]
-    [Route("[controller]")]
-    public class ChieController : ControllerBase, IChieClient
-    {
-        private readonly LlamaService _llamaService;
+	[ApiController]
+	[Route("[controller]")]
+	public class ChieController : ControllerBase, IChieClient
+	{
+		private readonly CharacterConfiguration _characterConfiguration;
 
-        private readonly ILogger _logger;
+		private readonly LlamaService _llamaService;
 
-        private readonly List<IRequestPipeline> _pipelines;
+		private readonly ILogger _logger;
 
-        public ChieController(IEnumerable<IRequestPipeline> pipelines, LlamaService llamaService, ILogger logger)
-        {
-            this._logger = logger;
-            this._llamaService = llamaService;
-            this._pipelines = pipelines.ToList();
-        }
+		private readonly List<IRequestPipeline> _pipelines;
 
-        [HttpGet("ContinueRequest/{channelId}")]
-        public Task<ContinueRequestResponse> ContinueRequest(string channelId)
-        {
-            return Task.FromResult(new ContinueRequestResponse()
-            {
-                MessageId = this._llamaService.ReturnControl(false, true, channelId)
-            });
-        }
+		public ChieController(IEnumerable<IRequestPipeline> pipelines, CharacterConfiguration characterConfiguration, LlamaService llamaService, ILogger logger)
+		{
+			this._logger = logger;
+			this._llamaService = llamaService;
+			this._pipelines = pipelines.ToList();
+			this._characterConfiguration = characterConfiguration;
+		}
 
-        [HttpGet("GetReply")]
-        public Task<ChatEntry?> GetReply(long id)
-        {
-            if (this._llamaService.TryGetReply(id, out ChatEntry? ce))
-            {
-                return Task.FromResult(ce);
-            }
-            else
-            {
-                return Task.FromResult<ChatEntry?>(new ChatEntry() { });
-            }
-        }
+		[HttpGet("ContinueRequest/{channelId}")]
+		public Task<ContinueRequestResponse> ContinueRequest(string channelId)
+		{
+			return Task.FromResult(new ContinueRequestResponse()
+			{
+				MessageId = this._llamaService.ReturnControl(false, true, channelId)
+			});
+		}
 
-        [HttpGet("GetResponses")]
-        public Task<ChatEntry[]> GetResponses(string channelId, long after) => Task.FromResult(this._llamaService.GetResponses(channelId, after));
+		[HttpGet("GetReply")]
+		public Task<ChatEntry?> GetReply(long id)
+		{
+			if (this._llamaService.TryGetReply(id, out ChatEntry? ce))
+			{
+				return Task.FromResult(ce);
+			}
+			else
+			{
+				return Task.FromResult<ChatEntry?>(new ChatEntry() { });
+			}
+		}
 
-        [HttpGet("IsTyping/{channel}")]
-        public Task<IsTypingResponse> IsTyping(string channel)
-        {
-            LlamaClientResponseState clientResponse = this._llamaService.CheckIfResponding(channel);
+		[HttpGet("GetResponses")]
+		public Task<ChatEntry[]> GetResponses(string channelId, long after) => Task.FromResult(this._llamaService.GetResponses(channelId, after));
 
-            return Task.FromResult(new IsTypingResponse()
-            {
-                IsTyping = clientResponse.IsTyping,
-                Content = clientResponse.Content,
-            });
-        }
+		[HttpGet("IsTyping/{channel}")]
+		public Task<IsTypingResponse> IsTyping(string channel)
+		{
+			LlamaClientResponseState clientResponse = this._llamaService.CheckIfResponding(channel);
 
-        [HttpPost("Send")]
-        public async Task<MessageSendResponse> Send(ChatEntry[] chatEntries)
-        {
-            await this._llamaService.Initialization;
+			return Task.FromResult(new IsTypingResponse()
+			{
+				IsTyping = clientResponse.IsTyping,
+				Content = clientResponse.Content,
+			});
+		}
 
-            List<ChatEntry> processedEntries = await this._pipelines.Process(chatEntries);
+		[HttpPost("Send")]
+		public async Task<MessageSendResponse> Send(ChatEntry[] chatEntries)
+		{
+			await this._llamaService.Initialization;
 
-            if (processedEntries.Count == 0)
-            {
-                return new MessageSendResponse()
-                {
-                    MessageId = 0
-                };
-            }
+			List<ChatEntry> processedEntries = await this._pipelines.Process(chatEntries);
 
-            return new MessageSendResponse()
-            {
-                MessageId = await this._llamaService.Send(processedEntries.ToArray())
-            };
-        }
-    }
+			if (processedEntries.Count == 0)
+			{
+				return new MessageSendResponse()
+				{
+					MessageId = 0
+				};
+			}
+
+			return new MessageSendResponse()
+			{
+				MessageId = await this._llamaService.Send(processedEntries.ToArray())
+			};
+		}
+
+		[HttpGet("StartVisible")]
+		public Task<StartVisibleResponse> StartVisible()
+		{
+			return Task.FromResult(new StartVisibleResponse()
+			{
+				StartVisible = this._characterConfiguration.StartVisible
+			});
+		}
+	}
 }

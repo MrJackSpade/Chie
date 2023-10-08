@@ -2,45 +2,45 @@
 
 namespace DiscordGpt.Services
 {
-    public class NameService
-    {
-        public int CalculateNamePriority(string name)
-        {
-            bool integers = false;
-            bool special = false;
+	public class NameService
+	{
+		public int CalculateNamePriority(string name)
+		{
+			bool integers = false;
+			bool special = false;
 
-            foreach (char c in name)
-            {
-                if (char.IsDigit(c))
-                {
-                    integers = true;
-                }
-                else if (!char.IsLetter(c))
-                {
-                    special = true;
-                }
-            }
+			foreach (char c in name)
+			{
+				if (char.IsDigit(c))
+				{
+					integers = true;
+				}
+				else if (!char.IsLetter(c))
+				{
+					special = true;
+				}
+			}
 
-            if (special)
-            {
-                return 0;
-            }
+			if (special)
+			{
+				return 0;
+			}
 
-            if (integers)
-            {
-                return 1;
-            }
+			if (integers)
+			{
+				return 1;
+			}
 
-            return 2;
-        }
+			return 2;
+		}
 
-        public string CleanUserName(string toClean)
-        {
-            string[] parts = toClean.Replace("_", " ").CleanSplit(' ').ToArray();
+		public string CleanUserName(string toClean)
+		{
+			string[] parts = toClean.Replace("_", " ").CleanSplit(' ').ToArray();
 
-            string[] orderedParts = parts.OrderByDescending(this.CalculateNamePriority).ThenByDescending(s => s.Length).ToArray();
+			string[] orderedParts = parts.OrderByDescending(this.CalculateNamePriority).ThenByDescending(s => s.Length).ToArray();
 
-            return orderedParts.First();
-        }
-    }
+			return orderedParts.First();
+		}
+	}
 }

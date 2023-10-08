@@ -28,7 +28,7 @@ namespace Llama.Extensions
             return logits;
         }
 
-        public static LlamaToken GetToken(this IContext handler, int id) => new(id, NativeApi.TokenToStr(handler.Handle, id));
+        public static LlamaToken GetToken(this IContext handler, int id) => new(id, NativeApi.TokenToPiece(handler.Handle, id));
 
         public static void SetBuffer(this IContext context, LlamaTokenCollection llamaTokens)
         {

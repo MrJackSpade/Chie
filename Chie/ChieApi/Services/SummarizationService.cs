@@ -9,7 +9,7 @@ namespace ChieApi.Services
     {
         private const string DIR_SUMMARIZATION = "SummarizationData";
 
-        private const int MAX_IN_TOKENS = 250;
+        private const int MAX_IN_TOKENS = 750;
 
         private readonly ISummaryApiClient _summaryApiClient;
 
@@ -110,11 +110,11 @@ namespace ChieApi.Services
                 }
 
                 //Append new block to beginning since order is reversed
-                string summarized = (await this._summaryApiClient.Summarize(toSummarize.ToString())).Content;
+                string summarized = (await this._summaryApiClient.Summarize(toSummarize.ToString())).Content.Replace("[NEXT_CONCEPT]", "\n");
 
                 if (distinctResponses.Add(summarized))
                 {
-                    summaryResponse = summarized + " " + summaryResponse;
+                    summaryResponse = summarized + "\n" + summaryResponse;
 
                     //This should be done with the LlamaApi but this is a cheap hack that will mostly work for now
                     int summaryResponseTokens = (await this._summaryApiClient.Tokenize(summaryResponse)).Content.Length;

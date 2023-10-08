@@ -2,8 +2,8 @@
 
 namespace Embedding.Interfaces
 {
-    public interface IEmbeddingApiClient
-    {
-        Task<EmbeddingResponse> Generate(string[] data);
-    }
+	public interface IEmbeddingApiClient
+	{
+		Task<EmbeddingResponse> Generate(string[] data);
+	}
 }

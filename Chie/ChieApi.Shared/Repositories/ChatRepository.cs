@@ -7,32 +7,16 @@ using System.Data.SqlClient;
 
 namespace ChieApi.Shared.Services
 {
-    public class ChatRepository
-    {
-        private readonly string _connectionString;
+	public class ChatRepository
+	{
+		private readonly string _connectionString;
 
-        private readonly object _databaseLock = new();
+		private readonly object _databaseLock = new();
 
-        public ChatRepository(IHasConnectionString connectionString)
-        {
-            this._connectionString = connectionString.ConnectionString;
-        }
-
-        public ChatEntry? GetBefore(long id, bool includeHidden = false)
-        {
-            using SqlConnection connection = new(this._connectionString);
-
-            string query = $"select top 1 * from chatentry where id < {id}";
-
-            if (!includeHidden)
-            {
-                query += $" and IsVisible = 1 ";
-            }
-
-            query += $"  order by id desc";
-
-            return connection.Query<ChatEntry>(query).SingleOrDefault();
-        }
+		public ChatRepository(IHasConnectionString connectionString)
+		{
+			this._connectionString = connectionString.ConnectionString;
+		}
 
 		public ChatEntry? GetAfter(long id, bool includeHidden = false)
 		{
@@ -50,192 +34,208 @@ namespace ChieApi.Shared.Services
 			return connection.Query<ChatEntry>(query).SingleOrDefault();
 		}
 
+		public ChatEntry? GetBefore(long id, bool includeHidden = false)
+		{
+			using SqlConnection connection = new(this._connectionString);
+
+			string query = $"select top 1 * from chatentry where id < {id}";
+
+			if (!includeHidden)
+			{
+				query += $" and IsVisible = 1 ";
+			}
+
+			query += $"  order by id desc";
+
+			return connection.Query<ChatEntry>(query).SingleOrDefault();
+		}
+
 		public float[]? GetEmbeddings(Model model, long chatEntryId)
-        {
-            using SqlConnection connection = new(this._connectionString);
+		{
+			using SqlConnection connection = new(this._connectionString);
 
-            ChatEntryEmbedding? embeddings = connection.Query<ChatEntryEmbedding>($"select * from ChatEntryEmbedding where ChatEntryId = {chatEntryId} and modelid = {model.Id}").SingleOrDefault();
+			ChatEntryEmbedding? embeddings = connection.Query<ChatEntryEmbedding>($"select * from ChatEntryEmbedding where ChatEntryId = {chatEntryId} and modelid = {model.Id}").SingleOrDefault();
 
-            if (embeddings == null)
-            {
-                return null;
-            }
+			if (embeddings == null)
+			{
+				return null;
+			}
 
-            float[] floats = new float[embeddings.Data.Length / sizeof(float)];
+			float[] floats = new float[embeddings.Data.Length / sizeof(float)];
 
-            for (int i = 0; i < embeddings.Data.Length; i += sizeof(float))
-            {
-                floats[i / sizeof(float)] = BitConverter.ToSingle(embeddings.Data, i);
-            }
+			for (int i = 0; i < embeddings.Data.Length; i += sizeof(float))
+			{
+				floats[i / sizeof(float)] = BitConverter.ToSingle(embeddings.Data, i);
+			}
 
-            return floats;
-        }
+			return floats;
+		}
 
-        public ChatEntry GetLastMessage(string userId = null, bool includeHidden = false)
-        {
-            using SqlConnection connection = new(this._connectionString);
+		public ChatEntry GetLastMessage(string userId = null, bool includeHidden = false)
+		{
+			using SqlConnection connection = new(this._connectionString);
 
-            string query = "select top 1 * from chatentry where 1 = 1";
+			string query = "select top 1 * from chatentry where 1 = 1";
 
-            if (!string.IsNullOrEmpty(userId))
-            {
-                query += $" and UserId = '{userId}'";
-            }
+			if (!string.IsNullOrEmpty(userId))
+			{
+				query += $" and UserId = '{userId}'";
+			}
 
-            if (!includeHidden)
-            {
-                query += " and isVisible = 1 ";
-            }
+			if (!includeHidden)
+			{
+				query += " and isVisible = 1 ";
+			}
 
-            query += " order by id desc";
+			query += " order by id desc";
 
-            return connection.Query<ChatEntry>(query).FirstOrDefault();
-        }
+			return connection.Query<ChatEntry>(query).FirstOrDefault();
+		}
 
-        public IEnumerable<ChatEntry> GetLastMessages(string userId, bool includeHidden = false)
-        {
-            using SqlConnection connection = new(this._connectionString);
+		public IEnumerable<ChatEntry> GetLastMessages(string userId, bool includeHidden = false)
+		{
+			using SqlConnection connection = new(this._connectionString);
 
-            string query = $"select * from chatentry where 1 = 1";
+			string query = $"select * from chatentry where 1 = 1";
 
-            if (userId != null)
-            {
-                query += $" and UserId = '{userId}' ";
-            }
+			if (userId != null)
+			{
+				query += $" and UserId = '{userId}' ";
+			}
 
-            if (!includeHidden)
-            {
-                query += $" and IsVisible = 1 ";
-            }
+			if (!includeHidden)
+			{
+				query += $" and IsVisible = 1 ";
+			}
 
-            query += $"  order by id desc";
+			query += $"  order by id desc";
 
-            return connection.Query<ChatEntry>(query).Take(100).ToArray();
-        }
+			return connection.Query<ChatEntry>(query).Take(100).ToArray();
+		}
 
-        public ChatEntry[] GetMessages(string? channelId = null, long after = 0, string userId = null, bool includeHidden = false, bool includeTemporary = false)
-        {
-            using SqlConnection connection = new(this._connectionString);
+		public ChatEntry[] GetMessages(string? channelId = null, long after = 0, string userId = null, bool includeHidden = false, bool includeTemporary = false)
+		{
+			using SqlConnection connection = new(this._connectionString);
 
-            string query = $"select * from chatentry where id > {after}";
+			string query = $"select * from chatentry where id > {after}";
 
-            if (!string.IsNullOrWhiteSpace(channelId))
-            {
-                query += $" and SourceChannel = '{channelId}' ";
-            }
+			if (!string.IsNullOrWhiteSpace(channelId))
+			{
+				query += $" and SourceChannel = '{channelId}' ";
+			}
 
-            if (userId != null)
-            {
-                query += $" and UserId = '{userId}' ";
-            }
+			if (userId != null)
+			{
+				query += $" and UserId = '{userId}' ";
+			}
 
-            if (!includeHidden)
-            {
-                query += $" and IsVisible = 1 ";
-            }
+			if (!includeHidden)
+			{
+				query += $" and IsVisible = 1 ";
+			}
 
-            if (!includeTemporary)
-            {
-                query += $" and (Type is null OR Type != {(int)LlamaTokenType.Temporary}) ";
-            }
+			if (!includeTemporary)
+			{
+				query += $" and (Type is null OR Type != {(int)LlamaTokenType.Temporary}) ";
+			}
 
-            query += "order by id asc";
+			query += "order by id asc";
 
-            ChatEntry[] chatEntries = connection.Query<ChatEntry>(query).ToArray();
+			ChatEntry[] chatEntries = connection.Query<ChatEntry>(query).ToArray();
 
-            return chatEntries;
-        }
+			return chatEntries;
+		}
 
-        public ChatEntry[] GetMissingEmbeddings(Model model, bool includeHidden = false, bool includeTemporary = false)
-        {
-            using SqlConnection connection = new(this._connectionString);
+		public ChatEntry[] GetMissingEmbeddings(Model model, bool includeHidden = false, bool includeTemporary = false)
+		{
+			using SqlConnection connection = new(this._connectionString);
 
-            string query = $"select ce.* from ChatEntry ce left outer join ChatEntryEmbedding cee on cee.chatentryid = ce.id and cee.modelid = {model.Id} where cee.chatentryid is null";
+			string query = $"select ce.* from ChatEntry ce left outer join ChatEntryEmbedding cee on cee.chatentryid = ce.id and cee.modelid = {model.Id} where cee.chatentryid is null";
 
-            if (!includeHidden)
-            {
-                query += $" and IsVisible = 1 ";
-            }
+			if (!includeHidden)
+			{
+				query += $" and IsVisible = 1 ";
+			}
 
-            if (!includeTemporary)
-            {
-                query += $" and (Type = 0 OR Type != {(int)LlamaTokenType.Temporary}) ";
-            }
+			if (!includeTemporary)
+			{
+				query += $" and (Type = 0 OR Type != {(int)LlamaTokenType.Temporary}) ";
+			}
 
-            ChatEntry[] ids = connection.Query<ChatEntry>(query).ToArray();
+			ChatEntry[] ids = connection.Query<ChatEntry>(query).ToArray();
 
-            return ids;
-        }
+			return ids;
+		}
 
-        public IEnumerable<ChatEntry> GetRecentMessages()
-        {
-            using SqlConnection connection = new(this._connectionString);
+		public IEnumerable<ChatEntry> GetRecentMessages()
+		{
+			using SqlConnection connection = new(this._connectionString);
 
-            string query = "select * from chatentry order by id desc";
+			string query = "select * from chatentry order by id desc";
 
-            return connection.Query<ChatEntry>(query);
-        }
+			return connection.Query<ChatEntry>(query);
+		}
 
-        public IEnumerable<string> GetUserIds()
-        {
-            using SqlConnection connection = new(this._connectionString);
+		public IEnumerable<string> GetUserIds()
+		{
+			using SqlConnection connection = new(this._connectionString);
 
-            string query = "select userid from chatentry where id in (select max(id) from ChatEntry group by userid) and len(userid) > 0 and IsVisible = 1 order by id desc";
+			string query = "select userid from chatentry where id in (select max(id) from ChatEntry group by userid) and len(userid) > 0 and IsVisible = 1 order by id desc";
 
-            return connection.Query<ChatEntry>(query).Select(c => c.UserId).ToList();
-        }
+			return connection.Query<ChatEntry>(query).Select(c => c.UserId).ToList();
+		}
 
-        public long Save(ChatEntry chatEntry)
-        {
-            chatEntry.DateCreated = DateTime.Now;
+		public long Save(ChatEntry chatEntry)
+		{
+			chatEntry.DateCreated = DateTime.Now;
 
-            using SqlConnection connection = new(this._connectionString);
+			using SqlConnection connection = new(this._connectionString);
 
-            if (chatEntry.Id == 0)
-            {
-                connection.Insert(chatEntry);
-            }
-            else
-            {
-                connection.Update(chatEntry);
-            }
+			if (chatEntry.Id == 0)
+			{
+				connection.Insert(chatEntry);
+			}
+			else
+			{
+				connection.Update(chatEntry);
+			}
 
-            return chatEntry.Id;
-        }
+			return chatEntry.Id;
+		}
 
-        public void SaveEmbeddings(Model model, long id, float[] embeddings)
-        {
-            ChatEntryEmbedding cee = new()
-            {
-                ChatEntryId = id,
-                ModelId = model.Id,
-                Data = new byte[embeddings.Length * sizeof(float)]
-            };
+		public void SaveEmbeddings(Model model, long id, float[] embeddings)
+		{
+			ChatEntryEmbedding cee = new()
+			{
+				ChatEntryId = id,
+				ModelId = model.Id,
+				Data = new byte[embeddings.Length * sizeof(float)]
+			};
 
-            for (int i = 0; i < embeddings.Length; i++)
-            {
-                int targetIndex = i * sizeof(float);
-                byte[] thisFloat = BitConverter.GetBytes(embeddings[i]);
-                for (int j = 0; j < thisFloat.Length; j++)
-                {
-                    cee.Data[targetIndex + j] = thisFloat[j];
-                }
-            }
+			for (int i = 0; i < embeddings.Length; i++)
+			{
+				int targetIndex = i * sizeof(float);
+				byte[] thisFloat = BitConverter.GetBytes(embeddings[i]);
+				for (int j = 0; j < thisFloat.Length; j++)
+				{
+					cee.Data[targetIndex + j] = thisFloat[j];
+				}
+			}
 
-            lock (_databaseLock)
-            {
-                using SqlConnection connection = new(this._connectionString);
-                connection.Insert(cee, commandTimeout: int.MaxValue);
-            }
-        }
+			lock (_databaseLock)
+			{
+				using SqlConnection connection = new(this._connectionString);
+				connection.Insert(cee, commandTimeout: int.MaxValue);
+			}
+		}
 
-        public bool TryGetOriginal(long originalMessageId, out ChatEntry? chatEntry)
-        {
-            using SqlConnection connection = new(this._connectionString);
+		public bool TryGetOriginal(long originalMessageId, out ChatEntry? chatEntry)
+		{
+			using SqlConnection connection = new(this._connectionString);
 
-            chatEntry = connection.Query<ChatEntry>($"select * from chatentry where ReplyToId = {originalMessageId}").FirstOrDefault();
+			chatEntry = connection.Query<ChatEntry>($"select * from chatentry where ReplyToId = {originalMessageId}").FirstOrDefault();
 
-            return chatEntry != null;
-        }
-    }
+			return chatEntry != null;
+		}
+	}
 }

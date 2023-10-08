@@ -7,14 +7,14 @@ namespace ChieApi.Pipelines
 {
     public class TimePassagePipeline : IRequestPipeline
     {
-        private readonly ICharacterFactory _characterFactory;
+        private readonly ChatRepository _chatService;
 
-        private readonly ChatService _chatService;
+        private readonly string _characterName;
 
-        public TimePassagePipeline(ChatService databaseService, ICharacterFactory characterFactory)
+        public TimePassagePipeline(ChatRepository databaseService, CharacterConfiguration characterConfiguration)
         {
             this._chatService = databaseService;
-            this._characterFactory = characterFactory;
+            this._characterName = characterConfiguration.CharacterName;
         }
 
         public async IAsyncEnumerable<ChatEntry> Process(ChatEntry chatEntry)
@@ -35,7 +35,7 @@ namespace ChieApi.Pipelines
 
                     yield return new ChatEntry()
                     {
-                        DisplayName = (await this._characterFactory.Build()).CharacterName,
+                        DisplayName = _characterName,
                         Content = $"*Notices {timeSpan} {pos} passed*",
                         Type = LlamaTokenType.Temporary
                     };

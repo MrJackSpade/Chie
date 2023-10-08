@@ -42,7 +42,7 @@
 		/// <summary>
 		/// Default 0.01
 		/// </summary>
-		public float MinP { get; set; } = 0.05f;
+		public float MinP { get; set; } = 0.15f;
 
 		/// <summary>
 		/// Default 40

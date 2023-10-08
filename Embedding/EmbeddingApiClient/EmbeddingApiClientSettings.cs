@@ -2,9 +2,9 @@
 
 namespace Embedding
 {
-    public class EmbeddingApiClientSettings
-    {
-        [JsonPropertyName("rootUrl")]
-        public string RootUrl { get; set; }
-    }
+	public class EmbeddingApiClientSettings
+	{
+		[JsonPropertyName("rootUrl")]
+		public string RootUrl { get; set; }
+	}
 }

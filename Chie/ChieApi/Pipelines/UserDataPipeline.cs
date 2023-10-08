@@ -8,27 +8,20 @@ namespace ChieApi.Pipelines
 {
     public partial class UserDataPipeline : IRequestPipeline
     {
-        private readonly ICharacterFactory _characterFactory;
-
         private readonly HashSet<string> _returnedData = new();
 
-        private readonly UserDataService _userDataService;
+        private readonly UserDataRepository _userDataService;
 
-        private string? _characterName;
+        private readonly string? _characterName;
 
-        public UserDataPipeline(UserDataService userDataService, ICharacterFactory characterFactory)
+        public UserDataPipeline(UserDataRepository userDataService, CharacterConfiguration characterConfiguration)
         {
             this._userDataService = userDataService;
-            this._characterFactory = characterFactory;
+            this._characterName = characterConfiguration.CharacterName;
         }
 
         public async IAsyncEnumerable<ChatEntry> Process(ChatEntry chatEntry)
         {
-            if (string.IsNullOrWhiteSpace(this._characterName))
-            {
-                this._characterName = (await this._characterFactory.Build()).CharacterName;
-            }
-
             this.SwapId(chatEntry);
 
             if (chatEntry.DisplayName != this._characterName &&

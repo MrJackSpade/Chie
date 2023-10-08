@@ -23,7 +23,7 @@ namespace Llama.Core.Samplers.Mirostat
 		{
 			if (!_isWords.TryGetValue(id, out bool word))
 			{
-				string value = NativeApi.TokenToStr(ctx, id);
+				string value = NativeApi.TokenToPiece(ctx, id);
 				word = !string.IsNullOrWhiteSpace(value) && value[0] == ' ';
 				_isWords.Add(id, word);
 			}

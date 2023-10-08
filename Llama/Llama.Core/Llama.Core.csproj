@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Utils\Ai.Utils\Ai.Utils.csproj" />
     <ProjectReference Include="..\Llama.Data\Llama.Data.csproj" />
     <ProjectReference Include="..\Llama.Extensions\Llama.Extensions.csproj" />
     <ProjectReference Include="..\Llama.Native\Llama.Native.csproj" />

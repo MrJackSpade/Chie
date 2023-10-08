@@ -34,11 +34,9 @@ namespace ChieApi.Services
 
         private readonly AutoResetEvent _acceptingInput = new(false);
 
-        private readonly ICharacterFactory _characterFactory;
-
         private readonly SemaphoreSlim _chatLock = new(1);
 
-        private readonly ChatService _chatService;
+        private readonly ChatRepository _chatService;
 
         private readonly LlamaContextClient _client;
 
@@ -62,9 +60,9 @@ namespace ChieApi.Services
 
         private readonly List<ITokenTransformer> _transformers;
 
-        private readonly UserDataService _userDataService;
+        private readonly UserDataRepository _userDataService;
 
-        private CharacterConfiguration _characterConfiguration;
+        private readonly CharacterConfiguration _characterConfiguration;
 
         private LlamaTokenCollection _context;
 
@@ -72,17 +70,17 @@ namespace ChieApi.Services
 
         private Task<SummaryResponse>? _summaryTask;
 
-        public LlamaService(UserDataService userDataService, SummarizationService summarizationService, DictionaryService dictionaryService, ICharacterFactory characterFactory, LlamaContextClient client, LlamaContextModel contextModel, LlamaTokenCache llamaTokenCache, ILogger logger, ChatService chatService, LogitService logitService)
+        public LlamaService(UserDataRepository userDataService, SummarizationService summarizationService, DictionaryRepository dictionaryService, CharacterConfiguration characterConfiguration, LlamaContextClient client, LlamaContextModel contextModel, LlamaTokenCache llamaTokenCache, ILogger logger, ChatRepository chatService, LogitService logitService)
         {
             this._userDataService = userDataService;
             this._summarizationService = summarizationService;
             this._client = client;
-            this._characterFactory = characterFactory;
             this._logitService = logitService;
             this._logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this._chatService = chatService ?? throw new ArgumentNullException(nameof(chatService));
             this._contextModel = contextModel;
             this._tokenCache = llamaTokenCache;
+            this._characterConfiguration = characterConfiguration;
 
             logger.LogInformation("Constructing Llama Service");
 
@@ -124,8 +122,8 @@ namespace ChieApi.Services
 
             this._postAccept = new List<IPostAccept>()
             {
-                //new RoleplayEnforcingTransformer(0.01f, 0.5f, 2.5f),
-                new CumulativeInferrenceRepetitionBias(1.5f, 3),
+                new AsteriskAlignmentTransformer(this._characterConfiguration.AsteriskCap),
+				new CumulativeInferrenceRepetitionBias(1.5f, 3),
                 new TabNewlineOnly()
             };
 
@@ -377,10 +375,6 @@ namespace ChieApi.Services
 
             enumerator.SetBias(LlamaToken.EOS.Id, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
             enumerator.SetBias(LlamaToken.NewLine.Id, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
-
-            // "
-			enumerator.SetBias(376, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
-
 			enumerator.SetBias(this._characterConfiguration.LogitBias, LogitRuleLifetime.Inferrence, LogitBiasType.Additive);
 
             while (await enumerator.MoveNextAsync())
@@ -431,7 +425,7 @@ namespace ChieApi.Services
         private async Task Init()
         {
             this._logger.LogInformation("Constructing Llama Client");
-            this._characterConfiguration ??= await this._characterFactory.Build();
+
             this.CharacterName = this._characterConfiguration.CharacterName;
 
             this._logger.LogDebug(System.Text.Json.JsonSerializer.Serialize(this._characterConfiguration, new System.Text.Json.JsonSerializerOptions()
@@ -748,14 +742,15 @@ namespace ChieApi.Services
             int contextLen = this._characterConfiguration.ContextLength;
             int contextGen = (await this._contextModel.ToCollection()).Count;
             bool existingSummary = (await this._contextModel.Summary.ToCollection()).Count > 0;
+            bool canSummarize = _characterConfiguration.MemoryStart < DateTime.Now;
 
             float sumNextStart = 0.6f;
             float sumNextLoad = 1 - (1 / (float)(SUMMARY_CHUNKS - 1));
 
             //We only want to gen/load when it makes sense, which is when we have a lot 
             //of context or when theres no existing history
-            bool shouldSumStart = contextGen > contextLen * sumNextStart || !existingSummary;
-            bool shouldSumLoad = contextGen > contextLen * sumNextLoad || (!existingSummary && _summaryTask != null && _summaryTask.IsCompleted);
+            bool shouldSumStart = contextGen > contextLen * sumNextStart || (!existingSummary && canSummarize);
+            bool shouldSumLoad = contextGen > contextLen * sumNextLoad || (!existingSummary && _summaryTask != null && _summaryTask.IsCompleted && canSummarize);
 
             if (this._summaryTask?.IsCanceled ?? false)
             {
@@ -767,7 +762,7 @@ namespace ChieApi.Services
                 await this._summaryTask;
 
                 SummaryResponse summary = await this._summaryTask;
-                string strSummary = summary.Summary.Replace("\r", "");
+                string strSummary = summary.Summary.Replace("\r", "\n").Replace("\n\n", "\n");
                 IReadOnlyLlamaTokenCollection tokens = await this._tokenCache.Get(strSummary, false);
 
                 this._contextModel.Summary = new LlamaTokenBlock(tokens, LlamaTokenType.Undefined);
@@ -820,6 +815,16 @@ namespace ChieApi.Services
                         //up the summary since we're going to purge it
                         lastMessageId = Math.Max(messages[i].Id, lastMessageId);
                         toRemove--;
+                    }
+                }
+
+                if(lastMessageId == 0)
+                {
+                    List<long> possibleTargets = messages.Select(m => m.Id).Where(x => x != 0).ToList();
+
+                    if(possibleTargets.Count > 0)
+                    {
+                        lastMessageId = possibleTargets.Min();
                     }
                 }
 

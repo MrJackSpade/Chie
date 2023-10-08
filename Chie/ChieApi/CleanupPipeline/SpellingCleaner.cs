@@ -6,9 +6,9 @@ namespace ChieApi.CleanupPipeline
 {
     public class SpellingCleaner : ITextCleaner
     {
-        private readonly DictionaryService _dictionaryService;
+        private readonly DictionaryRepository _dictionaryService;
 
-        public SpellingCleaner(DictionaryService dictionaryService)
+        public SpellingCleaner(DictionaryRepository dictionaryService)
         {
             this._dictionaryService = dictionaryService;
         }

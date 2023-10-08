@@ -18,8 +18,7 @@ namespace ChieApi.CleanupPipeline
             s = s.Replace(" ?", "?");
             s = s.Replace(" !", "!");
             s = s.Replace("..?", "?");
-            s = s.Replace("...", "…");
-
+            //s = s.Replace("...", "…");
             s = s.Replace('’', '\''); // Right single quotation mark
             s = s.Replace('‘', '\''); // Left single quotation mark
             s = s.Replace('“', '"');  // Left double quotation mark

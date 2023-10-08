@@ -5,13 +5,13 @@ namespace ChieApi.CleanupPipeline
 {
     public class UnbrokenWordsCleaner : ITextCleaner
     {
-        private readonly DictionaryService _dictionaryService;
+        private readonly DictionaryRepository _dictionaryService;
 
         private readonly int _maxCount;
 
         private readonly Dictionary<char, string[]> _wordsByLetter = new();
 
-        public UnbrokenWordsCleaner(DictionaryService dictionaryService, int maxCount)
+        public UnbrokenWordsCleaner(DictionaryRepository dictionaryService, int maxCount)
         {
             _maxCount = maxCount;
 

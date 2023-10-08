@@ -8,7 +8,7 @@ namespace ChieApi.Services
 {
     public static class MacroService
     {
-        public static async Task<string> Transform(string input)
+        public static string Transform(string input)
         {
             List<string> outputLines = new();
 
@@ -25,7 +25,7 @@ namespace ChieApi.Services
 
                 if (line.StartsWith("#"))
                 {
-                    await ResolveCommand(line, macros);
+                    ResolveCommand(line, macros);
                 }
                 else if (line.Contains("%%"))
                 {
@@ -50,7 +50,7 @@ namespace ChieApi.Services
             return string.Join(Environment.NewLine, outputLines.ToArray());
         }
 
-        public static async Task<string> TransformFile(string filePath) => await Transform(File.ReadAllText(filePath));
+        public static string TransformFile(string filePath) => Transform(File.ReadAllText(filePath));
 
         private static object GetMemberValue(object source, string memberName, Queue<string> commands)
         {
@@ -125,7 +125,7 @@ namespace ChieApi.Services
             return toReturn;
         }
 
-        private static async Task ResolveCommand(string line, Dictionary<string, object> macros)
+        private static void ResolveCommand(string line, Dictionary<string, object> macros)
         {
             Queue<string> commands = new();
 
@@ -139,14 +139,14 @@ namespace ChieApi.Services
             switch (thisCommand.ToUpper().Trim('#'))
             {
                 case "SET":
-                    await ResolveSetCommand(commands, macros);
+                    ResolveSetCommand(commands, macros);
                     break;
 
                 default: throw new NotImplementedException();
             }
         }
 
-        private static async Task<object> ResolvePath(object source, Queue<string> commands)
+        private static object ResolvePath(object source, Queue<string> commands)
         {
             string memberPath = commands.Dequeue();
 
@@ -165,7 +165,7 @@ namespace ChieApi.Services
 
                 if (root is Task task)
                 {
-                    await task;
+                    Task.Run(async () => await task).Wait();
 
                     root = task.GetType().GetProperty("Result").GetValue(task);
                 }
@@ -174,7 +174,7 @@ namespace ChieApi.Services
             return root;
         }
 
-        private static async Task ResolveSetCommand(Queue<string> commands, Dictionary<string, object> macros)
+        private static void ResolveSetCommand(Queue<string> commands, Dictionary<string, object> macros)
         {
             string varName = commands.Dequeue();
             string varSource = commands.Dequeue();
@@ -184,7 +184,7 @@ namespace ChieApi.Services
             {
                 case "MACRO":
                     source = macros[sourceName];
-                    object value = await ResolvePath(source, commands);
+                    object value = ResolvePath(source, commands);
                     macros.Add(varName, value);
                     break;
 
