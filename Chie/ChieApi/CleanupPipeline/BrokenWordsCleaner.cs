@@ -1,5 +1,5 @@
-﻿using ChieApi.Interfaces;
-using ChieApi.Shared.Services;
+﻿using ChieApi.Shared.Services;
+using LlamaApi.Shared.Interfaces;
 using System.Text.RegularExpressions;
 
 namespace ChieApi.CleanupPipeline

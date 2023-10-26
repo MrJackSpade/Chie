@@ -377,12 +377,12 @@ namespace Llama.Core
 			collection.Append(this.GetToken(1075));//him
 			collection.Append(this.GetToken(670));//his
 			collection.Append(this.GetToken(7955));//hers
-												   //collection.Append(this.GetToken(29892));//,
+			collection.Append(this.GetToken(29892));//,
 			collection.Append(this.GetToken(322));//and
 			collection.Append(this.GetToken(306));//I
 			collection.Append(this.GetToken(310));//of
 			collection.Append(this.GetToken(29879));//s
-													//collection.Append(this.GetToken(29991));//!
+			collection.Append(this.GetToken(29991));//!
 			collection.Append(this.GetToken(278));//the
 			collection.Append(this.GetToken(592));//me
 			collection.Append(this.GetToken(263));//a

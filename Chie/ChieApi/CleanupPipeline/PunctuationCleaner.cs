@@ -1,4 +1,4 @@
-﻿using ChieApi.Interfaces;
+﻿using LlamaApi.Shared.Interfaces;
 using System.Text.RegularExpressions;
 
 namespace ChieApi.CleanupPipeline

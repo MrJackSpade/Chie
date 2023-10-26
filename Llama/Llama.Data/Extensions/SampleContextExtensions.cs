@@ -18,6 +18,8 @@ namespace Llama.Data.Extensions
             Span<LlamaTokenData> span = context.Candidates.data.Span;
             LlamaTokenData existing = span[tokenId];
 
+            int mod = existing.logit > 0 ? 1 : -1;
+
 			span[tokenId] = logitBiasType switch
 			{
 				LogitBiasType.Additive => new LlamaTokenData()
@@ -29,8 +31,8 @@ namespace Llama.Data.Extensions
 				LogitBiasType.Multiplicative => new LlamaTokenData()
 				{
 					id = existing.id,
-					logit = existing.logit * probability,
-					p = existing.p * probability
+					logit = existing.logit * probability * mod,
+					p = existing.p * probability * mod
 				},
 				_ => throw new NotImplementedException(),
 			};

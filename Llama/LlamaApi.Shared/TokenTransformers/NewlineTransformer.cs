@@ -1,6 +1,6 @@
 ﻿using Ai.Utils.Extensions;
-using ChieApi.Interfaces;
 using Llama.Data.Models;
+using LlamaApi.Shared.Interfaces;
 using LlamaApiClient;
 using System.Text.RegularExpressions;
 

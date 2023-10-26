@@ -1,4 +1,4 @@
-﻿using ChieApi.Interfaces;
+﻿using LlamaApi.Shared.Interfaces;
 
 namespace ChieApi.CleanupPipeline
 {

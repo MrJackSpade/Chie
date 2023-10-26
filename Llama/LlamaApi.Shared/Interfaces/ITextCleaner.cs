@@ -1,4 +1,4 @@
-﻿namespace ChieApi.Interfaces
+﻿namespace LlamaApi.Shared.Interfaces
 {
     public interface ITextCleaner
     {

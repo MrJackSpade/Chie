@@ -1,6 +1,6 @@
-﻿using ChieApi.Interfaces;
-using Llama.Data.Extensions;
+﻿using Llama.Data.Extensions;
 using Llama.Data.Models;
+using LlamaApi.Shared.Interfaces;
 using LlamaApiClient;
 using System.Diagnostics;
 

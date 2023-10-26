@@ -17,6 +17,7 @@ using Llama.Data.Models;
 using Llama.Data.Models.Settings;
 using LlamaApi.Models.Request;
 using LlamaApi.Shared.Extensions;
+using LlamaApi.Shared.Interfaces;
 using LlamaApi.Shared.Models.Response;
 using LlamaApiClient;
 using Loxifi;
@@ -92,11 +93,13 @@ namespace ChieApi.Services
                 new RepetitionBlockingSampler(3)
             };
 
+            TextTruncationTransformer textTruncation = new(1000, 500, 150, 0, ".!?…*", dictionaryService);
+
             this._transformers = new List<ITokenTransformer>()
             {
                 new SpaceStartTransformer(),
                 new NewlineTransformer(),
-                new TextTruncationTransformer(1000, 500, 150, ".!?…", dictionaryService),
+                textTruncation,
                 //new TextExtensionTransformer(100, 150),
                 new RepetitionBlockingTransformer(3),
                 new InvalidCharacterBlockingTransformer()
@@ -117,7 +120,8 @@ namespace ChieApi.Services
                 new BrokenWordsCleaner(dictionaryService, 3),
                 new SentenceLevelPunctuationCleaner(),
                 new DuplicateSentenceRemover(),
-                new AsteriskSpacingCleaner()
+                new AsteriskSpacingCleaner(),
+                textTruncation
             };
 
             this._postAccept = new List<IPostAccept>()
@@ -375,7 +379,7 @@ namespace ChieApi.Services
 
             enumerator.SetBias(LlamaToken.EOS.Id, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
             enumerator.SetBias(LlamaToken.NewLine.Id, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
-			enumerator.SetBias(this._characterConfiguration.LogitBias, LogitRuleLifetime.Inferrence, LogitBiasType.Additive);
+			enumerator.SetBias(this._characterConfiguration.LogitBias, LogitRuleLifetime.Inferrence, LogitBiasType.Multiplicative);
 
             while (await enumerator.MoveNextAsync())
             {

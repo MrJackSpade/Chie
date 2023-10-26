@@ -1,5 +1,5 @@
 ﻿using ChieApi.Extensions;
-using ChieApi.Interfaces;
+using LlamaApi.Shared.Interfaces;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 

@@ -1,5 +1,5 @@
-﻿using ChieApi.Interfaces;
-using Llama.Data.Models;
+﻿using Llama.Data.Models;
+using LlamaApi.Shared.Interfaces;
 using LlamaApiClient;
 using Loxifi.AsyncExtensions;
 

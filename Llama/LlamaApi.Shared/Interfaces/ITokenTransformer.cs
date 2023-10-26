@@ -1,7 +1,7 @@
 ﻿using Llama.Data.Models;
 using LlamaApiClient;
 
-namespace ChieApi.Interfaces
+namespace LlamaApi.Shared.Interfaces
 {
     public interface ITokenTransformer
     {

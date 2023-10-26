@@ -1,5 +1,5 @@
-﻿using ChieApi.Interfaces;
-using ChieApi.Shared.Services;
+﻿using ChieApi.Shared.Services;
+using LlamaApi.Shared.Interfaces;
 
 namespace ChieApi.CleanupPipeline
 {

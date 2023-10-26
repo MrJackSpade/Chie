@@ -1,12 +1,12 @@
-﻿using ChieApi.Interfaces;
-using Llama.Data.Interfaces;
+﻿using Llama.Data.Interfaces;
 using Llama.Data.Models;
+using LlamaApi.Shared.Interfaces;
 using LlamaApiClient;
 using Loxifi.AsyncExtensions;
 
 namespace ChieApi.TokenTransformers
 {
-    public class TextTruncationTransformer : ITokenTransformer
+    public class TextTruncationTransformer : ITokenTransformer, ITextCleaner
     {
         private readonly IDictionaryService _dictionaryService;
 
@@ -20,13 +20,41 @@ namespace ChieApi.TokenTransformers
 
         private readonly Random _random = new();
 
-        public TextTruncationTransformer(int hardmax, int max, int min, string endChars, IDictionaryService dictionaryService)
+        private readonly int _base;
+
+        public TextTruncationTransformer(int hardmax, int max, int min, int b,  string endChars, IDictionaryService dictionaryService)
         {
-            this._min = min;
-            this._max = max;
-            this._hardmax = hardmax;
-            this._endChars = endChars;
-            this._dictionaryService = dictionaryService;
+            _min = min;
+            _max = max;
+            _hardmax = hardmax;
+            _endChars = endChars;
+            _dictionaryService = dictionaryService;
+            _base = b;
+        }
+
+        public string Clean(string content)
+        {
+            if(content.Length <= _max)
+            {
+                return content;
+            }
+
+            int lastGoodEnd = 0;
+
+            for(int i = 0; i < content.Length; i++)
+            {
+                if(GoodEndPos(i, content))
+                {
+                    lastGoodEnd = i;
+                }
+            }
+
+            if(lastGoodEnd <= _min)
+            {
+                return content;
+            }
+
+            return content[..(lastGoodEnd + 1)];
         }
 
         public async IAsyncEnumerable<LlamaToken> TransformToken(InferenceEnumerator enumerator, IAsyncEnumerable<LlamaToken> selectedTokens)
@@ -55,11 +83,16 @@ namespace ChieApi.TokenTransformers
                 yield break;
             }
 
-            float chance = (characterCount - this._min) / (float)(this._max - this._min);
+            float chance = 0;
 
-            bool truncate = this._random.NextDouble() < chance;
+            if (characterCount >= _min)
+            {
+                chance = ((characterCount - _base) / (float)(_max - _base));
+            }
 
-            if (!truncate || !this.GoodEndChar(written) || !nextT.StartsWith(" ") || this.EndsWithWord(written))
+            bool truncate = _random.NextDouble() < chance;
+
+            if (!truncate || !GoodEndChar(written) || !nextT.StartsWith(" ") || EndsWithWord(written))
             {
                 await foreach (LlamaToken token in selectedTokens)
                 {
@@ -86,13 +119,30 @@ namespace ChieApi.TokenTransformers
             return _dictionaryService.IsWord(lastWord);
         }
 
+        private bool GoodEndPos(int index, string toTest)
+        {
+            return GoodEndChar(toTest[index]) && (toTest.Length == index + 1 || toTest[index + 1] == ' ');
+        }
+
         private bool GoodEndChar(string toTest)
         {
             string t = toTest.Trim();
 
-            foreach (char c in this._endChars)
+            if(t.Length == 0)
             {
-                if (t.EndsWith(c))
+                return false;
+            }
+
+            char c = t[^1];
+
+            return GoodEndChar(c);
+        }
+
+        private bool GoodEndChar(char toTest)
+        {
+            foreach (char c in _endChars)
+            {
+                if (toTest == c)
                 {
                     return true;
                 }
