@@ -5,10 +5,10 @@ namespace LlamaApi.Shared.Models.Response
     public class EvaluationResponse
     {
         [JsonPropertyName("availableBuffer")]
-        public int AvailableBuffer { get; set; }
+        public uint AvailableBuffer { get; set; }
 
         [JsonPropertyName("evaluated")]
-        public int Evaluated { get; set; }
+        public uint Evaluated { get; set; }
 
         [JsonPropertyName("id")]
         public Guid Id { get; set; }

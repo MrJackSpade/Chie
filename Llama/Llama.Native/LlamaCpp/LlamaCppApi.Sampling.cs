@@ -17,18 +17,6 @@ namespace Llama.Native
         public static extern void ComplexPresencePenalty(SafeLlamaContextHandle ctx, IntPtr candidates, int[] last_tokens, ulong last_tokens_size, int minGroupLength, float scalePerGroup, float scalePerLength);
 
         /// <summary>
-        /// Frequency and presence penalties described in OpenAI API https://platform.openai.com/docs/api-reference/parameter-details.
-        /// </summary>
-        /// <param name="ctx"></param>
-        /// <param name="candidates">Pointer to LlamaTokenDataArray</param>
-        /// <param name="last_tokens"></param>
-        /// <param name="last_tokens_size"></param>
-        /// <param name="alpha_frequency"></param>
-        /// <param name="alpha_presence"></param>
-        [DllImport(LIBRARY_NAME, EntryPoint = "llama_sample_frequency_and_presence_penalties")]
-        public static extern void SampleFrequencyAndPresencePenalties(SafeLlamaContextHandle ctx, IntPtr candidates, int[] last_tokens, ulong last_tokens_size, float alpha_frequency, float alpha_presence);
-
-        /// <summary>
         /// Repetition penalty described in CTRL academic paper https://arxiv.org/abs/1909.05858, with negative logit fix.
         /// </summary>
         /// <param name="ctx"></param>
@@ -36,8 +24,9 @@ namespace Llama.Native
         /// <param name="last_tokens"></param>
         /// <param name="last_tokens_size"></param>
         /// <param name="penalty"></param>
-        [DllImport(LIBRARY_NAME, EntryPoint = "llama_sample_repetition_penalty")]
-        public static extern void SampleRepetitionPenalty(SafeLlamaContextHandle ctx, IntPtr candidates, int[] last_tokens, ulong last_tokens_size, float penalty);
+
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_sample_repetition_penalties")]
+        public static extern void RepetitionPenalties(SafeLlamaContextHandle ctx, IntPtr candidates, int[] lastTokens, ulong last_tokens_size, float penaltyRepeat, float penaltyFreq, float penaltyPresent);
 
         /// <summary>
         /// Sorts candidate tokens by their logits in descending order and calculate probabilities based on logits.

@@ -28,7 +28,7 @@ namespace Llama.Extensions
             return logits;
         }
 
-        public static LlamaToken GetToken(this IContext handler, int id) => new(id, NativeApi.TokenToPiece(handler.Handle, id));
+        public static LlamaToken GetToken(this IContext handler, int id) => new(id, NativeApi.TokenToPiece(handler.ModelHandle, id));
 
         public static void SetBuffer(this IContext context, LlamaTokenCollection llamaTokens)
         {
@@ -57,7 +57,7 @@ namespace Llama.Extensions
         {
             LlamaTokenCollection tokens = new();
 
-            foreach (int id in NativeApi.LlamaTokenize(context.Handle, value, addBos, Encoding.UTF8))
+            foreach (int id in NativeApi.LlamaTokenize(context.ModelHandle, value, addBos))
             {
                 tokens.Append(context.GetToken(id));
             }
@@ -77,7 +77,7 @@ namespace Llama.Extensions
             return tokens;
         }
 
-        public static int VocabCount(this IContext handler) => NativeApi.NVocab(handler.Handle);
+        public static int VocabCount(this IContext handler) => NativeApi.NVocab(handler.ModelHandle);
 
         public static void Write(this IContext context, IEnumerable<LlamaToken> tokens)
         {

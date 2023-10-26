@@ -36,7 +36,7 @@ namespace Llama.Extensions
             return false;
         }
 
-        public static int FindIndex<T>(this IEnumerable<T> source, int start, Func<T, bool> func)
+        public static int FindIndex<T>(this IEnumerable<T> source, uint start, Func<T, bool> func)
         {
             int i = 0;
             foreach (T t in source)
@@ -52,10 +52,10 @@ namespace Llama.Extensions
             return -1;
         }
 
-        public static LlamaTokenCollection From(this LlamaTokenCollection target, int startIndex, LlamaToken startToken)
+        public static LlamaTokenCollection From(this LlamaTokenCollection target, uint startIndex, LlamaToken startToken)
         {
             // Calculate the index to start from
-            int start = target.Count - startIndex;
+            uint start = target.Count - startIndex;
 
             // Ensure the index is within valid bounds
             if (start < 0)
@@ -73,7 +73,7 @@ namespace Llama.Extensions
             // If startToken was not found, use the original start position
             if (index == -1)
             {
-                index = start;
+                index = (int)start;
             }
 
             // Copy from the found position (or the original start position if startToken was not found)
@@ -105,7 +105,7 @@ namespace Llama.Extensions
 
                 if (isMatch)
                 {
-                    i += toFind.Count;
+                    i += (int)toFind.Count;
                     foreach (LlamaToken tokenA in toReplace)
                     {
                         toReturn.Append(tokenA);

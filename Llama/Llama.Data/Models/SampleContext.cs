@@ -10,5 +10,7 @@ namespace Llama.Data.Models
         public SafeLlamaContextHandle ContextHandle { get; set; }
 
         public IReadOnlyLlamaTokenCollection ContextTokens { get; set; }
+
+        public SafeLlamaModelHandle ModelHandle { get; set; }
     }
 }

@@ -6,7 +6,7 @@ namespace Llama.Data.Interfaces
 {
     public interface IContext
     {
-        public int AvailableBuffer { get; }
+        public uint AvailableBuffer { get; }
 
         IReadOnlyLlamaTokenCollection Buffer { get; }
 
@@ -14,17 +14,19 @@ namespace Llama.Data.Interfaces
 
         SafeLlamaContextHandle Handle { get; }
 
-        int Size { get; }
+        SafeLlamaModelHandle ModelHandle { get; }
+
+        uint Size { get; }
 
         void Clear();
 
         void Dispose();
 
-        int Evaluate(ExecutionPriority priority, int count = -1);
+        uint Evaluate(ExecutionPriority priority, int count = -1);
 
         LlamaToken SampleNext(LogitRuleCollection logitBias, ExecutionPriority priority);
 
-        void SetBufferPointer(int startIndex);
+        void SetBufferPointer(uint startIndex);
 
         void Write(LlamaToken token);
     }

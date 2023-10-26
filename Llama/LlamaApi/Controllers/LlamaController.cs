@@ -84,10 +84,11 @@ namespace LlamaApi.Controllers
                         };
                     }
 
-                    SafeLlamaContextHandle safeLlamaContextHandle = NativeApi.LoadContext(this._loadedModel.Instance.Handle, this._loadedModel.Settings, request.Settings);
+                    SafeLlamaContextHandle safeLlamaContextHandle = NativeApi.LoadContext(this._loadedModel.Instance.Handle, request.Settings);
 
                     LlamaContextWrapper wrapper = new(this._contextExecutionScheduler,
                                                        safeLlamaContextHandle,
+                                                       this._loadedModel.Instance.Handle,
                                                        request.Settings,
                                                        this.GetSimpleSamplers(request),
                                                        this.GetFinalSampler(request)
@@ -134,7 +135,7 @@ namespace LlamaApi.Controllers
             {
                 ContextInstance context = this._loadedModel.GetContext(request.ContextId);
 
-                int evaluated = context.Evaluate(request.Priority);
+                uint evaluated = context.Evaluate(request.Priority);
 
                 return new EvaluationResponse()
                 {
@@ -271,15 +272,13 @@ namespace LlamaApi.Controllers
         {
             return this._jobService.Enqueue(() =>
             {
-                ContextInstance context = this._loadedModel.GetContext(request.ContextId);
-
-                List<int> tokens = NativeApi.LlamaTokenize(context.Context.Handle, request.Content!, false, System.Text.Encoding.UTF8);
+                List<int> tokens = NativeApi.LlamaTokenize(this._loadedModel.Instance.Handle, request.Content!, false);
 
                 List<LlamaToken> toReturn = new();
 
                 foreach (int token in tokens)
                 {
-                    toReturn.Add(new LlamaToken(token, NativeApi.TokenToPiece(context.Context.Handle, token)));
+                    toReturn.Add(new LlamaToken(token, NativeApi.TokenToPiece(this._loadedModel.Instance.Handle, token)));
                 }
 
                 return new TokenizeResponse()
@@ -303,13 +302,13 @@ namespace LlamaApi.Controllers
 
             foreach (RequestLlamaToken token in request.Tokens)
             {
-                string value = NativeApi.TokenToPiece(context.Context.Handle, token.TokenId);
+                string value = NativeApi.TokenToPiece(this._loadedModel.Instance.Handle, token.TokenId);
                 toWrite.Append(new LlamaToken(token.TokenId, value));
             }
 
             if (request.StartIndex >= 0)
             {
-                context.Context.SetBufferPointer(request.StartIndex);
+                context.Context.SetBufferPointer((uint)request.StartIndex);
             }
 
             context.Write(toWrite);
@@ -366,11 +365,6 @@ namespace LlamaApi.Controllers
             if (request.RepetitionSamplerSettings != null)
             {
                 yield return new RepetitionSampler(request.RepetitionSamplerSettings);
-            }
-
-            if (request.FrequencyAndPresenceSamplerSettings != null)
-            {
-                yield return new FrequencyAndPresenceSampler(request.FrequencyAndPresenceSamplerSettings);
             }
 
             if (request.ComplexPresencePenaltySettings != null)

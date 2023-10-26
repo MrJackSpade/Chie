@@ -19,7 +19,7 @@ namespace Llama.Core.Samplers.Mirostat
 
 		private readonly Dictionary<int, bool> _isWords = new();
 
-		private bool CheckIfWord(SafeLlamaContextHandle ctx, int id)
+		private bool CheckIfWord(SafeLlamaModelHandle ctx, int id)
 		{
 			if (!_isWords.TryGetValue(id, out bool word))
 			{
@@ -88,7 +88,7 @@ namespace Llama.Core.Samplers.Mirostat
 			if (this._settings.PreserveWords)
 			{
 				top_x = SamplingApi.TokenGreedy(sampleContext.ContextHandle, sampleContext.Candidates);
-				topOnly = !this.CheckIfWord(sampleContext.ContextHandle, top_x);
+				topOnly = !this.CheckIfWord(sampleContext.ModelHandle, top_x);
 			}
 
 			int x;

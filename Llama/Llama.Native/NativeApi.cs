@@ -10,7 +10,36 @@ namespace Llama.Native
 {
     public static class NativeApi
     {
-        public static int Eval(SafeLlamaContextHandle handle, int[] tokens, int length, int evalPointer, int evalThreadCount) => LlamaCppApi.Eval(handle, tokens, length, evalPointer, evalThreadCount);
+        public static int Eval(SafeLlamaContextHandle handle, int[] tokens, int length, uint evalPointer, int evalThreadCount) => LlamaCppApi.Eval(handle, tokens, length, (int)evalPointer, evalThreadCount);
+
+        public static int Decode(SafeLlamaContextHandle handle, LlamaBatch batch)
+        {
+            var nbatch = new LlamaBatchNative
+            {
+                NTokens = batch.NTokens,
+                Token = Marshal.UnsafeAddrOfPinnedArrayElement(batch.Tokens, 0),
+                Embd = Marshal.UnsafeAddrOfPinnedArrayElement(batch.Embds, 0),
+                Pos = Marshal.UnsafeAddrOfPinnedArrayElement(batch.Pos, 0),
+                NSeqId = Marshal.UnsafeAddrOfPinnedArrayElement(batch.NSeqId, 0),
+                SeqId = Marshal.AllocHGlobal(IntPtr.Size * batch.NTokens),
+                Logits = Marshal.UnsafeAddrOfPinnedArrayElement(batch.Logits, 0)
+            };
+
+            for (int i = 0; i < batch.NTokens; i++)
+            {
+                IntPtr seqIdPointer = Marshal.UnsafeAddrOfPinnedArrayElement(batch.SeqId[i], 0);
+                Marshal.WriteIntPtr(batch.SeqId, i * IntPtr.Size, seqIdPointer);
+            }
+
+            // Call the PInvoke method
+            int result = LlamaCppApi.Decode(handle, nbatch);
+
+            // Free the allocated memory
+            Marshal.FreeHGlobal(nbatch.SeqId);
+
+            return result;
+        }
+    
 
         public static float[] GetEmbeddings(this SafeLlamaContextHandle handle)
         {
@@ -36,18 +65,18 @@ namespace Llama.Native
             return new Span<float>(logits, length);
         }
 
-        public static List<int> LlamaTokenize(SafeLlamaContextHandle ctx, string text, bool add_bos, Encoding encoding, bool useLegacy = true)
+        public static List<int> LlamaTokenize(SafeLlamaModelHandle ctx, string text, bool add_bos, bool useLegacy = true)
         {
             if(text == "\n")
             {
                 return new List<int>() { 13 };
             }
 
-            int cnt = encoding.GetByteCount(text + 1);
+            int cnt = System.Text.Encoding.Unicode.GetByteCount(text + 1);
 
             int[] res = new int[cnt + (add_bos ? 1 : 0)];
             
-            int n = LlamaCppApi.Tokenize(ctx, text, encoding, res, res.Length, add_bos);
+            int n = LlamaCppApi.Tokenize(ctx, text, res, res.Length, add_bos);
 
             if (n < 0)
             {
@@ -64,37 +93,33 @@ namespace Llama.Native
             return res.ToList();
         }
 
-        public static SafeLlamaContextHandle LoadContext(SafeLlamaModelHandle model, LlamaModelSettings modelSettings, LlamaContextSettings contextSettings)
+        public static SafeLlamaContextHandle LoadContext(SafeLlamaModelHandle model, LlamaContextSettings contextSettings)
         {
             LlamaContextParams lparams = LlamaCppApi.ContextDefaultParams();
 
             lparams.NCtx = contextSettings.ContextSize;
-            lparams.NGpuLayers = modelSettings.GpuLayerCount;
             lparams.NBatch = contextSettings.BatchSize;
-            lparams.Seed = modelSettings.Seed;
-            lparams.F16Kv = modelSettings.MemoryMode == Llama.Data.Enums.MemoryMode.Float16;
-            lparams.UseMmap = modelSettings.UseMemoryMap;
-            lparams.UseMlock = modelSettings.UseMemoryLock;
-            lparams.LogitsAll = modelSettings.Perplexity;
-            lparams.Embedding = modelSettings.GenerateEmbedding;
-            lparams.RopeFreqBase = modelSettings.RopeFrequencyBase;
-            lparams.RopeFreqScale = modelSettings.RopeFrequencyScaling;
+            lparams.Seed = contextSettings.Seed;
+            lparams.F16Kv = contextSettings.MemoryMode == Llama.Data.Enums.MemoryMode.Float16;
+            lparams.LogitsAll = contextSettings.Perplexity;
+            lparams.Embedding = contextSettings.GenerateEmbedding;
+            lparams.RopeFreqBase = contextSettings.RopeFrequencyBase;
+            lparams.RopeFreqScale = contextSettings.RopeFrequencyScaling;
             lparams.MulMatQ = true;
-
-            SetTensors(ref lparams, new float[16]);
+            lparams.NThreadsBatch = contextSettings.ThreadCount;
 
             IntPtr ctx_ptr = LlamaCppApi.NewContextWithModel(model, lparams);
 
             if (ctx_ptr == IntPtr.Zero)
             {
-                throw new LlamaCppRuntimeError($"Failed to load context {modelSettings.Model}.");
+                throw new LlamaCppRuntimeError($"Failed to load context.");
             }
 
             SafeLlamaContextHandle ctx = new(ctx_ptr, model, (p) => LlamaCppApi.FreeContext(p));
 
-            if (!string.IsNullOrEmpty(modelSettings.LoraAdapter))
+            if (!string.IsNullOrEmpty(contextSettings.LoraAdapter))
             {
-                int err = LlamaCppApi.ApplyLoraFromFile(ctx, modelSettings.LoraAdapter, string.IsNullOrEmpty(modelSettings.LoraBase) ? null : modelSettings.LoraBase, modelSettings.ThreadCount);
+                int err = LlamaCppApi.ApplyLoraFromFile(ctx, contextSettings.LoraAdapter, string.IsNullOrEmpty(contextSettings.LoraBase) ? null : contextSettings.LoraBase, (int)contextSettings.ThreadCount);
                 if (err != 0)
                 {
                     throw new LlamaCppRuntimeError("Failed to apply lora adapter.");
@@ -104,7 +129,7 @@ namespace Llama.Native
             return ctx;
         }
 
-		public static string TokenToPiece(this SafeLlamaContextHandle ctx, int token)
+		public static string TokenToPiece(this SafeLlamaModelHandle ctx, int token)
 		{
 			// Assuming a buffer size of 256, adjust as needed.
 			char[] buffer = new char[256];
@@ -129,20 +154,11 @@ namespace Llama.Native
 
 		public static LlamaModel LoadModel(LlamaModelSettings modelSettings)
         {
-            LlamaContextParams lparams = LlamaCppApi.ContextDefaultParams();
+            LlamaModelParams lparams = LlamaCppApi.ModelDefaultParams();
 
-            lparams.NCtx = modelSettings.ContextSize;
             lparams.NGpuLayers = modelSettings.GpuLayerCount;
-            lparams.NBatch = modelSettings.BatchSize;
-            lparams.Seed = modelSettings.Seed;
-            lparams.F16Kv = modelSettings.MemoryMode == Llama.Data.Enums.MemoryMode.Float16;
             lparams.UseMmap = modelSettings.UseMemoryMap;
             lparams.UseMlock = modelSettings.UseMemoryLock;
-            lparams.LogitsAll = modelSettings.Perplexity;
-            lparams.Embedding = modelSettings.GenerateEmbedding;
-            lparams.RopeFreqBase = modelSettings.RopeFrequencyBase;
-            lparams.RopeFreqScale = modelSettings.RopeFrequencyScaling;
-            lparams.MulMatQ = true;
 
             SetTensors(ref lparams, new float[16]);
 
@@ -161,9 +177,9 @@ namespace Llama.Native
             return new(new(model_ptr, (p) => LlamaCppApi.FreeModel(p)));
         }
 
-        public static int NVocab(SafeLlamaContextHandle handle) => LlamaCppApi.NVocab(handle);
+        public static int NVocab(SafeLlamaModelHandle handle) => LlamaCppApi.NVocab(handle);
 
-        private static void SetTensors(ref LlamaContextParams param, float[] values)
+        private static void SetTensors(ref LlamaModelParams param, float[] values)
         {
             // Populate your array.
             for (int i = 0; i < 16; i++)

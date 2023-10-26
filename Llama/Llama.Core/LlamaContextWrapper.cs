@@ -21,7 +21,7 @@ namespace Llama.Core
 	{
 		private readonly LlamaTokenCollection _buffer;
 
-		private readonly int _evalThreadCount;
+		private readonly uint _evalThreadCount;
 
 		private readonly LlamaTokenCollection _evaluated;
 
@@ -33,13 +33,13 @@ namespace Llama.Core
 
 		private readonly ITokenSelector _tokenSelector;
 
-		private int _bufferPointer = 0;
+		private uint _bufferPointer = 0;
 
-		private int _evalPointer = 0;
+		private uint _evalPointer = 0;
 
 		private readonly float[,] _embeddingStack;
 
-		public LlamaContextWrapper(IExecutionScheduler executionScheduler, SafeLlamaContextHandle handle, LlamaContextSettings settings, IEnumerable<ISimpleSampler> simpleSamplers, ITokenSelector tokenSelector)
+		public LlamaContextWrapper(IExecutionScheduler executionScheduler, SafeLlamaContextHandle handle, SafeLlamaModelHandle modelHandle, LlamaContextSettings settings, IEnumerable<ISimpleSampler> simpleSamplers, ITokenSelector tokenSelector)
 		{
 			if (executionScheduler is null)
 			{
@@ -75,6 +75,7 @@ namespace Llama.Core
 			this.Size = this._settings.ContextSize;
 			this._buffer = new LlamaTokenBuffer(this.Size);
 			this._evaluated = new LlamaTokenBuffer(this.Size);
+			this.ModelHandle = modelHandle ?? throw new ArgumentNullException();
 
 			if (!Directory.Exists("Logits"))
 			{
@@ -86,7 +87,7 @@ namespace Llama.Core
 		{
 		}
 
-		public int AvailableBuffer => this.Size - this._bufferPointer;
+		public uint AvailableBuffer => this.Size - this._bufferPointer;
 
 		public IReadOnlyLlamaTokenCollection Buffer => this._buffer;
 
@@ -94,9 +95,10 @@ namespace Llama.Core
 
 		public SafeLlamaContextHandle Handle { get; private set; }
 
-		public int Size { get; private set; }
+		public uint Size { get; private set; }
+        public SafeLlamaModelHandle ModelHandle { get; }
 
-		public void Clear()
+        public void Clear()
 		{
 			this._buffer.Clear();
 			this._bufferPointer = 0;
@@ -105,7 +107,7 @@ namespace Llama.Core
 
 		public void Dispose() => this.Handle.Dispose();
 
-		public int Evaluate(ExecutionPriority priority, int count = -1)
+		public uint Evaluate(ExecutionPriority priority, int count = -1)
 		{
 			if (count != -1)
 			{
@@ -114,9 +116,9 @@ namespace Llama.Core
 
 			this.Ensure();
 
-			int start = this._evalPointer;
+			int start = (int)this._evalPointer;
 
-			int end = this._bufferPointer;
+			int end = (int)this._bufferPointer;
 
 			LlamaTokenCollection toEvaluate = new(this._buffer.Skip(start).Take(end - start));
 
@@ -124,16 +126,16 @@ namespace Llama.Core
 
 			// evaluate tokens in batches
 			// embed is typically prepared beforehand to fit within a batch, but not always
-			for (int i = 0; i < toEvaluate.Count; i += this._settings.BatchSize)
+			for (uint i = 0; i < toEvaluate.Count; i += this._settings.BatchSize)
 			{
-				int n_eval = toEvaluate.Count - i;
+				uint n_eval = (uint)(toEvaluate.Count - i);
 
 				if (n_eval > this._settings.BatchSize)
 				{
 					n_eval = this._settings.BatchSize;
 				}
 
-				LlamaTokenCollection thisBlock = new(toEvaluate.Skip(i).Take(n_eval));
+				LlamaTokenCollection thisBlock = new(toEvaluate.Skip((int)i).Take((int)n_eval));
 
 				int[] tokens = thisBlock.Ids.ToArray();
 
@@ -149,9 +151,11 @@ namespace Llama.Core
 					Debugger.Break();
 				}
 
-				for (int c = 0; c < n_eval; c++)
+				for (uint c = 0; c < n_eval; c++)
 				{
-					this._evaluated[c + this._evalPointer] = this._buffer[c + this._evalPointer];
+					int c_loc = (int)(c + this._evalPointer);
+
+					this._evaluated[c_loc] = this._buffer[c_loc];
 				}
 
 				this._evalPointer += n_eval;
@@ -174,9 +178,9 @@ namespace Llama.Core
 				//eval. WE only need to do this if we've actually evaluated something
 				//because a zero length eval means the data is/was a match to the previous
 				//eval and the buffer is still value
-				for (int i = this._evalPointer; i < this.Evaluated.Count; i++)
+				for (uint i = this._evalPointer; i < this.Evaluated.Count; i++)
 				{
-					this._evaluated[i] = LlamaToken.Null;
+					this._evaluated[(int)i] = LlamaToken.Null;
 				}
 			}
 
@@ -214,7 +218,8 @@ namespace Llama.Core
 			{
 				Candidates = candidates,
 				ContextHandle = Handle,
-				ContextTokens = Evaluated
+				ContextTokens = Evaluated,
+				ModelHandle = ModelHandle
 			};
 
 			foreach (LogitClamp clamp in logitRules.OfType<LogitClamp>())
@@ -267,7 +272,7 @@ namespace Llama.Core
 			return toReturn;
 		}
 
-		public void SetBufferPointer(int startIndex)
+		public void SetBufferPointer(uint startIndex)
 		{
 			this._bufferPointer = startIndex;
 
@@ -281,7 +286,7 @@ namespace Llama.Core
 				{
 					if (this._evaluated[i] == this._buffer[i])
 					{
-						this._evalPointer = i;
+						this._evalPointer = (uint)i;
 					}
 					else
 					{
@@ -298,23 +303,23 @@ namespace Llama.Core
 				throw new OutOfContextException();
 			}
 
-			this._buffer[this._bufferPointer] = token;
+			this._buffer[(int)this._bufferPointer] = token;
 
 			//If the eval pointer is in sync with the buffer (up to date)
 			//We need to be up to date because a single mismatch char forces
 			//requires an eval for all subsequent tokens.
 			if (this._evalPointer >= this._bufferPointer)
 			{
-				LlamaToken lastEval = this._evaluated[this._bufferPointer];
+				LlamaToken lastEval = this._evaluated[(int)this._bufferPointer];
 
 				if (lastEval.Id != 0 || token.Id == 0) //sanity debug skip. Not needed
 				{
 					//Then check to see if the current eval token matches.
 					//If it does, we dont need to eval again
-					if (this._evaluated[this._bufferPointer].Id == token.Id)
+					if (this._evaluated[(int)this._bufferPointer].Id == token.Id)
 					{
 						//Just in case theres metadata
-						this._evaluated[this._bufferPointer] = token;
+						this._evaluated[(int)this._bufferPointer] = token;
 
 						//Ensure we bump the eval, to keep them in sync
 						this._evalPointer++;
@@ -332,7 +337,7 @@ namespace Llama.Core
 				throw new LlamaCppRuntimeError("Evaluation thread count can not be zero");
 			}
 
-			if (NativeApi.Eval(this.Handle, tokens, tokens.Length, this._evalPointer, this._evalThreadCount) != 0)
+			if (NativeApi.Eval(this.Handle, tokens, tokens.Length, this._evalPointer, (int)this._evalThreadCount) != 0)
 			{
 				throw new LlamaCppRuntimeError("Failed to eval.");
 			}

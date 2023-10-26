@@ -49,7 +49,7 @@ namespace Llama.Core.Samplers.Mirostat
 			return $"{token.GetEscapedValue()} ({data.p:0.00})";
 		}
 
-		public LlamaToken GetToken(SampleContext ctx, int id) => new(id, NativeApi.TokenToPiece(ctx.ContextHandle, id));
+		public LlamaToken GetToken(SampleContext ctx, int id) => new(id, NativeApi.TokenToPiece(ctx.ModelHandle, id));
 
 		private void Copy(Span<LlamaTokenData> sampleContext)
 		{
@@ -92,7 +92,7 @@ namespace Llama.Core.Samplers.Mirostat
 			if (this._settings.PreserveWords)
 			{
 				top_x = SamplingApi.TokenGreedy(sampleContext.ContextHandle, sampleContext.Candidates);
-				topOnly = !this.CheckIfWord(sampleContext.ContextHandle, top_x);
+				topOnly = !this.CheckIfWord(sampleContext.ModelHandle, top_x);
 			}
 
 			int x;
@@ -194,7 +194,7 @@ namespace Llama.Core.Samplers.Mirostat
 			return x;
 		}
 
-		private bool CheckIfWord(SafeLlamaContextHandle ctx, int id)
+		private bool CheckIfWord(SafeLlamaModelHandle ctx, int id)
 		{
 			if (!this._isWords.TryGetValue(id, out bool word))
 			{

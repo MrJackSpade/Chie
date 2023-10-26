@@ -16,16 +16,13 @@ namespace LlamaApi.Models.Request
         [JsonPropertyName("contextId")]
         public Guid? ContextId { get; set; }
 
-        [JsonPropertyName("frequencyAndPresence")]
-        public FrequencyAndPresenceSamplerSettings? FrequencyAndPresenceSamplerSettings { get; set; }
-
         [JsonPropertyName("mirostat")]
         public MirostatSamplerSettings? MirostatSamplerSettings { get; set; }
 
-		[JsonPropertyName("mirostatTemp")]
-		public MirostatTempSamplerSettings? MirostatTempSamplerSettings { get; set; }
+        [JsonPropertyName("mirostatTemp")]
+        public MirostatTempSamplerSettings? MirostatTempSamplerSettings { get; set; }
 
-		[JsonPropertyName("modelId")]
+        [JsonPropertyName("modelId")]
         public Guid ModelId { get; set; }
 
         [JsonPropertyName("priority")]

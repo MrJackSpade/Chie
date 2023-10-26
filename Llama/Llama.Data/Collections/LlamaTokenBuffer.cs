@@ -4,25 +4,25 @@ namespace Llama.Data.Collections
 {
     public class LlamaTokenBuffer : LlamaTokenCollection
     {
-        public LlamaTokenBuffer(int fixedSize)
+        public LlamaTokenBuffer(uint fixedSize)
         {
             this.FixedSize = fixedSize;
             this.Resize();
         }
 
-        public LlamaTokenBuffer(IEnumerable<LlamaToken> tokens, int fixedSize) : base(tokens)
+        public LlamaTokenBuffer(IEnumerable<LlamaToken> tokens, uint fixedSize) : base(tokens)
         {
             this.FixedSize = fixedSize;
             this.Resize();
         }
 
-        public int FixedSize { get; private set; } = -1;
+        public uint FixedSize { get; private set; } = 0;
 
         public override void Append(LlamaToken token)
         {
             base.Append(token);
 
-            if (this.FixedSize != -1 && this._tokens.Count > this.FixedSize)
+            if (this.FixedSize != 0 && this._tokens.Count > this.FixedSize)
             {
                 this._tokens.RemoveAt(0);
             }

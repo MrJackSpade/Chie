@@ -16,7 +16,7 @@ namespace Llama.Core.Samplers.Temperature
 
         public int SampleNext(SampleContext sampleContext)
         {
-            int top_k = this._settings.TopK <= 0 ? NativeApi.NVocab(sampleContext.ContextHandle) : this._settings.TopK;
+            int top_k = this._settings.TopK <= 0 ? NativeApi.NVocab(sampleContext.ModelHandle) : this._settings.TopK;
 
             // Temperature sampling
             SamplingApi.TopK(sampleContext.ContextHandle, sampleContext.Candidates, top_k, 1);

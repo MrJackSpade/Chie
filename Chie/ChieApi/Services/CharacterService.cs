@@ -41,7 +41,7 @@ namespace ChieApi.Services
 
 			if (this._characterConfiguration.Threads <= 0)
 			{
-				this._characterConfiguration.Threads = System.Environment.ProcessorCount / 2;
+				this._characterConfiguration.Threads = (uint)(System.Environment.ProcessorCount / 2);
 			}
 
 			this._characterConfiguration.AssistantBlock = GetTransformedPromptPath(this._characterConfiguration.AssistantBlock, "assistant.temp");

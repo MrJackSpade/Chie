@@ -26,9 +26,9 @@ namespace ChieApi.Services
 
 		public string? AssistantBlock { get; set; }
 
-        public int BatchSize { get; set; } = 512;
+        public uint BatchSize { get; set; } = 512;
 
-        public int ContextLength { get; set; } = 2048;
+        public uint ContextLength { get; set; } = 2048;
 
         public bool GenerateEmbedding { get; set; }
 
@@ -68,7 +68,7 @@ namespace ChieApi.Services
 
         public float Temperature { get; set; } = 0.80f;
 
-        public int? Threads { get; set; }
+        public uint? Threads { get; set; }
 
         public int Timeout { get; set; } = 600_000;
 

@@ -34,7 +34,7 @@ namespace Llama.Native
         /// <param name="last_tokens_size"></param>
         /// <param name="alpha_frequency"></param>
         /// <param name="alpha_presence"></param>
-        public static void FrequencyAndPresencePenalties(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, int[] check_tokens, float alpha_frequency, float alpha_presence)
+        public static void RepetitionPenalties(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, int[] check_tokens, float penalty, float alpha_frequency, float alpha_presence)
         {
             System.Buffers.MemoryHandle handle = candidates.data.Pin();
             LlamaTokenDataArrayNative st = new()
@@ -44,28 +44,7 @@ namespace Llama.Native
                 sorted = candidates.sorted
             };
 
-            LlamaCppApi.SampleFrequencyAndPresencePenalties(ctx, new IntPtr(&st), check_tokens, (ulong)check_tokens.Length, alpha_frequency, alpha_presence);
-        }
-
-        /// <summary>
-        /// Repetition penalty described in CTRL academic paper https://arxiv.org/abs/1909.05858, with negative logit fix.
-        /// </summary>
-        /// <param name="ctx"></param>
-        /// <param name="candidates">Pointer to LlamaTokenDataArray</param>
-        /// <param name="last_tokens"></param>
-        /// <param name="last_tokens_size"></param>
-        /// <param name="penalty"></param>
-        public static void RepetitionPenalty(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, int[] check_tokens, float penalty)
-        {
-            System.Buffers.MemoryHandle handle = candidates.data.Pin();
-            LlamaTokenDataArrayNative st = new()
-            {
-                data = new IntPtr(handle.Pointer),
-                size = candidates.size,
-                sorted = candidates.sorted
-            };
-
-            LlamaCppApi.SampleRepetitionPenalty(ctx, new IntPtr(&st), check_tokens, (ulong)check_tokens.Length, penalty);
+            LlamaCppApi.RepetitionPenalties(ctx, new IntPtr(&st), check_tokens, (ulong)check_tokens.Length, penalty, alpha_frequency, alpha_presence);
         }
 
         /// <summary>

@@ -20,7 +20,7 @@ namespace Llama.Data.Collections
         {
         }
 
-        public int Count => this._tokens.Count;
+        public uint Count => (uint)this._tokens.Count;
 
         public IEnumerable<int> Ids => this._tokens.Select(t => t.Id);
 

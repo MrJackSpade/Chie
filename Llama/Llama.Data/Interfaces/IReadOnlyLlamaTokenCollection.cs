@@ -5,7 +5,7 @@ namespace Llama.Data.Interfaces
 {
     public interface IReadOnlyLlamaTokenCollection : IEnumerable<LlamaToken>
     {
-        int Count { get; }
+        uint Count { get; }
 
         IEnumerable<int> Ids { get; }
 
