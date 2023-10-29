@@ -29,6 +29,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Utils", "Utils", "{0D3192B4
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ai.Utils", "Utils\Ai.Utils\Ai.Utils.csproj", "{0C9B3103-FF87-4E27-96B0-CEA77915DB4B}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{79CA583E-07BE-4A0C-8F71-76BDAE6B7E1C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Llama.Core.Tests", "Llama.Core.Tests\Llama.Core.Tests.csproj", "{D782909D-D810-4677-A47D-B4A1834367D3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -75,6 +79,10 @@ Global
 		{0C9B3103-FF87-4E27-96B0-CEA77915DB4B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0C9B3103-FF87-4E27-96B0-CEA77915DB4B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0C9B3103-FF87-4E27-96B0-CEA77915DB4B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D782909D-D810-4677-A47D-B4A1834367D3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D782909D-D810-4677-A47D-B4A1834367D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D782909D-D810-4677-A47D-B4A1834367D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D782909D-D810-4677-A47D-B4A1834367D3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -83,6 +91,7 @@ Global
 		{76FEE609-4817-47CE-8D1A-3539485A4758} = {BBCBFE2F-6221-4CAC-BB37-29472DCEB27E}
 		{57C31788-C479-40F1-BBD6-C98777AC0790} = {BBCBFE2F-6221-4CAC-BB37-29472DCEB27E}
 		{0C9B3103-FF87-4E27-96B0-CEA77915DB4B} = {0D3192B4-D435-4196-B1F8-784957364E3D}
+		{D782909D-D810-4677-A47D-B4A1834367D3} = {79CA583E-07BE-4A0C-8F71-76BDAE6B7E1C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5CD54321-0BE1-49B0-9A4F-EFE31405ED39}

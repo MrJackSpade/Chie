@@ -22,7 +22,7 @@ namespace Llama.Data.Interfaces
 
         void Dispose();
 
-        uint Evaluate(ExecutionPriority priority, int count = -1);
+        void Evaluate(ExecutionPriority priority, int count = -1);
 
         LlamaToken SampleNext(LogitRuleCollection logitBias, ExecutionPriority priority);
 

@@ -135,15 +135,16 @@ namespace LlamaApi.Controllers
             {
                 ContextInstance context = this._loadedModel.GetContext(request.ContextId);
 
-                uint evaluated = context.Evaluate(request.Priority);
+                context.Evaluate(request.Priority);
 
                 return new EvaluationResponse()
                 {
                     AvailableBuffer = context.Context.AvailableBuffer,
                     Id = request.ContextId,
                     IsLoaded = true,
-                    Evaluated = evaluated
+                    Evaluated = 0
                 };
+
             }, request.Priority);
         }
 

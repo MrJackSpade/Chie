@@ -50,7 +50,7 @@ namespace Llama.Native
         /// startPos < 0 : [0,  endPos]
         /// endPos < 0 : [startPos, inf)
         /// </summary>
-        [DllImport("LlamaLibrary", EntryPoint = "llama_kv_cache_seq_cp")]
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_kv_cache_seq_cp")]
         public static extern void CopyCacheTokens(SafeLlamaContextHandle handle, int sourceSequenceId, int destinationSequenceId, int startPos, int endPos);
 
         /// <summary>
@@ -97,6 +97,14 @@ namespace Llama.Native
         public static extern void FreeModel(IntPtr ctx);
 
         /// <summary>
+        /// Returns the number of tokens in the KV cache
+        /// </summary>
+        /// <param name="ctx"></param>
+        /// <returns></returns>
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_get_kv_cache_token_count")]
+        public static extern int GetCacheTokenCount(SafeLlamaContextHandle ctx);
+
+        /// <summary>
         /// Get the embeddings for the input
         /// shape: [n_embd] (1-dimensional)
         /// </summary>
@@ -104,14 +112,6 @@ namespace Llama.Native
         /// <returns></returns>
         [DllImport(LIBRARY_NAME, EntryPoint = "llama_get_embeddings")]
         public static extern float* GetEmbeddings(SafeLlamaContextHandle ctx);
-
-        /// <summary>
-        /// Returns the number of tokens in the KV cache
-        /// </summary>
-        /// <param name="ctx"></param>
-        /// <returns></returns>
-        [DllImport(LIBRARY_NAME, EntryPoint = "llama_get_kv_cache_token_count")]
-        public static extern int GetKvCacheTokenCount(SafeLlamaContextHandle ctx);
 
         /// <summary>
         /// Token logits obtained from the last call to llama_eval()
@@ -156,7 +156,7 @@ namespace Llama.Native
         /// <summary>
         /// Removes all tokens that do not belong to the specified sequence.
         /// </summary>
-        [DllImport("LlamaLibrary", EntryPoint = "llama_kv_cache_seq_keep")]
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_kv_cache_seq_keep")]
         public static extern void KeepCacheTokens(SafeLlamaContextHandle handle, int sequenceId);
 
         /// <summary>
@@ -226,7 +226,7 @@ namespace Llama.Native
         /// start < 0 : [0,  end]
         /// end < 0 : [start, inf)
         /// </summary>
-        [DllImport("LlamaLibrary", EntryPoint = "llama_kv_cache_tokens_rm")]
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_kv_cache_tokens_rm")]
         public static extern void RemoveCacheTokens(SafeLlamaContextHandle handle, int start, int end);
 
         /// <summary>
@@ -234,7 +234,7 @@ namespace Llama.Native
         /// startPos < 0 : [0,  endPos]
         /// endPos < 0 : [startPos, inf)
         /// </summary>
-        [DllImport("LlamaLibrary", EntryPoint = "llama_kv_cache_seq_rm")]
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_kv_cache_seq_rm")]
         public static extern void RemoveCacheTokens(SafeLlamaContextHandle handle, int sequenceId, int startPos, int endPos);
 
         [DllImport(LIBRARY_NAME, EntryPoint = "llama_reset_timings")]
@@ -275,7 +275,7 @@ namespace Llama.Native
         /// startPos < 0 : [0,  endPos]
         /// endPos < 0 : [startPos, inf)
         /// </summary>
-        [DllImport("LlamaLibrary", EntryPoint = "llama_kv_cache_seq_shift")]
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_kv_cache_seq_shift")]
         public static extern void ShiftCacheTokens(SafeLlamaContextHandle handle, int sequenceId, int startPos, int endPos, int delta);
 
         [DllImport(LIBRARY_NAME, EntryPoint = "llama_token_bos")]

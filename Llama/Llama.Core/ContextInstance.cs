@@ -32,7 +32,7 @@ namespace Llama.Core
 
         public void Dispose() => this.Context.Dispose();
 
-        public uint Evaluate(ExecutionPriority priority) => this.Context.Evaluate(priority);
+        public void Evaluate(ExecutionPriority priority) => this.Context.Evaluate(priority);
 
         /// <summary>
         /// Call the model to run inference.

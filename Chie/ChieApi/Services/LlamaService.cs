@@ -802,7 +802,7 @@ namespace ChieApi.Services
 
                 //Now we figure out how many tokens we need to 
                 //remove from the current gen, to get in under the target
-                uint toRemove = contextGen - targetLength;
+                int toRemove = (int)(contextGen - targetLength);
 
                 //Figure out how many messages we have
                 int numMessages = messages.Count;
@@ -813,7 +813,7 @@ namespace ChieApi.Services
                 {
                     if (messages[i].Type != LlamaTokenType.Temporary)
                     {
-                        toRemove -= (uint)(await messages[i].Count());
+                        toRemove -= await messages[i].Count();
 
                         //Out summarization should start (working back)
                         //from before the first message we're going to remove.

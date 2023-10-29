@@ -2,6 +2,7 @@
 using Llama.Core.Exceptions;
 using Llama.Core.Interfaces;
 using Llama.Core.Samplers.FrequencyAndPresence;
+using Llama.Core.Utils;
 using Llama.Data;
 using Llama.Data.Collections;
 using Llama.Data.Exceptions;
@@ -19,11 +20,9 @@ namespace Llama.Core
 {
 	public class LlamaContextWrapper : IContext
 	{
-		private readonly LlamaTokenCollection _buffer;
+		private readonly PointerArray<LlamaToken> _buffer;
 
-		private readonly uint _evalThreadCount;
-
-		private readonly LlamaTokenCollection _evaluated;
+		private readonly PointerArray<LlamaToken> _evaluated;
 
 		private readonly IExecutionScheduler _executionScheduler;
 
@@ -33,11 +32,9 @@ namespace Llama.Core
 
 		private readonly ITokenSelector _tokenSelector;
 
-		private uint _bufferPointer = 0;
-
-		private uint _evalPointer = 0;
-
 		private readonly float[,] _embeddingStack;
+
+		private PointerArraySynchronizer<LlamaToken> _synchronizer;
 
 		public LlamaContextWrapper(IExecutionScheduler executionScheduler, SafeLlamaContextHandle handle, SafeLlamaModelHandle modelHandle, LlamaContextSettings settings, IEnumerable<ISimpleSampler> simpleSamplers, ITokenSelector tokenSelector)
 		{
@@ -66,16 +63,26 @@ namespace Llama.Core
 				}
 			}
 
-			this._evalThreadCount = settings.EvalThreadCount;
+			_synchronizer = new PointerArraySynchronizer<LlamaToken>(
+				new KvCacheShifter(settings.EvalThreadCount, handle),
+				settings.BatchSize,
+				LlamaToken.Null
+				);
+
 			this._executionScheduler = executionScheduler;
 			this.Handle = handle;
 			this._simpleSamplers = simpleSamplers.ToList();
 			this._tokenSelector = tokenSelector ?? throw new ArgumentNullException(nameof(tokenSelector));
 			this._settings = settings ?? throw new ArgumentNullException(nameof(settings));
 			this.Size = this._settings.ContextSize;
-			this._buffer = new LlamaTokenBuffer(this.Size);
-			this._evaluated = new LlamaTokenBuffer(this.Size);
-			this.ModelHandle = modelHandle ?? throw new ArgumentNullException();
+			
+			this._buffer = new PointerArray<LlamaToken>(this.Size);
+			this._buffer.Fill(LlamaToken.Null);
+			
+			this._evaluated = new PointerArray<LlamaToken>(this.Size);
+			this._evaluated.Fill(LlamaToken.Null);
+
+            this.ModelHandle = modelHandle ?? throw new ArgumentNullException();
 
 			if (!Directory.Exists("Logits"))
 			{
@@ -87,11 +94,11 @@ namespace Llama.Core
 		{
 		}
 
-		public uint AvailableBuffer => this.Size - this._bufferPointer;
+		public uint AvailableBuffer => this.Size - this._buffer.Pointer;
 
-		public IReadOnlyLlamaTokenCollection Buffer => this._buffer;
+		public IReadOnlyLlamaTokenCollection Buffer => new LlamaTokenCollection(this._buffer);
 
-		public IReadOnlyLlamaTokenCollection Evaluated => this._evaluated;
+		public IReadOnlyLlamaTokenCollection Evaluated => new LlamaTokenCollection(this._evaluated);
 
 		public SafeLlamaContextHandle Handle { get; private set; }
 
@@ -101,13 +108,12 @@ namespace Llama.Core
         public void Clear()
 		{
 			this._buffer.Clear();
-			this._bufferPointer = 0;
-			this._evalPointer = 0;
+			this._evaluated.Pointer = 0;
 		}
 
 		public void Dispose() => this.Handle.Dispose();
 
-		public uint Evaluate(ExecutionPriority priority, int count = -1)
+		public void Evaluate(ExecutionPriority priority, int count = -1)
 		{
 			if (count != -1)
 			{
@@ -116,75 +122,20 @@ namespace Llama.Core
 
 			this.Ensure();
 
-			int start = (int)this._evalPointer;
+			_synchronizer.Sync(_evaluated, _buffer);
 
-			int end = (int)this._bufferPointer;
-
-			LlamaTokenCollection toEvaluate = new(this._buffer.Skip(start).Take(end - start));
-
-			Debug.WriteLine($"Evaluating: {toEvaluate.Count}");
-
-			// evaluate tokens in batches
-			// embed is typically prepared beforehand to fit within a batch, but not always
-			for (uint i = 0; i < toEvaluate.Count; i += this._settings.BatchSize)
+			
+			//Everything after the evaluation pointer is zero'd out because its no
+			//longer valid. If we don't do this, new tokens might "match" old data
+			//left in the buffer and increment the pointer without triggering a new
+			//eval. WE only need to do this if we've actually evaluated something
+			//because a zero length eval means the data is/was a match to the previous
+			//eval and the buffer is still value
+			
+			for (uint i = this._evaluated.Pointer; i < this._evaluated.Length; i++)
 			{
-				uint n_eval = (uint)(toEvaluate.Count - i);
-
-				if (n_eval > this._settings.BatchSize)
-				{
-					n_eval = this._settings.BatchSize;
-				}
-
-				LlamaTokenCollection thisBlock = new(toEvaluate.Skip((int)i).Take((int)n_eval));
-
-				int[] tokens = thisBlock.Ids.ToArray();
-
-				try
-				{
-					Debug.WriteLine($"{this._evalPointer + 1}/{end}");
-
-					this._executionScheduler.Execute(() => this.NativeEval(tokens), priority);
-				}
-				catch (Exception e) when (Debugger.IsAttached)
-				{
-					Debug.WriteLine(e);
-					Debugger.Break();
-				}
-
-				for (uint c = 0; c < n_eval; c++)
-				{
-					int c_loc = (int)(c + this._evalPointer);
-
-					this._evaluated[c_loc] = this._buffer[c_loc];
-				}
-
-				this._evalPointer += n_eval;
+				this._evaluated[i] = LlamaToken.Null;
 			}
-
-			//The entirety of the token data needs to be synced for all tokens regardless
-			//once the eval is complete, because otherwise metadata wont be copied across
-			//The copy call above only intends on copying for the sake of the modification
-			//event but an additional "full sync" call is needed.
-			for (int i = 0; i < this._evalPointer; i++)
-			{
-				this._evaluated[i] = this._buffer[i];
-			}
-
-			if (toEvaluate.Count > 0)
-			{
-				//Everything after the evaluation pointer is zero'd out because its no
-				//longer valid. If we don't do this, new tokens might "match" old data
-				//left in the buffer and increment the pointer without triggering a new
-				//eval. WE only need to do this if we've actually evaluated something
-				//because a zero length eval means the data is/was a match to the previous
-				//eval and the buffer is still value
-				for (uint i = this._evalPointer; i < this.Evaluated.Count; i++)
-				{
-					this._evaluated[(int)i] = LlamaToken.Null;
-				}
-			}
-
-			return toEvaluate.Count;
 		}
 
 		public LlamaToken SampleNext(LogitRuleCollection logitRules, ExecutionPriority priority) => this._executionScheduler.Execute(() => this.SampleTokenRaw(logitRules), priority);
@@ -192,13 +143,6 @@ namespace Llama.Core
 		public LlamaToken SampleTokenRaw(LogitRuleCollection logitRules)
 		{
 			Span<float> logits = this.GetLogits();
-
-			//float[] embeddings = this.GetEmbeddings();
-			//
-			//for (int i = 0; i < embeddings.Length; i++)
-			//{
-			//	this._embeddingStack[this._evalPointer, i] = embeddings[i];
-			//}
 
 			List<string> values = new(logits.Length);
 
@@ -274,19 +218,19 @@ namespace Llama.Core
 
 		public void SetBufferPointer(uint startIndex)
 		{
-			this._bufferPointer = startIndex;
+			this._buffer.Pointer = startIndex;
 
-			if (this._evalPointer >= this._bufferPointer)
+			if (this._evaluated.Pointer >= this._buffer.Pointer)
 			{
-				this._evalPointer = this._bufferPointer;
+				this._evaluated.Pointer = this._buffer.Pointer;
 			}
 			else
 			{
-				for (int i = 0; i < this._bufferPointer; i++)
+				for (uint i = 0; i < this._buffer.Pointer; i++)
 				{
 					if (this._evaluated[i] == this._buffer[i])
 					{
-						this._evalPointer = (uint)i;
+						this._evaluated.Pointer = i;
 					}
 					else
 					{
@@ -303,44 +247,31 @@ namespace Llama.Core
 				throw new OutOfContextException();
 			}
 
-			this._buffer[(int)this._bufferPointer] = token;
+			this._buffer[this._buffer.Pointer] = token;
 
 			//If the eval pointer is in sync with the buffer (up to date)
 			//We need to be up to date because a single mismatch char forces
 			//requires an eval for all subsequent tokens.
-			if (this._evalPointer >= this._bufferPointer)
+			if (this._evaluated.Pointer >= this._buffer.Pointer)
 			{
-				LlamaToken lastEval = this._evaluated[(int)this._bufferPointer];
+				LlamaToken lastEval = this._evaluated[this._buffer.Pointer];
 
 				if (lastEval.Id != 0 || token.Id == 0) //sanity debug skip. Not needed
 				{
 					//Then check to see if the current eval token matches.
 					//If it does, we dont need to eval again
-					if (this._evaluated[(int)this._bufferPointer].Id == token.Id)
+					if (this._evaluated[this._buffer.Pointer].Id == token.Id)
 					{
 						//Just in case theres metadata
-						this._evaluated[(int)this._bufferPointer] = token;
+						this._evaluated[this._buffer.Pointer] = token;
 
 						//Ensure we bump the eval, to keep them in sync
-						this._evalPointer++;
+						this._evaluated.Pointer++;
 					}
 				}
 			}
 
-			this._bufferPointer++;
-		}
-
-		private void NativeEval(int[] tokens)
-		{
-			if (this._evalThreadCount == 0)
-			{
-				throw new LlamaCppRuntimeError("Evaluation thread count can not be zero");
-			}
-
-			if (NativeApi.Eval(this.Handle, tokens, tokens.Length, this._evalPointer, (int)this._evalThreadCount) != 0)
-			{
-				throw new LlamaCppRuntimeError("Failed to eval.");
-			}
+			this._buffer.Pointer++;
 		}
 
 		private LlamaTokenCollection NoPenalize()

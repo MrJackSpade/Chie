@@ -2,7 +2,7 @@
 using Llama.Data.Exceptions;
 using Llama.Data.Models;
 using Llama.Data.Native;
-using System.Dynamic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -10,8 +10,6 @@ namespace Llama.Native
 {
     public static class NativeApi
     {
-        public static int Eval(SafeLlamaContextHandle handle, int[] tokens, int length, uint evalPointer, int evalThreadCount) => LlamaCppApi.Eval(handle, tokens, length, (int)evalPointer, evalThreadCount);
-
         public static int Decode(SafeLlamaContextHandle handle, LlamaBatch batch)
         {
             var nbatch = new LlamaBatchNative
@@ -39,7 +37,20 @@ namespace Llama.Native
 
             return result;
         }
-    
+
+        private static void Log(string method, params object[] args)
+        {
+            args ??= new object[0];
+
+            Debug.WriteLine($"{method}({string.Join(", ", args)})");
+        }
+
+        public static int Eval(SafeLlamaContextHandle handle, int[] tokens, int length, uint evalPointer, int evalThreadCount)
+        {
+            Log(nameof(Eval), tokens, length, evalPointer, evalThreadCount);
+
+            return  LlamaCppApi.Eval(handle, tokens, length, (int)evalPointer, evalThreadCount);
+        }
 
         public static float[] GetEmbeddings(this SafeLlamaContextHandle handle)
         {
@@ -67,7 +78,7 @@ namespace Llama.Native
 
         public static List<int> LlamaTokenize(SafeLlamaModelHandle ctx, string text, bool add_bos, bool useLegacy = true)
         {
-            if(text == "\n")
+            if (text == "\n")
             {
                 return new List<int>() { 13 };
             }
@@ -75,7 +86,7 @@ namespace Llama.Native
             int cnt = System.Text.Encoding.Unicode.GetByteCount(text + 1);
 
             int[] res = new int[cnt + (add_bos ? 1 : 0)];
-            
+
             int n = LlamaCppApi.Tokenize(ctx, text, res, res.Length, add_bos);
 
             if (n < 0)
@@ -85,7 +96,7 @@ namespace Llama.Native
 
             res = res.Take(n).ToArray();
 
-            if(useLegacy && res[0] == 29871)
+            if (useLegacy && res[0] == 29871)
             {
                 res = res.Skip(1).ToArray();
             }
@@ -107,6 +118,7 @@ namespace Llama.Native
             lparams.RopeFreqScale = contextSettings.RopeFrequencyScaling;
             lparams.MulMatQ = true;
             lparams.NThreadsBatch = contextSettings.ThreadCount;
+            lparams.NThreads = contextSettings.ThreadCount;
 
             IntPtr ctx_ptr = LlamaCppApi.NewContextWithModel(model, lparams);
 
@@ -129,30 +141,7 @@ namespace Llama.Native
             return ctx;
         }
 
-		public static string TokenToPiece(this SafeLlamaModelHandle ctx, int token)
-		{
-			// Assuming a buffer size of 256, adjust as needed.
-			char[] buffer = new char[256];
-
-			int result = LlamaCppApi.TokenToPiece(ctx, token, buffer, buffer.Length);
-
-			// Assuming a successful result is indicated by a non-negative value.
-			// Adjust the condition based on the actual behavior of the C++ function.
-			if (result < 0)
-			{
-				throw new InvalidOperationException($"Failed to convert token to piece. Error code: {result}");
-			}
-
-			string toReturn = new(buffer, 0, result);
-
-			byte[] dataAsWindows1252 = Encoding.GetEncoding("Windows-1252").GetBytes(toReturn);
-
-			string correctlyInterpretedString = Encoding.UTF8.GetString(dataAsWindows1252);
-
-			return correctlyInterpretedString;
-		}
-
-		public static LlamaModel LoadModel(LlamaModelSettings modelSettings)
+        public static LlamaModel LoadModel(LlamaModelSettings modelSettings)
         {
             LlamaModelParams lparams = LlamaCppApi.ModelDefaultParams();
 
@@ -178,6 +167,46 @@ namespace Llama.Native
         }
 
         public static int NVocab(SafeLlamaModelHandle handle) => LlamaCppApi.NVocab(handle);
+
+        public static void ShiftCacheTokens(SafeLlamaContextHandle handle, uint sequenceId, uint startPos, uint endPos, int delta)
+        {
+            //llama_kv_cache_seq_rm(ctx, 0, params.n_keep + 1, params.n_keep + 1 + n_discard);
+            //llama_kv_cache_seq_shift(ctx, 0, params.n_keep + 1 + n_discard, n_past, -n_discard);
+
+            if(delta > 0)
+            {
+                throw new NotImplementedException("Right shift not implemented");
+            }
+
+            Log(nameof(LlamaCppApi.RemoveCacheTokens), sequenceId, startPos + delta, startPos);
+            LlamaCppApi.RemoveCacheTokens(handle, (int)sequenceId, (int)startPos + delta, (int)startPos);
+
+            Log(nameof(LlamaCppApi.ShiftCacheTokens), sequenceId, startPos, endPos, delta);
+            LlamaCppApi.ShiftCacheTokens(handle, (int)sequenceId, (int)startPos, (int)endPos, delta);
+        }
+
+        public static string TokenToPiece(this SafeLlamaModelHandle ctx, int token)
+        {
+            // Assuming a buffer size of 256, adjust as needed.
+            char[] buffer = new char[256];
+
+            int result = LlamaCppApi.TokenToPiece(ctx, token, buffer, buffer.Length);
+
+            // Assuming a successful result is indicated by a non-negative value.
+            // Adjust the condition based on the actual behavior of the C++ function.
+            if (result < 0)
+            {
+                throw new InvalidOperationException($"Failed to convert token to piece. Error code: {result}");
+            }
+
+            string toReturn = new(buffer, 0, result);
+
+            byte[] dataAsWindows1252 = Encoding.GetEncoding("Windows-1252").GetBytes(toReturn);
+
+            string correctlyInterpretedString = Encoding.UTF8.GetString(dataAsWindows1252);
+
+            return correctlyInterpretedString;
+        }
 
         private static void SetTensors(ref LlamaModelParams param, float[] values)
         {
