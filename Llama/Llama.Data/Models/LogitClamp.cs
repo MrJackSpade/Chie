@@ -2,7 +2,7 @@
 
 namespace Llama.Data.Models
 {
-	public class LogitClamp : LogitRule
+    public class LogitClamp : LogitRule
     {
         private float _startValue;
 

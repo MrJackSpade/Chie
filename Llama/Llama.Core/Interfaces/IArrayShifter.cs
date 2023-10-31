@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Llama.Data.Models;
 
 namespace Llama.Core.Interfaces
 {
@@ -17,31 +13,18 @@ namespace Llama.Core.Interfaces
         void CopyCacheTokens(uint sourceSequenceId, uint destinationSequenceId, uint startPos, uint endPos);
 
         /// <summary>
-        /// Adds relative position "delta" to all tokens that belong to the specified sequence and have positions in [startPos, endPos)
-        /// If the KV cache is RoPEd, the KV data is updated accordingly.
-        /// startPos < 0 : [0,  endPos]
-        /// endPos < 0 : [startPos, inf)
+        /// Decode the tokens
         /// </summary>
-        void ShiftCacheTokens(uint sequenceId, uint startPos, uint endPos, int delta);
+        /// <param name="start"></param>
+        /// <param name="count"></param>
+        void Decode(BatchDecode<T> batch);
 
         /// <summary>
-        /// Remove all tokens data of cells in [start, end)
-        /// start < 0 : [0,  end]
-        /// end < 0 : [start, inf)
+        /// Evaluates the tokens
         /// </summary>
-        void RemoveCacheTokens(uint start, uint end);
-
-        /// <summary>
-        /// Removes all tokens that belong to the specified sequence and have positions in [startPos, endPos)
-        /// startPos < 0 : [0,  endPos]
-        /// endPos < 0 : [startPos, inf)
-        /// </summary>
-        void RemoveCacheTokens(uint sequenceId, uint startPos, uint endPos);
-
-        /// <summary>
-        /// Removes all tokens that do not belong to the specified sequence.
-        /// </summary>
-        void KeepCacheTokens(uint sequenceId);
+        /// <param name="start"></param>
+        /// <param name="count"></param>
+        void Evaluate(T[] tokens, uint startPos);
 
         /// <summary>
         /// Returns the number of tokens in the KV cache
@@ -51,10 +34,38 @@ namespace Llama.Core.Interfaces
         int GetCacheTokenCount();
 
         /// <summary>
-        /// Evaluates the tokens
+        /// Removes all tokens that do not belong to the specified sequence.
         /// </summary>
-        /// <param name="start"></param>
-        /// <param name="count"></param>
-        void Evaluate(T[] tokens, uint startPos);
+        void KeepCacheTokens(uint sequenceId);
+
+        /// <summary>
+        /// Remove all tokens data of cells in [start, end)
+        /// start < 0 : [0,  end]
+        /// end < 0 : [start, inf)
+        /// </summary>
+        void RemoveCacheToken(uint index);
+
+        /// <summary>
+        /// Remove all tokens data of cells in [start, end)
+        /// start < 0 : [0,  end]
+        /// end < 0 : [start, inf)
+        /// </summary>
+        void RemoveCacheTokens(uint start, uint end);
+
+        /// <summary>
+        /// Adds relative position "delta" to all tokens that belong to the specified sequence and have positions in [startPos, endPos)
+        /// If the KV cache is RoPEd, the KV data is updated accordingly.
+        /// startPos < 0 : [0,  endPos]
+        /// endPos < 0 : [startPos, inf)
+        /// </summary>
+        void ShiftCacheToken(uint sequenceId, uint index, int delta);
+
+        /// <summary>
+        /// Adds relative position "delta" to all tokens that belong to the specified sequence and have positions in [startPos, endPos)
+        /// If the KV cache is RoPEd, the KV data is updated accordingly.
+        /// startPos < 0 : [0,  endPos]
+        /// endPos < 0 : [startPos, inf)
+        /// </summary>
+        void ShiftCacheTokens(uint sequenceId, uint startPos, uint endPos, int delta);
     }
 }

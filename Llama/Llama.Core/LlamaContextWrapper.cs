@@ -1,331 +1,326 @@
-﻿using Ai.Utils.Extensions;
-using Llama.Core.Exceptions;
+﻿using Llama.Core.Exceptions;
 using Llama.Core.Interfaces;
 using Llama.Core.Samplers.FrequencyAndPresence;
 using Llama.Core.Utils;
 using Llama.Data;
 using Llama.Data.Collections;
-using Llama.Data.Exceptions;
 using Llama.Data.Extensions;
 using Llama.Data.Interfaces;
 using Llama.Data.Models;
 using Llama.Data.Native;
 using Llama.Data.Scheduler;
 using Llama.Extensions;
-using Llama.Native;
-using System.Diagnostics;
-using System.Text;
 
 namespace Llama.Core
 {
-	public class LlamaContextWrapper : IContext
-	{
-		private readonly PointerArray<LlamaToken> _buffer;
+    public class LlamaContextWrapper : IContext
+    {
+        private readonly PointerArray<LlamaToken> _buffer;
 
-		private readonly PointerArray<LlamaToken> _evaluated;
+        private readonly float[,] _embeddingStack;
 
-		private readonly IExecutionScheduler _executionScheduler;
+        private readonly PointerArray<LlamaToken> _evaluated;
 
-		private readonly LlamaContextSettings _settings;
+        private readonly IExecutionScheduler _executionScheduler;
 
-		private readonly IList<ISimpleSampler> _simpleSamplers;
+        private readonly LlamaContextSettings _settings;
 
-		private readonly ITokenSelector _tokenSelector;
+        private readonly IList<ISimpleSampler> _simpleSamplers;
 
-		private readonly float[,] _embeddingStack;
+        private readonly ITokenSelector _tokenSelector;
 
-		private PointerArraySynchronizer<LlamaToken> _synchronizer;
+        private PointerArraySynchronizer<LlamaToken> _synchronizer;
 
-		public LlamaContextWrapper(IExecutionScheduler executionScheduler, SafeLlamaContextHandle handle, SafeLlamaModelHandle modelHandle, LlamaContextSettings settings, IEnumerable<ISimpleSampler> simpleSamplers, ITokenSelector tokenSelector)
-		{
-			if (executionScheduler is null)
-			{
-				throw new ArgumentNullException(nameof(executionScheduler));
-			}
+        public LlamaContextWrapper(IExecutionScheduler executionScheduler, SafeLlamaContextHandle handle, SafeLlamaModelHandle modelHandle, LlamaContextSettings settings, IEnumerable<ISimpleSampler> simpleSamplers, ITokenSelector tokenSelector)
+        {
+            if (executionScheduler is null)
+            {
+                throw new ArgumentNullException(nameof(executionScheduler));
+            }
 
-			if (handle is null)
-			{
-				throw new ArgumentNullException(nameof(handle));
-			}
+            if (handle is null)
+            {
+                throw new ArgumentNullException(nameof(handle));
+            }
 
-			if (simpleSamplers is null)
-			{
-				throw new ArgumentNullException(nameof(simpleSamplers));
-			}
+            if (simpleSamplers is null)
+            {
+                throw new ArgumentNullException(nameof(simpleSamplers));
+            }
 
-			this._embeddingStack = new float[settings.ContextSize, 8192];
+            this._embeddingStack = new float[settings.ContextSize, 8192];
 
-			for (int x = 0; x < settings.ContextSize; x++)
-			{
-				for (int y = 0; y < settings.ContextSize; y++)
-				{
-					this._embeddingStack[x, y] = float.NaN;
-				}
-			}
+            for (int x = 0; x < settings.ContextSize; x++)
+            {
+                for (int y = 0; y < settings.ContextSize; y++)
+                {
+                    this._embeddingStack[x, y] = float.NaN;
+                }
+            }
 
-			_synchronizer = new PointerArraySynchronizer<LlamaToken>(
-				new KvCacheShifter(settings.EvalThreadCount, handle),
-				settings.BatchSize,
-				LlamaToken.Null
-				);
+            _synchronizer = new PointerArraySynchronizer<LlamaToken>(
+                new KvCacheShifter(settings.EvalThreadCount, handle),
+                settings.BatchSize,
+                LlamaToken.Null
+                );
 
-			this._executionScheduler = executionScheduler;
-			this.Handle = handle;
-			this._simpleSamplers = simpleSamplers.ToList();
-			this._tokenSelector = tokenSelector ?? throw new ArgumentNullException(nameof(tokenSelector));
-			this._settings = settings ?? throw new ArgumentNullException(nameof(settings));
-			this.Size = this._settings.ContextSize;
-			
-			this._buffer = new PointerArray<LlamaToken>(this.Size);
-			this._buffer.Fill(LlamaToken.Null);
-			
-			this._evaluated = new PointerArray<LlamaToken>(this.Size);
-			this._evaluated.Fill(LlamaToken.Null);
+            this._executionScheduler = executionScheduler;
+            this.Handle = handle;
+            this._simpleSamplers = simpleSamplers.ToList();
+            this._tokenSelector = tokenSelector ?? throw new ArgumentNullException(nameof(tokenSelector));
+            this._settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            this.Size = this._settings.ContextSize;
+
+            this._buffer = new PointerArray<LlamaToken>(this.Size);
+            this._buffer.Fill(LlamaToken.Null);
+
+            this._evaluated = new PointerArray<LlamaToken>(this.Size);
+            this._evaluated.Fill(LlamaToken.Null);
 
             this.ModelHandle = modelHandle ?? throw new ArgumentNullException();
 
-			if (!Directory.Exists("Logits"))
-			{
-				Directory.CreateDirectory("Logits");
-			}
-		}
+            if (!Directory.Exists("Logits"))
+            {
+                Directory.CreateDirectory("Logits");
+            }
+        }
 
-		protected LlamaContextWrapper()
-		{
-		}
+        protected LlamaContextWrapper()
+        {
+        }
 
-		public uint AvailableBuffer => this.Size - this._buffer.Pointer;
+        public uint AvailableBuffer => this.Size - this._buffer.Pointer;
 
-		public IReadOnlyLlamaTokenCollection Buffer => new LlamaTokenCollection(this._buffer);
+        public IReadOnlyLlamaTokenCollection Buffer => new LlamaTokenCollection(this._buffer);
 
-		public IReadOnlyLlamaTokenCollection Evaluated => new LlamaTokenCollection(this._evaluated);
+        public IReadOnlyLlamaTokenCollection Evaluated => new LlamaTokenCollection(this._evaluated);
 
-		public SafeLlamaContextHandle Handle { get; private set; }
+        public SafeLlamaContextHandle Handle { get; private set; }
 
-		public uint Size { get; private set; }
         public SafeLlamaModelHandle ModelHandle { get; }
 
+        public uint Size { get; private set; }
+
         public void Clear()
-		{
-			this._buffer.Clear();
-			this._evaluated.Pointer = 0;
-		}
+        {
+            this._buffer.Clear();
+            this._evaluated.Pointer = 0;
+        }
 
-		public void Dispose() => this.Handle.Dispose();
+        public void Dispose() => this.Handle.Dispose();
 
-		public void Evaluate(ExecutionPriority priority, int count = -1)
-		{
-			if (count != -1)
-			{
-				throw new NotImplementedException();
-			}
+        public void Evaluate(ExecutionPriority priority, int count = -1)
+        {
+            if (count != -1)
+            {
+                throw new NotImplementedException();
+            }
 
-			this.Ensure();
+            this.Ensure();
 
-			_synchronizer.Sync(_evaluated, _buffer);
+            _synchronizer.Sync(_evaluated, _buffer);
 
-			
-			//Everything after the evaluation pointer is zero'd out because its no
-			//longer valid. If we don't do this, new tokens might "match" old data
-			//left in the buffer and increment the pointer without triggering a new
-			//eval. WE only need to do this if we've actually evaluated something
-			//because a zero length eval means the data is/was a match to the previous
-			//eval and the buffer is still value
-			
-			for (uint i = this._evaluated.Pointer; i < this._evaluated.Length; i++)
-			{
-				this._evaluated[i] = LlamaToken.Null;
-			}
-		}
+            //Everything after the evaluation pointer is zero'd out because its no
+            //longer valid. If we don't do this, new tokens might "match" old data
+            //left in the buffer and increment the pointer without triggering a new
+            //eval. WE only need to do this if we've actually evaluated something
+            //because a zero length eval means the data is/was a match to the previous
+            //eval and the buffer is still value
 
-		public LlamaToken SampleNext(LogitRuleCollection logitRules, ExecutionPriority priority) => this._executionScheduler.Execute(() => this.SampleTokenRaw(logitRules), priority);
+            for (uint i = this._evaluated.Pointer; i < this._evaluated.Length; i++)
+            {
+                this._evaluated[i] = LlamaToken.Null;
+            }
+        }
 
-		public LlamaToken SampleTokenRaw(LogitRuleCollection logitRules)
-		{
-			Span<float> logits = this.GetLogits();
+        public LlamaToken SampleNext(LogitRuleCollection logitRules, ExecutionPriority priority) => this._executionScheduler.Execute(() => this.SampleTokenRaw(logitRules), priority);
 
-			List<string> values = new(logits.Length);
+        public LlamaToken SampleTokenRaw(LogitRuleCollection logitRules)
+        {
+            Span<float> logits = this.GetLogits();
 
-			foreach (float logit in logits)
-			{
-				values.Add(logit.ToString());
-			}
+            List<string> values = new(logits.Length);
 
-			// Apply params.logit_bias map
-			logits.Add(logitRules.OfType<LogitBias>());
+            foreach (float logit in logits)
+            {
+                values.Add(logit.ToString());
+            }
 
-			LlamaTokenDataArray candidates = new(logits);
+            // Apply params.logit_bias map
+            logits.Add(logitRules.OfType<LogitBias>());
 
-			Dictionary<LlamaToken, float> no_penalize = logits.Extract(this.NoPenalize());
+            LlamaTokenDataArray candidates = new(logits);
 
-			SampleContext sampleContext = new()
-			{
-				Candidates = candidates,
-				ContextHandle = Handle,
-				ContextTokens = Evaluated,
-				ModelHandle = ModelHandle
-			};
+            Dictionary<LlamaToken, float> no_penalize = logits.Extract(this.NoPenalize());
 
-			foreach (LogitClamp clamp in logitRules.OfType<LogitClamp>())
-			{
-				clamp.SetStart(sampleContext.GetProbability(clamp.LogitId));
-			}
+            SampleContext sampleContext = new()
+            {
+                Candidates = candidates,
+                ContextHandle = Handle,
+                ContextTokens = Evaluated,
+                ModelHandle = ModelHandle
+            };
 
-			//TODO: Fix cheap hack
-			foreach (ISimpleSampler simpleSampler in this._simpleSamplers.Where(s => s.GetType() != typeof(ComplexPresenceSampler)))
-			{
-				simpleSampler.SampleNext(sampleContext);
-			}
+            foreach (LogitClamp clamp in logitRules.OfType<LogitClamp>())
+            {
+                clamp.SetStart(sampleContext.GetProbability(clamp.LogitId));
+            }
 
-			//Apply penalty
-			foreach (LogitPenalty penalty in logitRules.OfType<LogitPenalty>())
-			{
-				sampleContext.SetPenalty(penalty.LogitId, penalty.Value);
-			}
+            //TODO: Fix cheap hack
+            foreach (ISimpleSampler simpleSampler in this._simpleSamplers.Where(s => s.GetType() != typeof(ComplexPresenceSampler)))
+            {
+                simpleSampler.SampleNext(sampleContext);
+            }
 
-			sampleContext.Update(no_penalize);
+            //Apply penalty
+            foreach (LogitPenalty penalty in logitRules.OfType<LogitPenalty>())
+            {
+                sampleContext.SetPenalty(penalty.LogitId, penalty.Value);
+            }
 
-			//TODO: Fix cheap hack
-			foreach (ISimpleSampler simpleSampler in this._simpleSamplers.Where(s => s.GetType() == typeof(ComplexPresenceSampler)))
-			{
-				simpleSampler.SampleNext(sampleContext);
-			}
+            sampleContext.Update(no_penalize);
 
-			//Apply bias
-			foreach (LogitBias bias in logitRules.OfType<LogitBias>())
-			{
-				sampleContext.SetBias(bias.LogitId, bias.Value, bias.LogitBiasType);
-			}
+            //TODO: Fix cheap hack
+            foreach (ISimpleSampler simpleSampler in this._simpleSamplers.Where(s => s.GetType() == typeof(ComplexPresenceSampler)))
+            {
+                simpleSampler.SampleNext(sampleContext);
+            }
 
-			//Apply clamping
-			foreach (LogitClamp clamp in logitRules.OfType<LogitClamp>())
-			{
-				float nv = sampleContext.GetProbability(clamp.LogitId);
-				float cv = clamp.GetValue(nv);
+            //Apply bias
+            foreach (LogitBias bias in logitRules.OfType<LogitBias>())
+            {
+                sampleContext.SetBias(bias.LogitId, bias.Value, bias.LogitBiasType);
+            }
 
-				if (cv != nv)
-				{
-					sampleContext.SetProbability(clamp.LogitId, cv);
-				}
-			}
+            //Apply clamping
+            foreach (LogitClamp clamp in logitRules.OfType<LogitClamp>())
+            {
+                float nv = sampleContext.GetProbability(clamp.LogitId);
+                float cv = clamp.GetValue(nv);
 
-			int tokenId = this._tokenSelector.SampleNext(sampleContext);
+                if (cv != nv)
+                {
+                    sampleContext.SetProbability(clamp.LogitId, cv);
+                }
+            }
 
-			LlamaToken toReturn = this.GetToken(tokenId);
+            int tokenId = this._tokenSelector.SampleNext(sampleContext);
 
-			return toReturn;
-		}
+            LlamaToken toReturn = this.GetToken(tokenId);
 
-		public void SetBufferPointer(uint startIndex)
-		{
-			this._buffer.Pointer = startIndex;
+            return toReturn;
+        }
 
-			if (this._evaluated.Pointer >= this._buffer.Pointer)
-			{
-				this._evaluated.Pointer = this._buffer.Pointer;
-			}
-			else
-			{
-				for (uint i = 0; i < this._buffer.Pointer; i++)
-				{
-					if (this._evaluated[i] == this._buffer[i])
-					{
-						this._evaluated.Pointer = i;
-					}
-					else
-					{
-						return;
-					}
-				}
-			}
-		}
+        public void SetBufferPointer(uint startIndex)
+        {
+            this._buffer.Pointer = startIndex;
 
-		public void Write(LlamaToken token)
-		{
-			if (this.AvailableBuffer == 0)
-			{
-				throw new OutOfContextException();
-			}
+            if (this._evaluated.Pointer >= this._buffer.Pointer)
+            {
+                this._evaluated.Pointer = this._buffer.Pointer;
+            }
+            else
+            {
+                for (uint i = 0; i < this._buffer.Pointer; i++)
+                {
+                    if (this._evaluated[i] == this._buffer[i])
+                    {
+                        this._evaluated.Pointer = i;
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+            }
+        }
 
-			this._buffer[this._buffer.Pointer] = token;
+        public void Write(LlamaToken token)
+        {
+            if (this.AvailableBuffer == 0)
+            {
+                throw new OutOfContextException();
+            }
 
-			//If the eval pointer is in sync with the buffer (up to date)
-			//We need to be up to date because a single mismatch char forces
-			//requires an eval for all subsequent tokens.
-			if (this._evaluated.Pointer >= this._buffer.Pointer)
-			{
-				LlamaToken lastEval = this._evaluated[this._buffer.Pointer];
+            this._buffer[this._buffer.Pointer] = token;
 
-				if (lastEval.Id != 0 || token.Id == 0) //sanity debug skip. Not needed
-				{
-					//Then check to see if the current eval token matches.
-					//If it does, we dont need to eval again
-					if (this._evaluated[this._buffer.Pointer].Id == token.Id)
-					{
-						//Just in case theres metadata
-						this._evaluated[this._buffer.Pointer] = token;
+            //If the eval pointer is in sync with the buffer (up to date)
+            //We need to be up to date because a single mismatch char forces
+            //requires an eval for all subsequent tokens.
+            if (this._evaluated.Pointer >= this._buffer.Pointer)
+            {
+                LlamaToken lastEval = this._evaluated[this._buffer.Pointer];
 
-						//Ensure we bump the eval, to keep them in sync
-						this._evaluated.Pointer++;
-					}
-				}
-			}
+                if (lastEval.Id != 0 || token.Id == 0) //sanity debug skip. Not needed
+                {
+                    //Then check to see if the current eval token matches.
+                    //If it does, we dont need to eval again
+                    if (this._evaluated[this._buffer.Pointer].Id == token.Id)
+                    {
+                        //Just in case theres metadata
+                        this._evaluated[this._buffer.Pointer] = token;
 
-			this._buffer.Pointer++;
-		}
+                        //Ensure we bump the eval, to keep them in sync
+                        this._evaluated.Pointer++;
+                    }
+                }
+            }
 
-		private LlamaTokenCollection NoPenalize()
-		{
-			LlamaTokenCollection collection = new();
-			collection.Append(this.GetToken(13));//NL
-			collection.Append(this.GetToken(334));// *
-			collection.Append(this.GetToken(29930));//*
-			collection.Append(this.GetToken(368));//ly
-			collection.Append(this.GetToken(297));//in
-			collection.Append(this.GetToken(591));//we
-			collection.Append(this.GetToken(411));//with
-			collection.Append(this.GetToken(373));//on
-			collection.Append(this.GetToken(596));//your
-			collection.Append(this.GetToken(445));//this
-			collection.Append(this.GetToken(1048));//about
-			collection.Append(this.GetToken(408));//as
-			collection.Append(this.GetToken(367));//be
-			collection.Append(this.GetToken(338));//is
-			collection.Append(this.GetToken(470));//or
-			collection.Append(this.GetToken(727));//there
-			collection.Append(this.GetToken(267));//es
-			collection.Append(this.GetToken(1749));//our
-			collection.Append(this.GetToken(541));//but
-			collection.Append(this.GetToken(769));//then
-			collection.Append(this.GetToken(515));//from
-			collection.Append(this.GetToken(451));//not
-			collection.Append(this.GetToken(491));//by
-			collection.Append(this.GetToken(577));//so
-			collection.Append(this.GetToken(502));//us
-			collection.Append(this.GetToken(526));//are
-			collection.Append(this.GetToken(437));//do
-			collection.Append(this.GetToken(565));//if
-			collection.Append(this.GetToken(471));//was
-			collection.Append(this.GetToken(2086));//too
-			collection.Append(this.GetToken(304));//to
-			collection.Append(this.GetToken(590));//my
-			collection.Append(this.GetToken(902));//her
-			collection.Append(this.GetToken(1075));//him
-			collection.Append(this.GetToken(670));//his
-			collection.Append(this.GetToken(7955));//hers
-			collection.Append(this.GetToken(29892));//,
-			collection.Append(this.GetToken(322));//and
-			collection.Append(this.GetToken(306));//I
-			collection.Append(this.GetToken(310));//of
-			collection.Append(this.GetToken(29879));//s
-			collection.Append(this.GetToken(29991));//!
-			collection.Append(this.GetToken(278));//the
-			collection.Append(this.GetToken(592));//me
-			collection.Append(this.GetToken(263));//a
-			collection.Append(this.GetToken(363));//for
-			collection.Append(this.GetToken(372));//it
-			collection.Append(this.GetToken(393));//that
-			return collection;
-		}
-	}
+            this._buffer.Pointer++;
+        }
+
+        private LlamaTokenCollection NoPenalize()
+        {
+            LlamaTokenCollection collection = new();
+            collection.Append(this.GetToken(13));//NL
+            collection.Append(this.GetToken(334));// *
+            collection.Append(this.GetToken(29930));//*
+            collection.Append(this.GetToken(368));//ly
+            collection.Append(this.GetToken(297));//in
+            collection.Append(this.GetToken(591));//we
+            collection.Append(this.GetToken(411));//with
+            collection.Append(this.GetToken(373));//on
+            collection.Append(this.GetToken(596));//your
+            collection.Append(this.GetToken(445));//this
+            collection.Append(this.GetToken(1048));//about
+            collection.Append(this.GetToken(408));//as
+            collection.Append(this.GetToken(367));//be
+            collection.Append(this.GetToken(338));//is
+            collection.Append(this.GetToken(470));//or
+            collection.Append(this.GetToken(727));//there
+            collection.Append(this.GetToken(267));//es
+            collection.Append(this.GetToken(1749));//our
+            collection.Append(this.GetToken(541));//but
+            collection.Append(this.GetToken(769));//then
+            collection.Append(this.GetToken(515));//from
+            collection.Append(this.GetToken(451));//not
+            collection.Append(this.GetToken(491));//by
+            collection.Append(this.GetToken(577));//so
+            collection.Append(this.GetToken(502));//us
+            collection.Append(this.GetToken(526));//are
+            collection.Append(this.GetToken(437));//do
+            collection.Append(this.GetToken(565));//if
+            collection.Append(this.GetToken(471));//was
+            collection.Append(this.GetToken(2086));//too
+            collection.Append(this.GetToken(304));//to
+            collection.Append(this.GetToken(590));//my
+            collection.Append(this.GetToken(902));//her
+            collection.Append(this.GetToken(1075));//him
+            collection.Append(this.GetToken(670));//his
+            collection.Append(this.GetToken(7955));//hers
+            collection.Append(this.GetToken(29892));//,
+            collection.Append(this.GetToken(322));//and
+            collection.Append(this.GetToken(306));//I
+            collection.Append(this.GetToken(310));//of
+            collection.Append(this.GetToken(29879));//s
+            collection.Append(this.GetToken(29991));//!
+            collection.Append(this.GetToken(278));//the
+            collection.Append(this.GetToken(592));//me
+            collection.Append(this.GetToken(263));//a
+            collection.Append(this.GetToken(363));//for
+            collection.Append(this.GetToken(372));//it
+            collection.Append(this.GetToken(393));//that
+            return collection;
+        }
+    }
 }

@@ -3,6 +3,7 @@ using Llama.Data.Exceptions;
 using Llama.Data.Models;
 using Llama.Data.Native;
 using System.Diagnostics;
+using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -10,23 +11,49 @@ namespace Llama.Native
 {
     public static class NativeApi
     {
-        public static int Decode(SafeLlamaContextHandle handle, LlamaBatch batch)
+        public static int Decode(SafeLlamaContextHandle handle, BatchDecode<int> batch)
         {
+            int[] tokens = new int[batch.Items.Count];
+            int[] pos = new int[batch.Items.Count];
+            int[] nseq = new int[batch.Items.Count];
+
+            for (int i = 0; i < batch.Items.Count; i++)
+            {
+                tokens[i] = batch.Items[i].Token;
+                pos[i] = (int)batch.Items[i].Position;
+                nseq[i] = batch.Items[i].SequenceIds.Length;
+            }
+
             var nbatch = new LlamaBatchNative
             {
-                NTokens = batch.NTokens,
-                Token = Marshal.UnsafeAddrOfPinnedArrayElement(batch.Tokens, 0),
-                Embd = Marshal.UnsafeAddrOfPinnedArrayElement(batch.Embds, 0),
-                Pos = Marshal.UnsafeAddrOfPinnedArrayElement(batch.Pos, 0),
-                NSeqId = Marshal.UnsafeAddrOfPinnedArrayElement(batch.NSeqId, 0),
-                SeqId = Marshal.AllocHGlobal(IntPtr.Size * batch.NTokens),
-                Logits = Marshal.UnsafeAddrOfPinnedArrayElement(batch.Logits, 0)
+                NTokens = batch.Items.Count,
+                Token = Marshal.UnsafeAddrOfPinnedArrayElement(tokens, 0),
+                Pos = Marshal.UnsafeAddrOfPinnedArrayElement(pos, 0),
+                NSeqId = Marshal.UnsafeAddrOfPinnedArrayElement(nseq, 0),
+                SeqId = Marshal.AllocHGlobal(IntPtr.Size * batch.Items.Count)
             };
 
-            for (int i = 0; i < batch.NTokens; i++)
+            if(batch.Logits != null )
             {
-                IntPtr seqIdPointer = Marshal.UnsafeAddrOfPinnedArrayElement(batch.SeqId[i], 0);
-                Marshal.WriteIntPtr(batch.SeqId, i * IntPtr.Size, seqIdPointer);
+                nbatch.Logits = Marshal.UnsafeAddrOfPinnedArrayElement(batch.Logits, 0);
+            }
+
+            if (batch.Embeddings != null)
+            {
+                nbatch.Embd = Marshal.UnsafeAddrOfPinnedArrayElement(batch.Embeddings, 0);
+            }
+
+            // Allocate and set the unmanaged memory for the sequence IDs
+            for (int i = 0; i < batch.Items.Count; i++)
+            {
+                int[] currentSeqIds = batch.Items[i].SequenceIds;
+                IntPtr unmanagedArray = Marshal.AllocHGlobal(sizeof(int) * currentSeqIds.Length);
+
+                // Copy the managed array to the unmanaged memory
+                Marshal.Copy(currentSeqIds, 0, unmanagedArray, currentSeqIds.Length);
+
+                // Set the pointer in the SeqId array
+                Marshal.WriteIntPtr(nbatch.SeqId, i * IntPtr.Size, unmanagedArray);
             }
 
             // Call the PInvoke method
@@ -38,18 +65,11 @@ namespace Llama.Native
             return result;
         }
 
-        private static void Log(string method, params object[] args)
-        {
-            args ??= new object[0];
-
-            Debug.WriteLine($"{method}({string.Join(", ", args)})");
-        }
-
         public static int Eval(SafeLlamaContextHandle handle, int[] tokens, int length, uint evalPointer, int evalThreadCount)
         {
             Log(nameof(Eval), tokens, length, evalPointer, evalThreadCount);
 
-            return  LlamaCppApi.Eval(handle, tokens, length, (int)evalPointer, evalThreadCount);
+            return LlamaCppApi.Eval(handle, tokens, length, (int)evalPointer, evalThreadCount);
         }
 
         public static float[] GetEmbeddings(this SafeLlamaContextHandle handle)
@@ -168,16 +188,12 @@ namespace Llama.Native
 
         public static int NVocab(SafeLlamaModelHandle handle) => LlamaCppApi.NVocab(handle);
 
+        public static void RemoveCacheTokens(SafeLlamaContextHandle handle, uint startPos, uint endPos)
+            => LlamaCppApi.RemoveCacheTokens(handle, (int)startPos, (int)endPos);
+        
+
         public static void ShiftCacheTokens(SafeLlamaContextHandle handle, uint sequenceId, uint startPos, uint endPos, int delta)
         {
-            //llama_kv_cache_seq_rm(ctx, 0, params.n_keep + 1, params.n_keep + 1 + n_discard);
-            //llama_kv_cache_seq_shift(ctx, 0, params.n_keep + 1 + n_discard, n_past, -n_discard);
-
-            if(delta > 0)
-            {
-                throw new NotImplementedException("Right shift not implemented");
-            }
-
             Log(nameof(LlamaCppApi.RemoveCacheTokens), sequenceId, startPos + delta, startPos);
             LlamaCppApi.RemoveCacheTokens(handle, (int)sequenceId, (int)startPos + delta, (int)startPos);
 
@@ -206,6 +222,13 @@ namespace Llama.Native
             string correctlyInterpretedString = Encoding.UTF8.GetString(dataAsWindows1252);
 
             return correctlyInterpretedString;
+        }
+
+        private static void Log(string method, params object[] args)
+        {
+            args ??= new object[0];
+
+            Debug.WriteLine($"{method}({string.Join(", ", args)})");
         }
 
         private static void SetTensors(ref LlamaModelParams param, float[] values)

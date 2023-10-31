@@ -23,6 +23,21 @@ namespace Llama.Core.Utils
             throw new NotImplementedException();
         }
 
+        public void Decode(BatchDecode<LlamaToken> batch)
+        {
+            BatchDecode<int> idBatch = new();
+
+            foreach(BatchItem<LlamaToken> oldItem in batch.Items)
+            {
+                idBatch.AddItem(oldItem.Token.Id, oldItem.Position, oldItem.SequenceIds, oldItem.IncludeLogits);
+            }
+
+            if (NativeApi.Decode(this._handle, idBatch) != 0)
+            {
+                throw new LlamaCppRuntimeError("Failed to eval.");
+            }
+        }
+
         public void Evaluate(LlamaToken[] tokens, uint pos)
         {
             if (this._threadCount == 0)
@@ -46,19 +61,16 @@ namespace Llama.Core.Utils
             throw new NotImplementedException();
         }
 
-        public void RemoveCacheTokens(uint start, uint end)
-        {
-            throw new NotImplementedException();
-        }
+        public void RemoveCacheToken(uint index)
+            => RemoveCacheTokens(index, index);
 
-        public void RemoveCacheTokens(uint sequenceId, uint startPos, uint endPos)
-        {
-            throw new NotImplementedException();
-        }
+        public void RemoveCacheTokens(uint startPos, uint endPos)
+            => NativeApi.RemoveCacheTokens(this._handle, startPos, endPos);
+
+        public void ShiftCacheToken(uint sequenceId, uint index, int delta)
+            => NativeApi.ShiftCacheTokens(this._handle, sequenceId, index, index, delta);
 
         public void ShiftCacheTokens(uint sequenceId, uint startPos, uint endPos, int delta)
-        {
-            NativeApi.ShiftCacheTokens(_handle, sequenceId, startPos, endPos, delta);
-        }
+            => NativeApi.ShiftCacheTokens(_handle, sequenceId, startPos, endPos, delta);
     }
 }

@@ -3,11 +3,6 @@
     public class MirostatSamplerSettings
     {
         /// <summary>
-        /// If true, Mirostat will only use TOPK sampling for new words
-        /// </summary>
-        public bool PreserveWords { get; set; } = true;
-
-        /// <summary>
         /// 100
         /// </summary>
         public readonly int M = 100;
@@ -21,6 +16,11 @@
         /// Tau * 2
         /// </summary>
         public float InitialMu => this.Tau * 2.0f;
+
+        /// <summary>
+        /// If true, Mirostat will only use TOPK sampling for new words
+        /// </summary>
+        public bool PreserveWords { get; set; } = true;
 
         /// <summary>
         /// Default 5

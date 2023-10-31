@@ -3,7 +3,6 @@ using Llama.Data.Interfaces;
 using Llama.Data.Models;
 using Llama.Extensions;
 using Llama.Native;
-using System.Text;
 
 namespace Llama.Extensions
 {

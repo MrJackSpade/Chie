@@ -1,7 +1,6 @@
 ﻿namespace Llama.Data.Models
 {
-
-	public abstract class LogitRule
+    public abstract class LogitRule
     {
         public string Key => $"{(int)this.RuleType}:{this.LogitId}";
 

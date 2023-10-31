@@ -8,6 +8,8 @@ namespace ChieApi.TokenTransformers
 {
     public class TextTruncationTransformer : ITokenTransformer, ITextCleaner
     {
+        private readonly int _base;
+
         private readonly IDictionaryService _dictionaryService;
 
         private readonly string _endChars;
@@ -20,9 +22,7 @@ namespace ChieApi.TokenTransformers
 
         private readonly Random _random = new();
 
-        private readonly int _base;
-
-        public TextTruncationTransformer(int hardmax, int max, int min, int b,  string endChars, IDictionaryService dictionaryService)
+        public TextTruncationTransformer(int hardmax, int max, int min, int b, string endChars, IDictionaryService dictionaryService)
         {
             _min = min;
             _max = max;
@@ -34,22 +34,22 @@ namespace ChieApi.TokenTransformers
 
         public string Clean(string content)
         {
-            if(content.Length <= _max)
+            if (content.Length <= _max)
             {
                 return content;
             }
 
             int lastGoodEnd = 0;
 
-            for(int i = 0; i < content.Length; i++)
+            for (int i = 0; i < content.Length; i++)
             {
-                if(GoodEndPos(i, content))
+                if (GoodEndPos(i, content))
                 {
                     lastGoodEnd = i;
                 }
             }
 
-            if(lastGoodEnd <= _min)
+            if (lastGoodEnd <= _min)
             {
                 return content;
             }
@@ -119,16 +119,11 @@ namespace ChieApi.TokenTransformers
             return _dictionaryService.IsWord(lastWord);
         }
 
-        private bool GoodEndPos(int index, string toTest)
-        {
-            return GoodEndChar(toTest[index]) && (toTest.Length == index + 1 || toTest[index + 1] == ' ');
-        }
-
         private bool GoodEndChar(string toTest)
         {
             string t = toTest.Trim();
 
-            if(t.Length == 0)
+            if (t.Length == 0)
             {
                 return false;
             }
@@ -149,6 +144,11 @@ namespace ChieApi.TokenTransformers
             }
 
             return false;
+        }
+
+        private bool GoodEndPos(int index, string toTest)
+        {
+            return GoodEndChar(toTest[index]) && (toTest.Length == index + 1 || toTest[index + 1] == ' ');
         }
     }
 }

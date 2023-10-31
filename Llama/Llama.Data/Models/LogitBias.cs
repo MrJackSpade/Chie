@@ -2,7 +2,7 @@
 
 namespace Llama.Data.Models
 {
-	public class LogitBias : LogitRule
+    public class LogitBias : LogitRule
     {
         public LogitBias(int id, float value, LogitRuleLifetime lifeTime, LogitBiasType logitBiasType)
         {
@@ -17,6 +17,7 @@ namespace Llama.Data.Models
         { }
 
         public LogitBiasType LogitBiasType { get; set; }
+
         public override LogitRuleType RuleType => LogitRuleType.Bias;
 
         public float Value { get; set; }

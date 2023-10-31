@@ -7,203 +7,203 @@ using System.Text;
 
 namespace Llama.Core.Samplers.Mirostat
 {
-	public class MirostatTempSampler : ITokenSelector
-	{
-		private readonly Dictionary<int, bool> _isWords = new();
+    public class MirostatTempSampler : ITokenSelector
+    {
+        private readonly Dictionary<int, bool> _isWords = new();
 
-		private readonly MirostatTempSamplerSettings _settings;
+        private readonly MirostatTempSamplerSettings _settings;
 
-		private float _mu;
+        private float _mu;
 
-		private float _temp;
+        private float _temp;
 
-		private LlamaTokenData[] _tempCandidates;
+        private LlamaTokenData[] _tempCandidates;
 
-		public MirostatTempSampler(MirostatTempSamplerSettings settings)
-		{
-			this._settings = settings;
-			this._mu = settings.InitialMu;
-			this._temp = settings.InitialTemperature;
-		}
+        public MirostatTempSampler(MirostatTempSamplerSettings settings)
+        {
+            this._settings = settings;
+            this._mu = settings.InitialMu;
+            this._temp = settings.InitialTemperature;
+        }
 
-		public static int Clamp(float k)
-		{
-			if (k <= 0)
-			{
-				return 0;
-			}
-			else if (k >= int.MaxValue)
-			{
-				return int.MaxValue;
-			}
-			else
-			{
-				return (int)k;
-			}
-		}
+        public static int Clamp(float k)
+        {
+            if (k <= 0)
+            {
+                return 0;
+            }
+            else if (k >= int.MaxValue)
+            {
+                return int.MaxValue;
+            }
+            else
+            {
+                return (int)k;
+            }
+        }
 
-		public string GetDisplayString(SampleContext ctx, LlamaTokenData data)
-		{
-			LlamaToken token = this.GetToken(ctx, data.id);
+        public string GetDisplayString(SampleContext ctx, LlamaTokenData data)
+        {
+            LlamaToken token = this.GetToken(ctx, data.id);
 
-			return $"{token.GetEscapedValue()} ({data.p:0.00})";
-		}
+            return $"{token.GetEscapedValue()} ({data.p:0.00})";
+        }
 
-		public LlamaToken GetToken(SampleContext ctx, int id) => new(id, NativeApi.TokenToPiece(ctx.ModelHandle, id));
+        public LlamaToken GetToken(SampleContext ctx, int id) => new(id, NativeApi.TokenToPiece(ctx.ModelHandle, id));
 
-		private void Copy(Span<LlamaTokenData> sampleContext)
-		{
-			this._tempCandidates ??= new LlamaTokenData[sampleContext.Length];
-			Span<LlamaTokenData> target = new(this._tempCandidates, 0, this._tempCandidates.Length);
-			sampleContext.CopyTo(target);
-		}
+        public int SampleNext(SampleContext sampleContext)
+        {
+            //Softmax for backup
+            SamplingApi.SoftMax(sampleContext.ContextHandle, sampleContext.Candidates);
+            Span<LlamaTokenData> candidateSpan = sampleContext.Candidates.data.Span;
+            this.Copy(candidateSpan);
 
-		private float GetBackupP(int id)
-		{
-			foreach (LlamaTokenData ltd in this._tempCandidates)
-			{
-				if(ltd.id == id)
-				{
-					return ltd.p;
-				}
-			}
+            SamplingApi.Temperature(sampleContext.ContextHandle, sampleContext.Candidates, this._temp);
+            SamplingApi.SoftMax(sampleContext.ContextHandle, sampleContext.Candidates);
 
-			throw new InvalidDataException();
-		}
+            float tau = this._settings.Target;
+            float eta = this._settings.LearningRate;
 
-		public int SampleNext(SampleContext sampleContext)
-		{
-			//Softmax for backup
-			SamplingApi.SoftMax(sampleContext.ContextHandle, sampleContext.Candidates);
-			Span<LlamaTokenData> candidateSpan = sampleContext.Candidates.data.Span;
-			this.Copy(candidateSpan);
+            Debug.WriteLine($"Temp: {this._temp}");
 
-			SamplingApi.Temperature(sampleContext.ContextHandle, sampleContext.Candidates, this._temp);
-			SamplingApi.SoftMax(sampleContext.ContextHandle, sampleContext.Candidates);
+            bool topOnly = false;
+            int top_x = 0;
 
-			float tau = this._settings.Target;
-			float eta = this._settings.LearningRate;
+            if (this._settings.PreserveWords)
+            {
+                top_x = SamplingApi.TokenGreedy(sampleContext.ContextHandle, sampleContext.Candidates);
+                topOnly = !this.CheckIfWord(sampleContext.ModelHandle, top_x);
+            }
 
-			Debug.WriteLine($"Temp: {this._temp}");
+            int x;
 
-			bool topOnly = false;
-			int top_x = 0;
+            if (topOnly)
+            {
+                x = top_x;
+            }
+            else
+            {
+                int n_keep = candidateSpan.Length;
+                float min_p = 1;
 
-			if (this._settings.PreserveWords)
-			{
-				top_x = SamplingApi.TokenGreedy(sampleContext.ContextHandle, sampleContext.Candidates);
-				topOnly = !this.CheckIfWord(sampleContext.ModelHandle, top_x);
-			}
+                if (this._settings.MinP > 0)
+                {
+                    min_p = this._settings.MinP;
+                }
 
-			int x;
+                if (this._settings.TopK > 0)
+                {
+                    n_keep = this._settings.TopK;
+                }
 
-			if (topOnly)
-			{
-				x = top_x;
-			}
-			else
-			{
-				int n_keep = candidateSpan.Length;
-				float min_p = 1;
+                // Sample the next word X using top-k sampling
+                SamplingApi.TopK(sampleContext.ContextHandle, sampleContext.Candidates, n_keep, 1);
 
-				if (this._settings.MinP > 0)
-				{
-					min_p = this._settings.MinP;
-				}
+                float cut_p = candidateSpan[0].p * min_p;
 
-				if (this._settings.TopK > 0)
-				{
-					n_keep = this._settings.TopK;
-				}
+                for (int i = 0; i < candidateSpan.Length; i++)
+                {
+                    if (i >= n_keep || candidateSpan[i].p < cut_p)
+                    {
+                        //How else do I supress this?
+                        candidateSpan[i].logit = float.NegativeInfinity;
+                    }
+                }
 
-				// Sample the next word X using top-k sampling
-				SamplingApi.TopK(sampleContext.ContextHandle, sampleContext.Candidates, n_keep, 1);
+                SamplingApi.SoftMax(sampleContext.ContextHandle, sampleContext.Candidates);
+                x = SamplingApi.Token(sampleContext.ContextHandle, sampleContext.Candidates);
+            }
 
-				float cut_p = candidateSpan[0].p * min_p;
+            // Compute error as the difference between observed surprise and target surprise value
+            int x_idx = 0;
 
-				for (int i = 0; i < candidateSpan.Length; i++)
-				{
-					if (i >= n_keep || candidateSpan[i].p < cut_p)
-					{
-						//How else do I supress this?
-						candidateSpan[i].logit = float.NegativeInfinity;
-					}
-				}
+            for (int i = 0; i < (int)sampleContext.Candidates.size; i++)
+            {
+                if (candidateSpan[i].id == x)
+                {
+                    x_idx = i;
+                    break;
+                }
+            }
 
-				SamplingApi.SoftMax(sampleContext.ContextHandle, sampleContext.Candidates);
-				x = SamplingApi.Token(sampleContext.ContextHandle, sampleContext.Candidates);
-			}
+            StringBuilder candidateBuilder = new();
 
-			// Compute error as the difference between observed surprise and target surprise value
-			int x_idx = 0;
+            candidateBuilder.Append($"[{this.GetDisplayString(sampleContext, candidateSpan[x_idx])}] || ");
 
-			for (int i = 0; i < (int)sampleContext.Candidates.size; i++)
-			{
-				if (candidateSpan[i].id == x)
-				{
-					x_idx = i;
-					break;
-				}
-			}
+            for (int i = 0; i < (topOnly ? 1 : 10); i++)
+            {
+                if (candidateSpan[i].p == 0)
+                {
+                    break;
+                }
 
-			StringBuilder candidateBuilder = new();
+                if (i > 0)
+                {
+                    candidateBuilder.Append(" | ");
+                }
 
-			candidateBuilder.Append($"[{this.GetDisplayString(sampleContext, candidateSpan[x_idx])}] || ");
+                candidateBuilder.Append(this.GetDisplayString(sampleContext, candidateSpan[i]));
+            }
 
-			for (int i = 0; i < (topOnly ? 1 : 10); i++)
-			{
-				if (candidateSpan[i].p == 0)
-				{
-					break;
-				}
+            Debug.WriteLine(candidateBuilder.ToString());
 
-				if (i > 0)
-				{
-					candidateBuilder.Append(" | ");
-				}
+            //Calculate surprise based on the original P to
+            //ensure that wonky probability fuckery doesn't mess
+            //up the surprise calculations
+            float original_p = this.GetBackupP(x);
 
-				candidateBuilder.Append(this.GetDisplayString(sampleContext, candidateSpan[i]));
-			}
+            if (!topOnly || this._settings.FactorPreservedWords)
+            {
+                float observed_surprise = -(float)(Math.Log(original_p) / Math.Log(2));
+                float e = observed_surprise - tau;
 
-			Debug.WriteLine(candidateBuilder.ToString());
+                // Update mu using the learning rate and error
+                float adj = eta * e;
+                float nuMu = this._mu - adj;
+                float nuTemp = this._temp - adj * this._settings.TemperatureLearningRate;
 
-			//Calculate surprise based on the original P to
-			//ensure that wonky probability fuckery doesn't mess
-			//up the surprise calculations
-			float original_p = this.GetBackupP(x);
+                if (nuTemp > 0 && !float.IsNaN(nuTemp) && !float.IsInfinity(nuTemp) && !float.IsNaN(nuMu) && !float.IsInfinity(nuMu))
+                {
+                    this._temp = nuTemp;
+                    this._mu = nuMu;
+                }
+            }
 
-			if (!topOnly || this._settings.FactorPreservedWords)
-			{
-				float observed_surprise = -(float)(Math.Log(original_p) / Math.Log(2));
-				float e = observed_surprise - tau;
+            Debug.WriteLine($"mu: {this._mu}");
 
-				// Update mu using the learning rate and error
-				float adj = eta * e;
-				float nuMu = this._mu - adj;
-				float nuTemp = this._temp - adj * this._settings.TemperatureLearningRate;
+            return x;
+        }
 
-				if(nuTemp > 0 && !float.IsNaN(nuTemp) && !float.IsInfinity(nuTemp) && !float.IsNaN(nuMu) && !float.IsInfinity(nuMu))
-				{
-					this._temp = nuTemp;
-					this._mu = nuMu;
-				}
-			}
+        private bool CheckIfWord(SafeLlamaModelHandle ctx, int id)
+        {
+            if (!this._isWords.TryGetValue(id, out bool word))
+            {
+                string value = NativeApi.TokenToPiece(ctx, id);
+                word = !string.IsNullOrWhiteSpace(value) && !char.IsLetter(value[0]);
+                this._isWords.Add(id, word);
+            }
 
-			Debug.WriteLine($"mu: {this._mu}");
+            return word;
+        }
 
-			return x;
-		}
+        private void Copy(Span<LlamaTokenData> sampleContext)
+        {
+            this._tempCandidates ??= new LlamaTokenData[sampleContext.Length];
+            Span<LlamaTokenData> target = new(this._tempCandidates, 0, this._tempCandidates.Length);
+            sampleContext.CopyTo(target);
+        }
 
-		private bool CheckIfWord(SafeLlamaModelHandle ctx, int id)
-		{
-			if (!this._isWords.TryGetValue(id, out bool word))
-			{
-				string value = NativeApi.TokenToPiece(ctx, id);
-				word = !string.IsNullOrWhiteSpace(value) && !char.IsLetter(value[0]);
-				this._isWords.Add(id, word);
-			}
+        private float GetBackupP(int id)
+        {
+            foreach (LlamaTokenData ltd in this._tempCandidates)
+            {
+                if (ltd.id == id)
+                {
+                    return ltd.p;
+                }
+            }
 
-			return word;
-		}
-	}
+            throw new InvalidDataException();
+        }
+    }
 }

@@ -13,12 +13,12 @@ namespace ChieApi.TokenTransformers
 
         public void PostAccept(InferenceEnumerator enumerator)
         {
-            if(enumerator.Enumerated.Count == 0)
+            if (enumerator.Enumerated.Count == 0)
             {
                 return;
             }
 
-            if(enumerator.Enumerated.Last().Id != 13)
+            if (enumerator.Enumerated.Last().Id != 13)
             {
                 enumerator.SetBias(12, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
             }

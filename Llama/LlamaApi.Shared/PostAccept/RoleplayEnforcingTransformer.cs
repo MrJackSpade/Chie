@@ -71,7 +71,7 @@ namespace ChieApi.TokenTransformers
                 float adj = spaceCount * _lengthenSlope;
                 float bias = 0 - baseF + adj;
 
-                if (bias < 0) 
+                if (bias < 0)
                 {
                     enumerator.SetBias(END_ASTERISK, bias, LogitRuleLifetime.Token, LogitBiasType.Additive);
                 }

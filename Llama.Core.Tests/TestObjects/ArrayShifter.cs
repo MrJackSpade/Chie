@@ -1,31 +1,76 @@
 ﻿using Llama.Core.Interfaces;
 using Llama.Data.Collections;
+using Llama.Data.Models;
 
 namespace Llama.Core.Tests.TestObjects
 {
     public class ArrayShifter<T> : IArrayShifter<T>
     {
-        private readonly List<Operation> _operations = new();
 
-        private readonly T[] _underlyingData;
+        private readonly IndexedItem[] _underlyingData;
 
         public ArrayShifter(PointerArray<T> startingState)
         {
-            _underlyingData = new T[startingState.Length];
+            _underlyingData = new IndexedItem[startingState.Length];
 
-            for (uint i = 0; i < startingState.Length; i++)
+            for (uint i = 0; i < startingState.Pointer; i++)
             {
-                _underlyingData[i] = startingState[i];
+                _underlyingData[i] = new IndexedItem() { Value = startingState[i], Pos = (int)i };
             }
         }
 
-        public IReadOnlyList<T> BackingData => _underlyingData.ToList();
+        public IReadOnlyList<T> BackingData
+        {
+            get
+            {
+                T[] toReturn = new T[_underlyingData.Length];
 
-        public IReadOnlyList<Operation> Operations => _operations;
+                HashSet<int> visited = new();
+
+                foreach (IndexedItem item in _underlyingData)
+                {
+                    if(item is null)
+                    {
+                        continue;
+                    }
+
+                    if (visited.Add(item.Pos))
+                    {
+                        toReturn[item.Pos] = item.Value;
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException();
+                    }
+                }
+
+                return toReturn;
+            }
+        }
 
         public void CopyCacheTokens(uint sourceSequenceId, uint destinationSequenceId, uint startPos, uint endPos)
         {
             throw new NotImplementedException();
+        }
+
+        public void Decode(BatchDecode<T> batch)
+        {
+            foreach(BatchItem<T> item in batch.Items)
+            {
+                for(int i = 0; i < _underlyingData.Length; i++)
+                {
+                    if (_underlyingData[i] is null)
+                    {
+                        _underlyingData[i] = new IndexedItem()
+                        {
+                            Value = item.Token,
+                            Pos = (int)item.Position
+                        };
+
+                        break;
+                    }
+                }
+            }
         }
 
         public void Evaluate(T[] tokens, uint startPos)
@@ -34,8 +79,6 @@ namespace Llama.Core.Tests.TestObjects
             {
                 throw new ArgumentOutOfRangeException("The provided tokens exceed the array bounds.");
             }
-
-            _operations.Add(new Operation(nameof(Evaluate), tokens.Length, (int)startPos));
 
             Array.Copy(tokens, 0, _underlyingData, startPos, tokens.Length);
         }
@@ -50,61 +93,49 @@ namespace Llama.Core.Tests.TestObjects
             throw new NotImplementedException();
         }
 
+        public void RemoveCacheToken(uint index)
+            => RemoveCacheTokens(index, index);
+
         public void RemoveCacheTokens(uint start, uint end)
-        {
-            throw new NotImplementedException();
-        }
+            => RemoveCacheTokens(0, start, end);
 
         public void RemoveCacheTokens(uint sequenceId, uint startPos, uint endPos)
         {
-            throw new NotImplementedException();
+            for(int i = 0; i < _underlyingData.Length; i++)
+            {
+                IndexedItem item = _underlyingData[i];
+
+                if(item != null && item.Pos >= startPos && item.Pos < endPos)
+                {
+                    _underlyingData[i] = null;
+                }
+            }
         }
+
+        public void ShiftCacheToken(uint sequenceId, uint index, int delta)
+            => ShiftCacheTokens(sequenceId, index, index, delta);
 
         public void ShiftCacheTokens(uint sequenceId, uint startPos, uint endPos, int delta)
         {
-            _operations.Add(new Operation(nameof(ShiftCacheTokens), (int)sequenceId, (int)startPos, (int)endPos, delta));
-
-            // Adjusting for special conditions
-            if (startPos < 0)
+            for (int i = 0; i < _underlyingData.Length; i++)
             {
-                startPos = 0;
-            }
+                IndexedItem item = _underlyingData[i];
 
-            if (endPos < 0)
-            {
-                endPos = (uint)_underlyingData.Length; // Note: Since endPos is exclusive, it can be set to the length of the array
-            }
-
-            if (delta > 0)
-            {
-                // Shift to the right
-                for (uint i = endPos - 1; i >= startPos; i--) // Adjusted to make endPos exclusive
+                if (item != null && item.Pos >= startPos && item.Pos < endPos)
                 {
-                    if (i + delta < _underlyingData.Length)
-                    {
-                        _underlyingData[i + delta] = _underlyingData[i];
-                    }
-                    else
-                    {
-                        throw new ArgumentOutOfRangeException("Shifting exceeds the array bounds.");
-                    }
+                    item.Pos += delta;
+                    item.Delta += delta;
                 }
             }
-            else if (delta < 0)
-            {
-                // Shift to the left
-                for (uint i = startPos; i < endPos; i++) // Adjusted to make endPos exclusive
-                {
-                    if (i + delta >= 0)
-                    {
-                        _underlyingData[i + delta] = _underlyingData[i];
-                    }
-                    else
-                    {
-                        throw new ArgumentOutOfRangeException("Shifting exceeds the array bounds.");
-                    }
-                }
-            }
+        }
+
+        private class IndexedItem
+        {
+            public int Delta { get; set; }
+
+            public int Pos { get; set; }
+
+            public T Value { get; set; }
         }
 
         public class Operation

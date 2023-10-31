@@ -1,6 +1,6 @@
 ﻿namespace Llama.Data.Models
 {
-	public enum LogitClampType
+    public enum LogitClampType
     {
         PreventIncrease,
 

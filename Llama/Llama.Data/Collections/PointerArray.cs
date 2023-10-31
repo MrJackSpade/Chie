@@ -5,7 +5,7 @@ namespace Llama.Data.Collections
     public class PointerArray<T> : IEnumerable<T>
     {
         private readonly T[] _backingData;
-       
+
         public PointerArray(uint length, params T[] array)
         {
             _backingData = new T[length];
@@ -13,14 +13,6 @@ namespace Llama.Data.Collections
             for (int i = 0; i < array.Length; i++)
             {
                 _backingData[i] = array[i];
-            }
-        }
-
-        public void Fill(T item)
-        {
-            for(int i = 0; i < _backingData.Length;i++)
-            {
-                _backingData[i] = item;
             }
         }
 
@@ -32,6 +24,19 @@ namespace Llama.Data.Collections
         {
             get => _backingData[index];
             set => _backingData[index] = value;
+        }
+
+        public void Clear()
+        {
+            Pointer = 0;
+        }
+
+        public void Fill(T item)
+        {
+            for (int i = 0; i < _backingData.Length; i++)
+            {
+                _backingData[i] = item;
+            }
         }
 
         public IEnumerator<T> GetEnumerator()
@@ -47,11 +52,6 @@ namespace Llama.Data.Collections
         public Span<T> Slice(int startIndex, int length)
         {
             return _backingData.AsSpan().Slice(startIndex, length);
-        }
-
-        public void Clear()
-        {
-            Pointer = 0;
         }
     }
 }

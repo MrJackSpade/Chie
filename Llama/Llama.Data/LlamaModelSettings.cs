@@ -1,10 +1,7 @@
-﻿using Llama.Data.Enums;
-
-namespace Llama.Data
+﻿namespace Llama.Data
 {
     public class LlamaModelSettings
-    { 
-      
+    {
         public int GpuLayerCount { get; set; } = 0;
 
         public string Model { get; set; }

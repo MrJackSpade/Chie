@@ -28,8 +28,6 @@ namespace Llama.Core.Tests.TestObjects
 
         public PointerArray<char> Evaluated { get; private set; }
 
-        public int OperationCount => Shifter.Operations.Count;
-
         public ArrayShifter<char> Shifter { get; private set; }
 
         public PointerArraySynchronizer<char> Synchronizer { get; private set; }

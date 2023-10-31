@@ -2,7 +2,7 @@
 
 namespace Llama.Data.Models
 {
-	public class LogitPenalty : LogitRule
+    public class LogitPenalty : LogitRule
     {
         public LogitPenalty(int id, float value, LogitRuleLifetime lifeTime)
         {

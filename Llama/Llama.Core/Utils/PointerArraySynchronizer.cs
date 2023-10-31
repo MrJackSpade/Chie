@@ -1,5 +1,7 @@
 ﻿using Llama.Core.Interfaces;
 using Llama.Data.Collections;
+using Llama.Data.Models;
+using System.Data;
 using System.Diagnostics;
 
 namespace Llama.Core.Utils
@@ -16,7 +18,7 @@ namespace Llama.Core.Utils
         {
             _arrayShifter = shifter;
             _batchSize = batchSize;
-            _defaultT = defaultT;    
+            _defaultT = defaultT;
         }
 
         public void Sync(PointerArray<T> evaluated, PointerArray<T> buffer)
@@ -39,48 +41,38 @@ namespace Llama.Core.Utils
 
         private void EvaluatePhase(PointerArray<T> evaluated, PointerArray<T> buffer)
         {
-            int start = (int)evaluated.Pointer;
+            BatchDecode<T> llamaBatch = new();
 
-            int end = (int)buffer.Pointer;
-
-            Span<T> toEvaluate = buffer.Slice(start, end - start);
-
-            Debug.WriteLine($"Evaluating: {toEvaluate.Length}");
-
-            // evaluate tokens in batches
-            // embed is typically prepared beforehand to fit within a batch, but not always
-            for (uint i = 0; i < toEvaluate.Length; i += _batchSize)
+            for(uint i = 0; i < buffer.Pointer; i++)
             {
-                uint n_eval = (uint)(toEvaluate.Length - i);
-
-                if (n_eval > _batchSize)
+                if (Equals(buffer[i], _defaultT))
                 {
-                    n_eval = _batchSize;
+                    break;
                 }
 
-                Span<T> thisBlock = toEvaluate.Slice((int)i, (int)n_eval);
-
-                try
+                if (!Equals(evaluated[i], buffer[i]))
                 {
-                    Debug.WriteLine($"{evaluated.Pointer + 1}/{end}");
-
-                    _arrayShifter.Evaluate(thisBlock.ToArray(), evaluated.Pointer);
-                }
-                catch (Exception e) when (Debugger.IsAttached)
-                {
-                    Debug.WriteLine(e);
-                    Debugger.Break();
+                    llamaBatch.AddItem(buffer[i], i);
                 }
 
-                for (uint c = 0; c < n_eval; c++)
+                if(llamaBatch.Items.Count == _batchSize)
                 {
-                    uint c_loc = c + evaluated.Pointer;
+                    Debug.WriteLine($"Evaluating: {llamaBatch.Items.Count}");
 
-                    evaluated[c_loc] = buffer[c_loc];
+                    _arrayShifter.Decode(llamaBatch);
+
+                    llamaBatch = new BatchDecode<T>();
                 }
-
-                evaluated.Pointer += n_eval;
             }
+
+            if (llamaBatch.Items.Count > 0)
+            {
+                Debug.WriteLine($"Evaluating: {llamaBatch.Items.Count}");
+
+                _arrayShifter.Decode(llamaBatch);
+            }
+
+            evaluated.Pointer = buffer.Pointer;
 
             //The entirety of the token data needs to be synced for all tokens regardless
             //once the eval is complete, because otherwise metadata wont be copied across
@@ -94,56 +86,68 @@ namespace Llama.Core.Utils
 
         private void ShiftPhase(PointerArray<T> evaluated, PointerArray<T> buffer)
         {
-            uint e_index = evaluated.Pointer;
+            ShiftItem[] shiftItems = new ShiftItem[evaluated.Length];
 
-            while (e_index < buffer.Pointer)
+            int j = 0;
+
+            for (uint i = 0; i < evaluated.Pointer; i++)
             {
-                T toMatch = buffer[e_index];
-
-                if (!Equals(evaluated[e_index], toMatch))
+                ShiftItem shiftToken = new()
                 {
-                    uint s_shift = e_index + 1;
+                    Item = evaluated[i],
+                    OriginalIndex = i
+                };
 
-                    while (!Equals(evaluated[s_shift], toMatch))
+                int start_j = j;
+
+                do
+                {
+                    if (shiftItems[j] == null && Equals(buffer[(uint)j], shiftToken.Item))
                     {
-                        s_shift++;
-
-                        if (s_shift == evaluated.Length)
-                        {
-                            return;
-                        }
+                        shiftItems[j] = shiftToken;
+                        shiftToken.NewIndex = (uint)j++;
+                        break;
                     }
 
-                    uint c_shift = 1;
-
-                    while (c_shift + s_shift < evaluated.Length && Equals(evaluated[c_shift + s_shift], buffer[e_index + c_shift]))
+                    if (++j == evaluated.Length)
                     {
-                        c_shift++;
+                        j = 0;
                     }
+                } while (j != start_j);
+            }
 
-                    Shift(evaluated, e_index, s_shift, c_shift);
+            for (int i = 0; i < evaluated.Length; i++)
+            {
+                ShiftItem item = shiftItems[i];
 
-                    evaluated.Pointer += c_shift;
-                    Debug.WriteLine($"New Evaluated Pointer: {evaluated.Pointer}");
-                    e_index += c_shift;
+                if ((item?.Delta ?? 0) != 0)
+                {
+                    _arrayShifter.ShiftCacheToken(0, item!.OriginalIndex, item.Delta);
+                    evaluated[item.NewIndex] = item.Item;
                 }
-                else
+            }
+
+            for (uint i = 0; i < evaluated.Length; i++)
+            {
+                ShiftItem item = shiftItems[i];
+
+                if (item is null && !Equals(evaluated[i], _defaultT))
                 {
-                    evaluated.Pointer++;
-                    e_index++;
+                    _arrayShifter.RemoveCacheToken(i);
+                    evaluated[i] = _defaultT;
                 }
             }
         }
 
-        private void Shift(PointerArray<T> container, uint e_index, uint startPos, uint shiftCount)
+        private class ShiftItem
         {
-            _arrayShifter.ShiftCacheTokens(0, startPos, startPos + shiftCount, (int)(e_index - startPos));
+            public int Delta => (int)(NewIndex - OriginalIndex);
 
-            for (uint i = 0; i < shiftCount; i++)
-            {
-                container[e_index + i] = container[startPos + i];
-                container[startPos + i] = _defaultT;
-            }
+            public T Item { get; set; }
+
+            public uint NewIndex { get; set; }
+
+            public uint OriginalIndex { get; set; }
         }
     }
 }

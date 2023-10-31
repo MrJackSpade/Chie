@@ -144,7 +144,6 @@ namespace LlamaApi.Controllers
                     IsLoaded = true,
                     Evaluated = 0
                 };
-
             }, request.Priority);
         }
 
@@ -353,9 +352,9 @@ namespace LlamaApi.Controllers
                 };
             }
 
-            if(request.MirostatTempSamplerSettings != null)
+            if (request.MirostatTempSamplerSettings != null)
             {
-                return new MirostatTempSampler(request.MirostatTempSamplerSettings); 
+                return new MirostatTempSampler(request.MirostatTempSamplerSettings);
             }
 
             throw new NotImplementedException();

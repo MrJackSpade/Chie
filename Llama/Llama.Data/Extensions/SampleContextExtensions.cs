@@ -1,6 +1,5 @@
 ﻿using Llama.Data.Models;
 using Llama.Data.Native;
-using System.Diagnostics;
 
 namespace Llama.Data.Extensions
 {
@@ -20,23 +19,23 @@ namespace Llama.Data.Extensions
 
             int mod = existing.logit > 0 ? 1 : -1;
 
-			span[tokenId] = logitBiasType switch
-			{
-				LogitBiasType.Additive => new LlamaTokenData()
-				{
-					id = existing.id,
-					logit = existing.logit + probability,
-					p = existing.p + probability
-				},
-				LogitBiasType.Multiplicative => new LlamaTokenData()
-				{
-					id = existing.id,
-					logit = existing.logit * probability * mod,
-					p = existing.p * probability * mod
-				},
-				_ => throw new NotImplementedException(),
-			};
-		}
+            span[tokenId] = logitBiasType switch
+            {
+                LogitBiasType.Additive => new LlamaTokenData()
+                {
+                    id = existing.id,
+                    logit = existing.logit + probability,
+                    p = existing.p + probability
+                },
+                LogitBiasType.Multiplicative => new LlamaTokenData()
+                {
+                    id = existing.id,
+                    logit = existing.logit * probability * mod,
+                    p = existing.p * probability * mod
+                },
+                _ => throw new NotImplementedException(),
+            };
+        }
 
         public static void SetPenalty(this SampleContext context, int tokenId, float probability)
         {
@@ -58,14 +57,6 @@ namespace Llama.Data.Extensions
             };
         }
 
-        public static void Update(this SampleContext context, IEnumerable<KeyValuePair<LlamaToken, float>> list)
-        {
-            foreach (KeyValuePair<LlamaToken, float> llamaToken in list)
-            {
-                context.SetProbability(llamaToken.Key.Id, llamaToken.Value);
-            }
-        }
-
         public static void SetProbability(this SampleContext context, int tokenId, float probability)
         {
             Span<LlamaTokenData> span = context.Candidates.data.Span;
@@ -76,6 +67,14 @@ namespace Llama.Data.Extensions
                 logit = probability,
                 p = probability
             };
+        }
+
+        public static void Update(this SampleContext context, IEnumerable<KeyValuePair<LlamaToken, float>> list)
+        {
+            foreach (KeyValuePair<LlamaToken, float> llamaToken in list)
+            {
+                context.SetProbability(llamaToken.Key.Id, llamaToken.Value);
+            }
         }
     }
 }
