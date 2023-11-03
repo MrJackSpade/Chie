@@ -18,7 +18,7 @@ namespace Llama.Data.Models
 
         public static LlamaToken NewLine => new(13, null);
 
-        public static LlamaToken Null => new(0, null);
+        public static LlamaToken Null => new(0, "█");
 
         public object Data { get; set; }
 

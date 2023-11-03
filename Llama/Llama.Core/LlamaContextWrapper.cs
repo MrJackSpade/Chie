@@ -19,9 +19,9 @@ namespace Llama.Core
 
         private readonly float[,] _embeddingStack;
 
-        private readonly PointerArray<LlamaToken> _evaluated;
-
         private readonly IExecutionScheduler _executionScheduler;
+
+        private readonly KvCacheState<LlamaToken> _kvCache;
 
         private readonly LlamaContextSettings _settings;
 
@@ -59,7 +59,7 @@ namespace Llama.Core
             }
 
             _synchronizer = new PointerArraySynchronizer<LlamaToken>(
-                new KvCacheShifter(settings.EvalThreadCount, handle),
+                new KvCacheShifter(settings.EvalThreadCount, handle, modelHandle),
                 settings.BatchSize,
                 LlamaToken.Null
                 );
@@ -74,8 +74,7 @@ namespace Llama.Core
             this._buffer = new PointerArray<LlamaToken>(this.Size);
             this._buffer.Fill(LlamaToken.Null);
 
-            this._evaluated = new PointerArray<LlamaToken>(this.Size);
-            this._evaluated.Fill(LlamaToken.Null);
+            this._kvCache = new KvCacheState<LlamaToken>(this.Size, LlamaToken.Null);
 
             this.ModelHandle = modelHandle ?? throw new ArgumentNullException();
 
@@ -93,7 +92,7 @@ namespace Llama.Core
 
         public IReadOnlyLlamaTokenCollection Buffer => new LlamaTokenCollection(this._buffer);
 
-        public IReadOnlyLlamaTokenCollection Evaluated => new LlamaTokenCollection(this._evaluated);
+        public IReadOnlyLlamaTokenCollection Evaluated => new LlamaTokenCollection(this._kvCache);
 
         public SafeLlamaContextHandle Handle { get; private set; }
 
@@ -104,7 +103,6 @@ namespace Llama.Core
         public void Clear()
         {
             this._buffer.Clear();
-            this._evaluated.Pointer = 0;
         }
 
         public void Dispose() => this.Handle.Dispose();
@@ -118,19 +116,7 @@ namespace Llama.Core
 
             this.Ensure();
 
-            _synchronizer.Sync(_evaluated, _buffer);
-
-            //Everything after the evaluation pointer is zero'd out because its no
-            //longer valid. If we don't do this, new tokens might "match" old data
-            //left in the buffer and increment the pointer without triggering a new
-            //eval. WE only need to do this if we've actually evaluated something
-            //because a zero length eval means the data is/was a match to the previous
-            //eval and the buffer is still value
-
-            for (uint i = this._evaluated.Pointer; i < this._evaluated.Length; i++)
-            {
-                this._evaluated[i] = LlamaToken.Null;
-            }
+            _synchronizer.Sync(_kvCache, _buffer);
         }
 
         public LlamaToken SampleNext(LogitRuleCollection logitRules, ExecutionPriority priority) => this._executionScheduler.Execute(() => this.SampleTokenRaw(logitRules), priority);
@@ -214,25 +200,6 @@ namespace Llama.Core
         public void SetBufferPointer(uint startIndex)
         {
             this._buffer.Pointer = startIndex;
-
-            if (this._evaluated.Pointer >= this._buffer.Pointer)
-            {
-                this._evaluated.Pointer = this._buffer.Pointer;
-            }
-            else
-            {
-                for (uint i = 0; i < this._buffer.Pointer; i++)
-                {
-                    if (this._evaluated[i] == this._buffer[i])
-                    {
-                        this._evaluated.Pointer = i;
-                    }
-                    else
-                    {
-                        return;
-                    }
-                }
-            }
         }
 
         public void Write(LlamaToken token)
@@ -242,31 +209,7 @@ namespace Llama.Core
                 throw new OutOfContextException();
             }
 
-            this._buffer[this._buffer.Pointer] = token;
-
-            //If the eval pointer is in sync with the buffer (up to date)
-            //We need to be up to date because a single mismatch char forces
-            //requires an eval for all subsequent tokens.
-            if (this._evaluated.Pointer >= this._buffer.Pointer)
-            {
-                LlamaToken lastEval = this._evaluated[this._buffer.Pointer];
-
-                if (lastEval.Id != 0 || token.Id == 0) //sanity debug skip. Not needed
-                {
-                    //Then check to see if the current eval token matches.
-                    //If it does, we dont need to eval again
-                    if (this._evaluated[this._buffer.Pointer].Id == token.Id)
-                    {
-                        //Just in case theres metadata
-                        this._evaluated[this._buffer.Pointer] = token;
-
-                        //Ensure we bump the eval, to keep them in sync
-                        this._evaluated.Pointer++;
-                    }
-                }
-            }
-
-            this._buffer.Pointer++;
+            this._buffer[this._buffer.Pointer++] = token;
         }
 
         private LlamaTokenCollection NoPenalize()

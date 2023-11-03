@@ -1,153 +1,306 @@
 ﻿using Llama.Core.Interfaces;
 using Llama.Data.Collections;
 using Llama.Data.Models;
-using System.Data;
 using System.Diagnostics;
 
 namespace Llama.Core.Utils
 {
-    public class PointerArraySynchronizer<T>
+    public partial class PointerArraySynchronizer<T>
     {
         protected IArrayShifter<T> _arrayShifter;
 
         private readonly uint _batchSize;
 
-        private readonly T _defaultT;
+        private readonly T _defaultToken;
 
         public PointerArraySynchronizer(IArrayShifter<T> shifter, uint batchSize, T defaultT)
         {
             _arrayShifter = shifter;
             _batchSize = batchSize;
-            _defaultT = defaultT;
+            _defaultToken = defaultT;
         }
 
-        public void Sync(PointerArray<T> evaluated, PointerArray<T> buffer)
+        public void Log(KvCacheState<T> kvCache, PointerArray<T> buffer)
         {
-            Debug.WriteLine("Shifting... ");
-            Debug.WriteLine($"\tEvaluated Pointer: {evaluated.Pointer}");
+            Guid g = Guid.NewGuid();
+
+            if(!Directory.Exists("Logs"))
+            {
+                Directory.CreateDirectory("Logs");
+            }
+
+            string e_dump = $"Logs\\{g}_kvCache";
+            string b_dump = $"Logs\\{g}_buffer_{buffer.Pointer}";
+
+            File.WriteAllLines(e_dump, GetLines(kvCache));
+            File.WriteAllLines(b_dump, GetLines(buffer));
+        }
+            
+        public void Sync(KvCacheState<T> kvCache, PointerArray<T> buffer)
+        {
+            Log(kvCache, buffer);
+
+            Debug.WriteLine("Transforming... ");
             Debug.WriteLine($"\tBuffer Pointer: {buffer.Pointer}");
 
-            ShiftPhase(evaluated, buffer);
+            TranformCache(kvCache, buffer);
 
-            Debug.WriteLine("Evaluating... ");
-            Debug.WriteLine($"\tEvaluated Pointer: {evaluated.Pointer}");
+            Debug.WriteLine("Filling... ");
             Debug.WriteLine($"\tBuffer Pointer: {buffer.Pointer}");
-            EvaluatePhase(evaluated, buffer);
+            FillCache(kvCache, buffer);
 
             Debug.WriteLine("Done Evaluating. ");
-            Debug.WriteLine($"\tEvaluated Pointer: {evaluated.Pointer}");
             Debug.WriteLine($"\tBuffer Pointer: {buffer.Pointer}");
         }
 
-        private void EvaluatePhase(PointerArray<T> evaluated, PointerArray<T> buffer)
+        public void TranformCache(KvCacheState<T> kvCache, PointerArray<T> buffer)
+        {
+            kvCache.ClearTransformations();
+
+            //Pre Buffer
+            PinUnchangedTokens(kvCache, buffer);
+
+            FindTokenReplacements(kvCache, buffer);
+
+            //Post Buffer
+            DefragPostBuffer(kvCache, buffer);
+
+            //Execute
+            List<KvCacheTransformation<T>> requiredMoves = kvCache.GetMoves().ToList();
+
+            //Migrate anything thats relocating out
+            MoveTokensToTempSpace(kvCache, requiredMoves);
+
+            //Clear anything thats left behind and not pinned
+            ClearUnpinnedTokens(kvCache, buffer);
+
+            //Pull tokens back in from temp space
+            RetrieveFromTempSpace(kvCache, requiredMoves);
+        }
+
+        private static void PinUnchangedTokens(KvCacheState<T> kvCache, PointerArray<T> buffer)
+        {
+            //First stage, copy over exact tokens
+            for (uint i = 0; i < buffer.Pointer; i++)
+            {
+                T item = kvCache[i];
+
+                if (Equals(item, buffer[i]))
+                {
+                    kvCache.Pin(i);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Remove any tokens that aren't set to be moved elsewhere, or pinned.
+        /// If its not set to be used somewhere else and its not pinned, then
+        /// it's not used anywhere. Leaving it will cause double tokens for that 
+        /// slot
+        /// </summary>
+        /// <param name="kvCache"></param>
+        /// <param name="buffer"></param>
+        private void ClearUnpinnedTokens(KvCacheState<T> kvCache, PointerArray<T> buffer)
+        {
+            for (uint i = 0; i < buffer.Pointer; i++)
+            {
+                if (!kvCache.IsMoved(i))
+                {
+                    _arrayShifter.RemoveCacheToken(i);
+                    kvCache[i] = _defaultToken;
+                }
+            }
+        }
+
+        private void Decode(KvCacheState<T> kvCache, BatchDecode<T> llamaBatch, bool force = false)
+        {
+            if (force || llamaBatch.Items.Count == _batchSize)
+            {
+                if (llamaBatch.Items.Count > 0)
+                {
+                    _arrayShifter.Decode(llamaBatch);
+
+                    foreach (BatchItem<T> item in llamaBatch.Items)
+                    {
+                        kvCache[item.Position] = item.Token;
+                    }
+
+                    llamaBatch.Clear();
+                }
+            }
+        }
+
+        private void FillCache(KvCacheState<T> kvCache, PointerArray<T> buffer)
         {
             BatchDecode<T> llamaBatch = new();
 
-            for(uint i = 0; i < buffer.Pointer; i++)
+            for (uint i = 0; i < buffer.Pointer; i++)
             {
-                if (Equals(buffer[i], _defaultT))
+                if (IsDefault(buffer[i]))
                 {
-                    break;
+                    throw new Exception("Default token found in buffer");
                 }
 
-                if (!Equals(evaluated[i], buffer[i]))
+                if (!Equals(kvCache[i], buffer[i]))
                 {
                     llamaBatch.AddItem(buffer[i], i);
                 }
 
-                if(llamaBatch.Items.Count == _batchSize)
-                {
-                    Debug.WriteLine($"Evaluating: {llamaBatch.Items.Count}");
-
-                    _arrayShifter.Decode(llamaBatch);
-
-                    llamaBatch = new BatchDecode<T>();
-                }
+                Decode(kvCache, llamaBatch);
             }
 
-            if (llamaBatch.Items.Count > 0)
-            {
-                Debug.WriteLine($"Evaluating: {llamaBatch.Items.Count}");
-
-                _arrayShifter.Decode(llamaBatch);
-            }
-
-            evaluated.Pointer = buffer.Pointer;
-
-            //The entirety of the token data needs to be synced for all tokens regardless
-            //once the eval is complete, because otherwise metadata wont be copied across
-            //The copy call above only intends on copying for the sake of the modification
-            //event but an additional "full sync" call is needed.
-            for (uint i = 0; i < evaluated.Pointer; i++)
-            {
-                evaluated[i] = buffer[i];
-            }
+            Decode(kvCache, llamaBatch, true);
         }
 
-        private void ShiftPhase(PointerArray<T> evaluated, PointerArray<T> buffer)
+        private void FindTokenReplacements(KvCacheState<T> kvCache, PointerArray<T> buffer)
         {
-            ShiftItem[] shiftItems = new ShiftItem[evaluated.Length];
+            WrapAroundCounter e = new(kvCache.Length);
 
-            int j = 0;
-
-            for (uint i = 0; i < evaluated.Pointer; i++)
+            //next stage, fill in gaps missing from the buffer
+            for (uint i = 0; i < buffer.Pointer - 1; i++)
             {
-                ShiftItem shiftToken = new()
+                //If this slot is taken, we've already found a match
+                if (kvCache.IsSet(i))
                 {
-                    Item = evaluated[i],
-                    OriginalIndex = i
-                };
+                    continue;
+                }
 
-                int start_j = j;
+                uint end_e = e;
+
+                T targetToken = buffer[i];
+
+                if (IsDefault(targetToken))
+                {
+                    continue;
+                }
 
                 do
                 {
-                    if (shiftItems[j] == null && Equals(buffer[(uint)j], shiftToken.Item))
+                    //skip this one if we've already reassigned it
+                    if (kvCache.IsMoved(e))
                     {
-                        shiftItems[j] = shiftToken;
-                        shiftToken.NewIndex = (uint)j++;
+                        e.Increment();
+                        continue;
+                    }
+
+                    T checkValue = kvCache[e];
+
+                    if (Equals(targetToken, checkValue)) //and it matches what we need
+                    {
+                        kvCache.Move(e, i);
+
+                        e.Increment();
                         break;
                     }
 
-                    if (++j == evaluated.Length)
-                    {
-                        j = 0;
-                    }
-                } while (j != start_j);
+                    e.Increment();
+                } while (e != end_e);
             }
+        }
 
-            for (int i = 0; i < evaluated.Length; i++)
+        private IEnumerable<string> GetLines(PointerArray<T> source)
+        {
+            foreach (T s in source)
             {
-                ShiftItem item = shiftItems[i];
-
-                if ((item?.Delta ?? 0) != 0)
+                if (s is LlamaToken token)
                 {
-                    _arrayShifter.ShiftCacheToken(0, item!.OriginalIndex, item.Delta);
-                    evaluated[item.NewIndex] = item.Item;
+                    yield return $"{token.Id}|{token.Value}";
                 }
-            }
-
-            for (uint i = 0; i < evaluated.Length; i++)
-            {
-                ShiftItem item = shiftItems[i];
-
-                if (item is null && !Equals(evaluated[i], _defaultT))
+                else
                 {
-                    _arrayShifter.RemoveCacheToken(i);
-                    evaluated[i] = _defaultT;
+                    yield return $"0|";
                 }
             }
         }
 
-        private class ShiftItem
+        private IEnumerable<string> GetLines(KvCacheState<T> source)
         {
-            public int Delta => (int)(NewIndex - OriginalIndex);
+            for (uint i = 0; i < source.Length; i++)
+            {
+                T s = source[i];
 
-            public T Item { get; set; }
+                if (s is LlamaToken token)
+                {
+                    yield return $"{token.Id}|{token.Value}";
+                }
+                else
+                {
+                    yield return $"0|";
+                }
+            }
+        }
 
-            public uint NewIndex { get; set; }
+        private bool IsDefault(T toTest)
+        {
+            return Equals(_defaultToken, toTest);
+        }
 
-            public uint OriginalIndex { get; set; }
+        private void MoveTokensToTempSpace(KvCacheState<T> kvCache, List<KvCacheTransformation<T>> requiredMoves)
+        {
+            //We're going to use a position outside the array as temporary.
+            //If we don't we have to calculate a proper order for swapping
+            //and thats a huge deal.Right now this isn't validated, but that
+            //may change causing this to break in the future
+            foreach (KvCacheTransformation<T> si in requiredMoves)
+            {
+                //Move into temp position outside the bounds
+                uint tempPos = si.NewIndex + kvCache.Length;
+                int tempDelta = (int)(tempPos - si.OriginalIndex);
+                _arrayShifter.ShiftCacheToken(0, si.OriginalIndex, tempDelta);
+                kvCache[si.OriginalIndex] = _defaultToken;
+            }
+        }
+
+        private void RetrieveFromTempSpace(KvCacheState<T> kvCache, List<KvCacheTransformation<T>> requiredMoves)
+        {
+            //Move everything back into the array
+            foreach (KvCacheTransformation<T> si in requiredMoves)
+            {
+                //Move into temp position outside the bounds
+                uint tempPos = si.NewIndex + kvCache.Length;
+                //move back size is fixed because the proper offset is calculated on the last step
+                _arrayShifter.ShiftCacheToken(0, tempPos, 0 - (int)kvCache.Length);
+                //Adjust the actual buffer for reals
+                kvCache[si.NewIndex] = si.Item;
+            }
+        }
+
+        private void DefragPostBuffer(KvCacheState<T> kvCache, PointerArray<T> buffer)
+        {
+            uint ii = buffer.Length - 1;
+
+            //Next pass. Find unused tokens and try and see if we have free space for them
+            //To save cache shit later
+            for (uint i = buffer.Length - 1; i <= 0; i--)
+            {
+                if (ii == buffer.Pointer)
+                {
+                    //No more space!
+                    break;
+                }
+
+                //Already moved, no worries
+                if (kvCache.IsMoved(i))
+                {
+                    continue;
+                }
+
+                //something new already assigned
+                if (kvCache.IsSet(ii))
+                {
+                    continue;
+                }
+
+                if (kvCache.IsDefault(i))
+                {
+                    continue;
+                }
+
+                //Mark it to move to this space
+                kvCache.Move(i, ii);
+
+                ii--;
+            }
         }
     }
 }

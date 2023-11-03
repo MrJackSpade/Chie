@@ -4,6 +4,7 @@ using Llama.Data.Models;
 using Llama.Data.Native;
 using System.Diagnostics;
 using System.Reflection.Metadata;
+using System.Reflection.Metadata.Ecma335;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -11,6 +12,119 @@ namespace Llama.Native
 {
     public static class NativeApi
     {
+        public static LlamaKvCache GetKvCache(SafeLlamaContextHandle context)
+        {
+            IntPtr kvCachePtr = LlamaCppApi.GetKvCache(context);
+            return Marshal.PtrToStructure<LlamaKvCache>(kvCachePtr);
+        }
+
+        public static LlamaKvCell[] GetKvCells(SafeLlamaContextHandle context)
+        {
+            LlamaKvCache cache = GetKvCache(context);
+
+            uint count = cache.size;
+
+            LlamaKvCell[] cells = new LlamaKvCell[count];
+
+            int cellSize = Marshal.SizeOf<LlamaKvCell>();
+
+            for (int i = 0; i < count; i++)
+            {
+                cells[i] = Marshal.PtrToStructure<LlamaKvCell>(IntPtr.Add(cache.cellsPointer, i * cellSize));
+            }
+
+            return cells;
+        }
+
+        class CellDefinition
+        {
+            public int Index { get; set; }
+            public LlamaKvCell Cell { get; set; }
+        }
+
+        public static LlamaToken[] GetEvaluated(SafeLlamaContextHandle context, SafeLlamaModelHandle model)
+        {
+            LlamaKvCell[] cells = GetKvCells(context);
+
+            LlamaToken[] evaluated = new LlamaToken[cells.Length];
+
+            Dictionary<int, List<CellDefinition>> cellDict = new();
+
+            {
+                int i = 0;
+                foreach (LlamaKvCell cell in cells)
+                {
+                    if(cell.pos == -1)
+                    {
+                        continue;
+                    }
+
+                    if (!cellDict.TryGetValue(cell.pos, out List<CellDefinition> cellColl))
+                    {
+                        cellColl = new List<CellDefinition>();
+                        cellDict[cell.pos] = cellColl;
+                    }
+
+                    cellColl.Add(new CellDefinition()
+                    {
+                        Index = i,
+                        Cell = cell,
+                    });
+
+                    i++;
+                }
+            }
+
+            foreach(int key in cellDict.Keys)
+            {
+                if (cellDict[key].Count < 2)
+                {
+                    cellDict.Remove(key);
+                }
+            }
+
+            if(cellDict.Count > 0)
+            {
+                Debugger.Break();
+            }
+
+            foreach(LlamaKvCell cell in cells)
+            {
+                LlamaToken token;
+
+                if(cell.pos < 0)
+                {
+                    continue;
+                }
+
+                if(cell.value == 0)
+                {
+                    token = LlamaToken.Null;
+                } else
+                {
+                    token = new LlamaToken(cell.value, TokenToPiece(model, cell.value));
+                }
+
+                if(evaluated[cell.pos] != null)
+                {
+                    //throw new InvalidOperationException("Can not double assign token");
+                } else
+                {
+                    evaluated[cell.pos] = token;
+                }
+            }
+
+            for(int i = 0; i < evaluated.Length; i++)
+            {
+                if (evaluated[i] == null)
+                {
+                    evaluated[i] = LlamaToken.Null;
+                }
+            }
+
+            return evaluated;
+        }
+
         public static int Decode(SafeLlamaContextHandle handle, BatchDecode<int> batch)
         {
             int[] tokens = new int[batch.Items.Count];
@@ -190,14 +304,12 @@ namespace Llama.Native
 
         public static void RemoveCacheTokens(SafeLlamaContextHandle handle, uint startPos, uint endPos)
             => LlamaCppApi.RemoveCacheTokens(handle, (int)startPos, (int)endPos);
-        
+
+        public static void RemoveCacheToken(SafeLlamaContextHandle handle, uint pos)
+            => LlamaCppApi.RemoveCacheTokens(handle, (int)pos, (int)(pos + 1));
 
         public static void ShiftCacheTokens(SafeLlamaContextHandle handle, uint sequenceId, uint startPos, uint endPos, int delta)
         {
-            Log(nameof(LlamaCppApi.RemoveCacheTokens), sequenceId, startPos + delta, startPos);
-            LlamaCppApi.RemoveCacheTokens(handle, (int)sequenceId, (int)startPos + delta, (int)startPos);
-
-            Log(nameof(LlamaCppApi.ShiftCacheTokens), sequenceId, startPos, endPos, delta);
             LlamaCppApi.ShiftCacheTokens(handle, (int)sequenceId, (int)startPos, (int)endPos, delta);
         }
 

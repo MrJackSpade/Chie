@@ -44,6 +44,9 @@ namespace Llama.Native
         [DllImport(LIBRARY_NAME, EntryPoint = "llama_context_default_params")]
         public static extern LlamaContextParams ContextDefaultParams();
 
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_get_kv_cache")]
+        public static extern IntPtr GetKvCache(SafeLlamaContextHandle ctx);
+
         /// <summary>
         /// Copy all tokens that belong to the specified source sequence to another destination sequence.
         /// Note that this does not allocate extra KV cache memory - it simply assigns the tokens to the new sequence.

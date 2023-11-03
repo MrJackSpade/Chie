@@ -1,4 +1,5 @@
 ﻿using Llama.Core.Interfaces;
+using Llama.Core.Utils;
 using Llama.Data.Collections;
 using Llama.Data.Models;
 
@@ -9,11 +10,11 @@ namespace Llama.Core.Tests.TestObjects
 
         private readonly IndexedItem[] _underlyingData;
 
-        public ArrayShifter(PointerArray<T> startingState)
+        public ArrayShifter(KvCacheState<T> startingState)
         {
             _underlyingData = new IndexedItem[startingState.Length];
 
-            for (uint i = 0; i < startingState.Pointer; i++)
+            for (uint i = 0; i < startingState.Length; i++)
             {
                 _underlyingData[i] = new IndexedItem() { Value = startingState[i], Pos = (int)i };
             }
@@ -94,7 +95,7 @@ namespace Llama.Core.Tests.TestObjects
         }
 
         public void RemoveCacheToken(uint index)
-            => RemoveCacheTokens(index, index);
+            => RemoveCacheTokens(index, index + 1);
 
         public void RemoveCacheTokens(uint start, uint end)
             => RemoveCacheTokens(0, start, end);

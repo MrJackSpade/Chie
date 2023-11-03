@@ -10,7 +10,7 @@ namespace Llama.Core.Tests.TestObjects
         {
             uint len = (uint)Math.Max(evaluated.Length, buffer.Length);
             uint bp = (uint)(bufferPointer == -1 ? buffer.Length : bufferPointer);
-            Evaluated = new PointerArray<char>(len, evaluated);
+            Evaluated = new KvCacheState<char>(evaluated, '\0');
             Buffer = new PointerArray<char>(len, buffer)
             {
                 Pointer = bp
@@ -20,13 +20,11 @@ namespace Llama.Core.Tests.TestObjects
             Synchronizer = new PointerArraySynchronizer<char>(Shifter, batchSize, '\0');
         }
 
-        public int BPointer => (int)Buffer.Pointer;
+        public int Pointer => (int)Buffer.Pointer;
 
         public PointerArray<char> Buffer { get; private set; }
 
-        public int EPointer => (int)Evaluated.Pointer;
-
-        public PointerArray<char> Evaluated { get; private set; }
+        public KvCacheState<char> Evaluated { get; private set; }
 
         public ArrayShifter<char> Shifter { get; private set; }
 
