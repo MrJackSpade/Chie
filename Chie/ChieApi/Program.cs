@@ -1,5 +1,6 @@
 using Ai.Utils.Extensions;
 using Blip;
+using ChieApi.Clients;
 using ChieApi.Interfaces;
 using ChieApi.Models;
 using ChieApi.Pipelines;
@@ -7,6 +8,11 @@ using ChieApi.Pipelines.MoodPipeline;
 using ChieApi.Services;
 using ChieApi.Shared.Services;
 using ChieApi.Tasks.Boredom;
+using Llama.Core.Samplers.Mirostat;
+using Llama.Data;
+using Llama.Data.Models.Settings;
+using LlamaApi.Shared.Models.Request;
+using LlamaApi.Shared.Models.Response;
 using LlamaApiClient;
 using Logging;
 using Microsoft.AspNetCore.Mvc;
@@ -15,6 +21,7 @@ using Summary;
 using Summary.Interfaces;
 using System.Diagnostics;
 using System.Text.Json.Serialization;
+using MirostatSamplerSettings = LlamaApi.Models.Request.MirostatSamplerSettings;
 
 namespace ChieApi
 {
@@ -52,7 +59,7 @@ namespace ChieApi
 			_ = builder.Services.AddSingleton<UserDataRepository>();
 			_ = builder.Services.AddSingleton<LogitService>();
 			_ = builder.Services.AddSingleton<CharacterService>();
-			_ = builder.Services.AddSingleton<CharacterConfiguration>(s => s.GetRequiredService<CharacterService>().Build());
+			_ = builder.Services.AddSingleton(s => s.GetRequiredService<CharacterService>().Build());
 			_ = builder.Services.AddSingleton<BlipApiClient>();
 			_ = builder.Services.AddSingleton<DictionaryCache>();
 			_ = builder.Services.AddSingleton<ISummaryApiClient, SummaryApiClient>();
@@ -64,7 +71,6 @@ namespace ChieApi
 			_ = builder.Services.AddTransient<IRequestPipeline, TimePassagePipeline>();
 			_ = builder.Services.AddTransient<IRequestPipeline, BoredomTask>();
 			_ = builder.Services.AddSingleton<IRequestPipeline, MoodPipeline>();
-			//_ = builder.Services.AddSingleton<IBackgroundProcess, UserSummarizer>();
 			_ = builder.Services.AddSingleton<IRequestPipeline, BootUpPipeline>();
 			_ = builder.Services.AddScoped<IRequestPipeline, UserDataPipeline>();
 			_ = builder.Services.AddTransient<IBackgroundTask, BoredomTask>();
@@ -83,8 +89,96 @@ namespace ChieApi
 
 			LlamaClientSettings clientSettings = new("http://localhost:5059");
 			_ = builder.Services.AddSingleton(clientSettings);
-			_ = builder.Services.AddSingleton<LlamaContextClient>();
-			_ = builder.Services.Configure<JsonOptions>(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+			_ = builder.Services.AddSingleton<LlamaContextClient, RunpodClient>();
+			_ = builder.Services.AddSingleton((s) =>
+			{
+                CharacterConfiguration _characterConfiguration = s.GetRequiredService<CharacterConfiguration>();
+				return new LlamaModelSettings()
+				{
+					GpuLayerCount = _characterConfiguration.GpuLayers,
+					Model = _characterConfiguration.ModelPath,
+					UseMemoryMap = !_characterConfiguration.NoMemoryMap,
+					UseMemoryLock = true
+				};
+            });
+
+			_ = builder.Services.AddSingleton((s) =>
+			{
+                CharacterConfiguration _characterConfiguration = s.GetRequiredService<CharacterConfiguration>();
+
+				ContextRequestSettings c = new();
+
+                if (_characterConfiguration.MiroStat != MirostatType.None)
+                {
+                    if (_characterConfiguration.MiroStat == MirostatType.Three)
+                    {
+                        c.MirostatTempSamplerSettings = new MirostatTempSamplerSettings()
+                        {
+                            Target = _characterConfiguration.MiroStatEntropy,
+                            LearningRate = _characterConfiguration.LearningRate,
+                            InitialTemperature = _characterConfiguration.Temperature,
+                            TopK = _characterConfiguration.TopK
+                        };
+                    }
+                    else
+                    {
+                        c.MirostatSamplerSettings = new MirostatSamplerSettings()
+                        {
+                            Tau = _characterConfiguration.MiroStatEntropy,
+                            Temperature = _characterConfiguration.Temperature,
+                            MirostatType = _characterConfiguration.MiroStat
+                        };
+                    }
+                }
+                else
+                {
+                    c.TemperatureSamplerSettings = new TemperatureSamplerSettings()
+                    {
+                        Temperature = _characterConfiguration.Temperature,
+                        TopP = _characterConfiguration.TopP,
+                    };
+                }
+
+                c.RepetitionSamplerSettings = new RepetitionSamplerSettings()
+                {
+                    RepeatPenalty = _characterConfiguration.RepeatPenalty,
+                    RepeatTokenPenaltyWindow = _characterConfiguration.RepeatPenaltyWindow
+                };
+
+                c.ComplexPresencePenaltySettings = new ComplexPresencePenaltySettings()
+                {
+                    LengthScale = 1.8f,
+                    GroupScale = 1.575f,
+                    MinGroupLength = 3,
+                    RepeatTokenPenaltyWindow = -1
+                };
+
+				return c;
+            });
+
+            _ = builder.Services.AddSingleton((s) =>
+            {
+                CharacterConfiguration _characterConfiguration = s.GetRequiredService<CharacterConfiguration>();
+
+				return new LlamaContextSettings()
+				{
+					BatchSize = _characterConfiguration.BatchSize,
+					ContextSize = _characterConfiguration.ContextLength,
+					EvalThreadCount = _characterConfiguration.Threads ?? (uint)(System.Environment.ProcessorCount / 2),
+					MemoryMode = _characterConfiguration.MemoryMode,
+					ThreadCount = _characterConfiguration.Threads ?? (uint)(Environment.ProcessorCount / 2),
+					RopeFrequencyScaling = 1 / _characterConfiguration.RopeScale,
+					RopeFrequencyBase = _characterConfiguration.RopeBase,
+					RopeScalingType = _characterConfiguration.RopeScalingType,
+					YarnAttnFactor = _characterConfiguration.YarnAttnFactor,
+					YarnBetaFast = _characterConfiguration.YarnBetaFast,
+					YarnBetaSlow = _characterConfiguration.YarnBetaSlow,
+					YarnExtFactor = _characterConfiguration.YarnExtFactor,
+					YarnOrigCtx = _characterConfiguration.YarnOrigCtx,
+				};
+            });
+
+            _ = builder.Services.Configure<JsonOptions>(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 			WebApplication app = builder.Build();
 

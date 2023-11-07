@@ -34,6 +34,11 @@ namespace Llama.Data.Native
         public uint NThreadsBatch;
 
         /// <summary>
+        /// RoPE scaling type, from `LlamaRopeScalingType`.
+        /// </summary>
+        public sbyte RopeScalingType;
+
+        /// <summary>
         /// RoPE base frequency, 0 = from model.
         /// </summary>
         public float RopeFreqBase;
@@ -44,7 +49,32 @@ namespace Llama.Data.Native
         public float RopeFreqScale;
 
         /// <summary>
-        /// If true, use experimental mul_mat_q kernels.
+        /// YaRN extrapolation mix factor, NaN = from model.
+        /// </summary>
+        public float YarnExtFactor;
+
+        /// <summary>
+        /// YaRN magnitude scaling factor.
+        /// </summary>
+        public float YarnAttnFactor;
+
+        /// <summary>
+        /// YaRN low correction dim.
+        /// </summary>
+        public float YarnBetaFast;
+
+        /// <summary>
+        /// YaRN high correction dim.
+        /// </summary>
+        public float YarnBetaSlow;
+
+        /// <summary>
+        /// YaRN original context size.
+        /// </summary>
+        public uint YarnOrigCtx;
+
+        /// <summary>
+        /// If true, use experimental mul_mat_q kernels (DEPRECATED - always true).
         /// </summary>
         [MarshalAs(UnmanagedType.I1)]
         public bool MulMatQ;

@@ -3,7 +3,6 @@ using Llama.Data.Exceptions;
 using Llama.Data.Models;
 using Llama.Data.Native;
 using Llama.Native;
-using System.Data.Common;
 using System.Diagnostics;
 
 namespace Llama.Core.Utils
@@ -40,13 +39,13 @@ namespace Llama.Core.Utils
             {
                 firstEmpty++;
 
-                if(firstEmpty == cells.Length)
+                if (firstEmpty == cells.Length)
                 {
                     return false;
                 }
             }
 
-            for(uint i = firstEmpty; i < cells.Length - batchIds.Items.Count; i++)
+            for (uint i = firstEmpty; i < cells.Length - batchIds.Items.Count; i++)
             {
                 FoundBlock thisBlock = new()
                 {
@@ -59,11 +58,11 @@ namespace Llama.Core.Utils
 
                 uint ii = 0;
 
-                while(ii < cutoff)
+                while (ii < cutoff)
                 {
                     uint offset = i + ii;
 
-                    if(offset >= cells.Length)
+                    if (offset >= cells.Length)
                     {
                         return foundBlock != null;
                     }
@@ -73,7 +72,7 @@ namespace Llama.Core.Utils
                         cutoff++;
                         thisBlock.AddReplacement(cells[offset].pos, cells[offset].value);
 
-                        if(foundBlock != null && foundBlock.TokenReplacements.Count <= thisBlock.TokenReplacements.Count)
+                        if (foundBlock != null && foundBlock.TokenReplacements.Count <= thisBlock.TokenReplacements.Count)
                         {
                             goodBlock = false;
                             break;
@@ -83,15 +82,15 @@ namespace Llama.Core.Utils
                     ii++;
                 }
 
-                if(goodBlock)
+                if (goodBlock)
                 {
                     thisBlock.Size = cutoff;
 
-                    if(foundBlock == null || foundBlock.Size > thisBlock.Size)
+                    if (foundBlock == null || foundBlock.Size > thisBlock.Size)
                     {
                         foundBlock = thisBlock;
 
-                        if(thisBlock.TokenReplacements.Count == 0)
+                        if (thisBlock.TokenReplacements.Count == 0)
                         {
                             return true;
                         }
@@ -111,17 +110,16 @@ namespace Llama.Core.Utils
 
             bool reevaluate = false;
 
-            foreach(BatchItem<LlamaToken> oldItem in batch.Items)
+            foreach (BatchItem<LlamaToken> oldItem in batch.Items)
             {
                 idBatch.AddItem(oldItem.Token.Id, oldItem.Position, oldItem.SequenceIds, oldItem.IncludeLogits);
                 maxNatural = Math.Max(oldItem.Position, maxNatural);
             }
 
-            if(idBatch.Items.Count > 1) 
-            { 
-                if(TryFindBlock(idBatch, out FoundBlock foundBlock))
+            if (idBatch.Items.Count > 1)
+            {
+                if (TryFindBlock(idBatch, out FoundBlock foundBlock))
                 {
-
                     if (foundBlock.TokenReplacements.Count > 0)
                     {
                         //We will need to clear up these token slots that we found in this span
@@ -136,7 +134,7 @@ namespace Llama.Core.Utils
                         }
                     }
 
-                    if(maxReplacement > maxNatural)
+                    if (maxReplacement > maxNatural)
                     {
                         reevaluate = true;
                     }
@@ -147,12 +145,15 @@ namespace Llama.Core.Utils
                 }
             }
 
+#if DEBUG
             Log(idBatch);
+#endif
 
             if (!reevaluate)
-            {              
+            {
                 Eval(idBatch);
-            } else
+            }
+            else
             {
                 BatchDecode<int> b1 = idBatch.Clone(b => b.Position != maxNatural);
                 BatchDecode<int> b2 = idBatch.Clone(b => b.Position == maxNatural);
@@ -162,12 +163,11 @@ namespace Llama.Core.Utils
 
             var cells = NativeApi.GetKvCells(this._handle);
             var evaluated = NativeApi.GetEvaluated(this._handle, this._model);
-
         }
 
         private void Log(BatchDecode<int> idBatch)
         {
-            if(!Directory.Exists("Logs"))
+            if (!Directory.Exists("Logs"))
             {
                 Directory.CreateDirectory("Logs");
             }

@@ -11,6 +11,7 @@
             }
 
             public uint Pos { get; set; }
+
             public int Value { get; set; }
         }
     }

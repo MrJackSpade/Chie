@@ -24,7 +24,7 @@ namespace Llama.Core.Utils
         {
             Guid g = Guid.NewGuid();
 
-            if(!Directory.Exists("Logs"))
+            if (!Directory.Exists("Logs"))
             {
                 Directory.CreateDirectory("Logs");
             }
@@ -35,10 +35,12 @@ namespace Llama.Core.Utils
             File.WriteAllLines(e_dump, GetLines(kvCache));
             File.WriteAllLines(b_dump, GetLines(buffer));
         }
-            
+
         public void Sync(KvCacheState<T> kvCache, PointerArray<T> buffer)
         {
+#if DEBUG
             Log(kvCache, buffer);
+#endif
 
             Debug.WriteLine("Transforming... ");
             Debug.WriteLine($"\tBuffer Pointer: {buffer.Pointer}");
@@ -95,7 +97,7 @@ namespace Llama.Core.Utils
         /// <summary>
         /// Remove any tokens that aren't set to be moved elsewhere, or pinned.
         /// If its not set to be used somewhere else and its not pinned, then
-        /// it's not used anywhere. Leaving it will cause double tokens for that 
+        /// it's not used anywhere. Leaving it will cause double tokens for that
         /// slot
         /// </summary>
         /// <param name="kvCache"></param>
@@ -104,7 +106,7 @@ namespace Llama.Core.Utils
         {
             for (uint i = 0; i < buffer.Pointer; i++)
             {
-                if (!kvCache.IsMoved(i))
+                if (!kvCache.IsMoved(i) && !kvCache.IsDefault(i))
                 {
                     _arrayShifter.RemoveCacheToken(i);
                     kvCache[i] = _defaultToken;

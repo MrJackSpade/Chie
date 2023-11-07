@@ -32,6 +32,16 @@ namespace LlamaApi.Models
             return context;
         }
 
+        public bool TryGetContext(Guid id, out ContextInstance? context)
+        {
+            if (this.Instance is null)
+            {
+                throw new ModelNotLoadedException();
+            }
+
+            return this.Evaluator.TryGetValue(id, out context);
+        }
+
         public void Lock() => this._semaphore.Wait();
 
         public void Unlock() => this._semaphore.Release();

@@ -8,31 +8,30 @@ using ChieApi.Samplers;
 using ChieApi.Shared.Entities;
 using ChieApi.Shared.Services;
 using ChieApi.TokenTransformers;
-using Llama.Core.Samplers.Mirostat;
-using Llama.Data;
 using Llama.Data.Collections;
 using Llama.Data.Extensions;
 using Llama.Data.Interfaces;
 using Llama.Data.Models;
-using Llama.Data.Models.Settings;
 using LlamaApi.Shared.Extensions;
 using LlamaApi.Shared.Interfaces;
-using LlamaApi.Shared.Models.Response;
 using LlamaApiClient;
 using Loxifi;
 using Loxifi.AsyncExtensions;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json.Serialization;
-using MirostatSamplerSettings = LlamaApi.Models.Request.MirostatSamplerSettings;
 
 namespace ChieApi.Services
 {
     public partial class LlamaService
     {
+        public const int SUMMARY_TARGET = 2000;
+
         private const int SUMMARY_CHUNKS = 12;
 
         private readonly AutoResetEvent _acceptingInput = new(false);
+
+        private readonly CharacterConfiguration _characterConfiguration;
 
         private readonly SemaphoreSlim _chatLock = new(1);
 
@@ -61,8 +60,6 @@ namespace ChieApi.Services
         private readonly List<ITokenTransformer> _transformers;
 
         private readonly UserDataRepository _userDataService;
-
-        private readonly CharacterConfiguration _characterConfiguration;
 
         private LlamaTokenCollection _context;
 
@@ -446,77 +443,6 @@ namespace ChieApi.Services
                 NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
             }));
 
-            _logger.LogInformation("Connecting to client...");
-
-            await _client.LoadModel(new LlamaModelSettings()
-            {
-                GpuLayerCount = _characterConfiguration.GpuLayers,
-                Model = _characterConfiguration.ModelPath,
-                UseMemoryMap = !_characterConfiguration.NoMemoryMap,
-                UseMemoryLock = true
-            });
-
-            await _client.LoadContext(new LlamaContextSettings()
-            {
-                BatchSize = _characterConfiguration.BatchSize,
-                ContextSize = _characterConfiguration.ContextLength,
-                EvalThreadCount = _characterConfiguration.Threads ?? (uint)(System.Environment.ProcessorCount / 2),
-                MemoryMode = _characterConfiguration.MemoryMode,
-                ThreadCount = _characterConfiguration.Threads ?? (uint)(Environment.ProcessorCount / 2),
-                RopeFrequencyScaling = _characterConfiguration.RopeScale,
-                RopeFrequencyBase = _characterConfiguration.RopeBase
-            }, (c) =>
-            {
-                c.ContextId = Guid.Empty;
-
-                if (_characterConfiguration.MiroStat != MirostatType.None)
-                {
-                    if (_characterConfiguration.MiroStat == MirostatType.Three)
-                    {
-                        c.MirostatTempSamplerSettings = new MirostatTempSamplerSettings()
-                        {
-                            Target = _characterConfiguration.MiroStatEntropy,
-                            LearningRate = _characterConfiguration.LearningRate,
-                            InitialTemperature = _characterConfiguration.Temperature,
-                            TopK = _characterConfiguration.TopK
-                        };
-                    }
-                    else
-                    {
-                        c.MirostatSamplerSettings = new MirostatSamplerSettings()
-                        {
-                            Tau = _characterConfiguration.MiroStatEntropy,
-                            Temperature = _characterConfiguration.Temperature,
-                            MirostatType = _characterConfiguration.MiroStat
-                        };
-                    }
-                }
-                else
-                {
-                    c.TemperatureSamplerSettings = new TemperatureSamplerSettings()
-                    {
-                        Temperature = _characterConfiguration.Temperature,
-                        TopP = _characterConfiguration.TopP,
-                    };
-                }
-
-                c.RepetitionSamplerSettings = new RepetitionSamplerSettings()
-                {
-                    RepeatPenalty = _characterConfiguration.RepeatPenalty,
-                    RepeatTokenPenaltyWindow = _characterConfiguration.RepeatPenaltyWindow
-                };
-
-                c.ComplexPresencePenaltySettings = new ComplexPresencePenaltySettings()
-                {
-                    LengthScale = 1.8f,
-                    GroupScale = 1.575f,
-                    MinGroupLength = 3,
-                    RepeatTokenPenaltyWindow = -1
-                };
-            });
-
-            _logger.LogInformation("Connected to client.");
-
             if (AiState == AiState.Initializing)
             {
                 _ = SetState(AiState.Idle);
@@ -739,7 +665,6 @@ namespace ChieApi.Services
 
             return true;
         }
-        public const int SUMMARY_TARGET = 2000;
 
         private async Task TrySummarize()
         {
@@ -753,7 +678,7 @@ namespace ChieApi.Services
             float sumNextStart = 0.6f;
             float sumNextLoad = 1 - (1 / (float)(SUMMARY_CHUNKS - 1));
 
-            //We only want to gen/load when it makes sense, which is when we have a lot 
+            //We only want to gen/load when it makes sense, which is when we have a lot
             //of context or when theres no existing history
             bool shouldSumStart = contextGen > contextLen * sumNextStart || (!existingSummary && canSummarize);
             bool shouldSumLoad = contextGen > contextLen * sumNextLoad || (!existingSummary && _summaryTask != null && _summaryTask.IsCompleted && canSummarize);
@@ -800,7 +725,7 @@ namespace ChieApi.Services
                 uint chunkLen = contextLen / SUMMARY_CHUNKS;
                 targetLength -= chunkLen;
 
-                //Now we figure out how many tokens we need to 
+                //Now we figure out how many tokens we need to
                 //remove from the current gen, to get in under the target
                 int toRemove = (int)(contextGen - targetLength);
 

@@ -7,11 +7,12 @@
             public uint Offset = 0;
 
             public uint Size = 0;
-            public List<TokenReplacement> TokenReplacements { get; set; } = new ();
+
+            public List<TokenReplacement> TokenReplacements { get; set; } = new();
 
             public void AddReplacement(int pos, int value)
             {
-                if(pos < 0)
+                if (pos < 0)
                 {
                     throw new ArgumentException("Position must be >= 0");
                 }

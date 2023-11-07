@@ -1,26 +1,17 @@
-﻿using Llama.Core.Samplers.Mirostat;
-using Llama.Data;
-using Llama.Data.Models.Settings;
+﻿using Llama.Data;
 using Llama.Data.Scheduler;
-using LlamaApi.Attributes;
+using LlamaApi.Shared.Models.Request;
 using System.Text.Json.Serialization;
 
 namespace LlamaApi.Models.Request
 {
-    [RequiresAny(nameof(MirostatSamplerSettings), nameof(TemperatureSamplerSettings), nameof(MirostatTempSamplerSettings))]
     public class ContextRequest
     {
-        [JsonPropertyName("ComplexPresence")]
-        public ComplexPresencePenaltySettings? ComplexPresencePenaltySettings { get; set; }
+        [JsonPropertyName("contextRequestSettings")]
+        public ContextRequestSettings? ContextRequestSettings { get; set; }
 
         [JsonPropertyName("contextId")]
-        public Guid? ContextId { get; set; }
-
-        [JsonPropertyName("mirostat")]
-        public MirostatSamplerSettings? MirostatSamplerSettings { get; set; }
-
-        [JsonPropertyName("mirostatTemp")]
-        public MirostatTempSamplerSettings? MirostatTempSamplerSettings { get; set; }
+        public Guid ContextId { get; set; }
 
         [JsonPropertyName("modelId")]
         public Guid ModelId { get; set; }
@@ -28,13 +19,7 @@ namespace LlamaApi.Models.Request
         [JsonPropertyName("priority")]
         public ExecutionPriority Priority { get; set; }
 
-        [JsonPropertyName("repetition")]
-        public RepetitionSamplerSettings? RepetitionSamplerSettings { get; set; }
-
         [JsonPropertyName("settings")]
         public LlamaContextSettings Settings { get; set; } = new LlamaContextSettings();
-
-        [JsonPropertyName("temperature")]
-        public TemperatureSamplerSettings? TemperatureSamplerSettings { get; set; }
     }
 }

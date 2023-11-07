@@ -121,6 +121,5 @@ namespace Llama.Native
         /// <param name="min_keep"></param>
         [DllImport(LIBRARY_NAME, EntryPoint = "llama_sample_typical")]
         public static extern void SampleTypical(SafeLlamaContextHandle ctx, IntPtr candidates, float p, ulong min_keep);
-
     }
 }

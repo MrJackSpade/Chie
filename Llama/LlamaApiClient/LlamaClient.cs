@@ -2,10 +2,10 @@
 using Llama.Data.Collections;
 using Llama.Data.Interfaces;
 using Llama.Data.Models;
-using LlamaApi.Models;
 using LlamaApi.Models.Request;
 using LlamaApi.Models.Response;
 using LlamaApi.Shared.Converters;
+using LlamaApi.Shared.Models;
 using LlamaApi.Shared.Models.Request;
 using LlamaApi.Shared.Models.Response;
 using System.Diagnostics;
@@ -17,18 +17,23 @@ namespace LlamaApiClient
 {
     public class LlamaClient
     {
-        private readonly HttpClient _httpClient;
+        private readonly ContextRequestSettings _contextRequestSettings;
+
+        private readonly LlamaContextSettings _contextSettings;
 
         private readonly Guid _modelGuid = Guid.Empty;
+
+        private readonly LlamaModelSettings _modelSettings;
 
         private readonly JsonSerializerOptions _serializerOptions;
 
         private readonly LlamaClientSettings _settings;
 
-        public LlamaClient(LlamaClientSettings settings)
+        public LlamaClient(LlamaClientSettings settings, LlamaContextSettings contextSettings, LlamaModelSettings modelSettings, ContextRequestSettings contextRequestSettings)
         {
-            this._settings = settings;
-            this._httpClient = new HttpClient()
+            _settings = settings;
+
+            HttpClient = new HttpClient()
             {
                 Timeout = TimeSpan.FromDays(1)
             };
@@ -39,24 +44,40 @@ namespace LlamaApiClient
             };
 
             _serializerOptions.Converters.Add(new LogitRuleConverter());
+            _contextSettings = contextSettings;
+            _modelSettings = modelSettings;
+            _contextRequestSettings = contextRequestSettings;
         }
+
+        protected HttpClient HttpClient { get; }
 
         public async Task DisposeContext(Guid contextId)
         {
-            await this.Post("/Llama/context/dispose", new ContextDisposeRequest()
+            await Post("/Llama/context/dispose", new ContextDisposeRequest()
             {
                 ContextId = contextId
-            });
+            }, contextId);
         }
 
         public async Task Eval(Guid contextId)
         {
-            EvaluationResponse response = await this.WaitForResponse<EvaluationResponse>("/Llama/eval", new EvaluateRequest()
+            EvaluationResponse response = await Post<EvaluationResponse>("/Llama/eval", new EvaluateRequest()
             {
                 ContextId = contextId
-            });
+            }, contextId);
 
             Debug.WriteLine("Evaluated: " + response.Evaluated);
+        }
+
+        public virtual async Task<ClientResponse> GetAsync(string host, string url)
+        {
+            HttpResponseMessage hr = await HttpClient.GetAsync(host + url);
+
+            return new ClientResponse()
+            {
+                Body = await hr.Content.ReadAsStringAsync(),
+                Status = (int)hr.StatusCode
+            };
         }
 
         public async Task<float[]> GetLogits(Guid contextId)
@@ -66,7 +87,7 @@ namespace LlamaApiClient
                 ContextId = contextId
             };
 
-            GetLogitsResponse response = await this.WaitForResponse<GetLogitsResponse>("/Llama/getlogits", request);
+            GetLogitsResponse response = await Post<GetLogitsResponse>("/Llama/getlogits", request, contextId);
 
             return response.GetValue().ToArray();
         }
@@ -74,34 +95,21 @@ namespace LlamaApiClient
         public InferenceEnumerator Infer(Guid contextId, LogitRuleCollection? logitRules)
         {
             return new InferenceEnumerator(
-                (b) => this.Predict(contextId, b),
-                (t) => this.Write(contextId, t),
+                (b) => Predict(contextId, b),
+                (t) => Write(contextId, t),
                 logitRules
             );
         }
 
-        public virtual async Task<ContextState> LoadContext(LlamaContextSettings settings, Action<ContextRequest> settingsAction)
+        public virtual async Task<ClientResponse> PostAsync(string host, string url, JsonContent content)
         {
-            ContextRequest cr = new()
+            HttpResponseMessage hr = await HttpClient.PostAsync(host + url, content);
+
+            return new ClientResponse()
             {
-                Settings = settings,
-                ModelId = this._modelGuid
+                Body = await hr.Content.ReadAsStringAsync(),
+                Status = (int)hr.StatusCode
             };
-
-            settingsAction.Invoke(cr);
-
-            ContextResponse loadResponse = await this.WaitForResponse<ContextResponse>("/Llama/context", cr);
-
-            return loadResponse.State;
-        }
-
-        public async Task<ModelResponse> LoadModel(LlamaModelSettings settings)
-        {
-            return await this.WaitForResponse<ModelResponse>("/Llama/model", new ModelRequest()
-            {
-                Settings = settings,
-                ModelId = this._modelGuid
-            });
         }
 
         public async Task<ResponseLlamaToken> Predict(Guid contextId, LogitRuleCollection? ruleCollection = null)
@@ -118,14 +126,7 @@ namespace LlamaApiClient
 
             PredictResponse response;
 
-            if (this._settings.Async)
-            {
-                response = await this.WaitForResponse<PredictResponse>("/Llama/predictasync", request);
-            }
-            else
-            {
-                response = await this.Post<PredictResponse>("/Llama/predict", request);
-            }
+            response = await Post<PredictResponse>("/Llama/predict", request, contextId);
 
             return response.Predicted;
         }
@@ -137,13 +138,13 @@ namespace LlamaApiClient
                 return new LlamaTokenCollection();
             }
 
-            TokenizeResponse response = await this.WaitForResponse<TokenizeResponse>("/Llama/tokenize", new TokenizeRequest()
+            TokenizeResponse response = await Post<TokenizeResponse>("/Llama/tokenize", new TokenizeRequest()
             {
                 Content = s,
                 ContextId = contextId
-            });
+            }, contextId);
 
-            return new LlamaTokenCollection(response.Tokens);
+            return new LlamaTokenCollection(response.Tokens.Select(lt => new LlamaToken(lt.Id, lt.Value)));
         }
 
         public async Task<ContextState> Write(Guid contextId, RequestLlamaToken requestLlamaToken, int startIndex = -1)
@@ -153,7 +154,7 @@ namespace LlamaApiClient
                 requestLlamaToken
             };
 
-            return await this.Write(contextId, tokens, startIndex);
+            return await Write(contextId, tokens, startIndex);
         }
 
         public async Task<ContextState> Write(Guid contextId, IEnumerable<RequestLlamaToken> requestLlamaTokens, int startIndex = -1)
@@ -167,105 +168,98 @@ namespace LlamaApiClient
 
             WriteTokenResponse response;
 
-            if (this._settings.Async)
-            {
-                response = await this.WaitForResponse<WriteTokenResponse>("/Llama/writeasync", request);
-            }
-            else
-            {
-                response = await this.Post<WriteTokenResponse>("/Llama/write", request);
-            }
+            response = await Post<WriteTokenResponse>("/Llama/write", request, contextId);
 
             return response.State;
         }
 
         public async Task<ContextState> Write(Guid contextId, string s, int startIndex = -1)
         {
-            IReadOnlyLlamaTokenCollection tokens = await this.Tokenize(contextId, s);
+            IReadOnlyLlamaTokenCollection tokens = await Tokenize(contextId, s);
 
-            return await this.Write(contextId, tokens.Select(r => new RequestLlamaToken() { TokenId = r.Id }), startIndex);
+            return await Write(contextId, tokens.Select(r => new RequestLlamaToken() { TokenId = r.Id }), startIndex);
         }
 
-        private async Task<TValue> Get<TValue>(string url)
+        protected virtual async Task<ContextState> LoadContext(LlamaContextSettings settings, Guid contextId)
         {
-            string responseStr = await this.Request(() => this._httpClient.GetAsync(this._settings.Host + url));
+            ContextRequest cr = new()
+            {
+                ContextId = contextId,
+                Settings = settings,
+                ModelId = _modelGuid,
+                ContextRequestSettings = _contextRequestSettings
+            };
+
+            ContextResponse loadResponse = await Post<ContextResponse>("/Llama/context", cr, contextId);
+
+            return loadResponse.State;
+        }
+
+        protected async Task<ModelResponse> LoadModel(LlamaModelSettings settings)
+        {
+            return await Post<ModelResponse>("/Llama/model", new ModelRequest()
+            {
+                Settings = settings,
+                ModelId = _modelGuid
+            }, Guid.Empty);
+        }
+
+        private async Task<TValue> Get<TValue>(string url, Guid contextId)
+        {
+            string responseStr = await Request(() => GetAsync(_settings.Host, url), contextId);
 
             return JsonSerializer.Deserialize<TValue>(responseStr);
         }
 
-        private async Task<TValue> Post<TValue>(string url, object data)
+        private async Task<TValue> Post<TValue>(string url, object data, Guid contextId)
         {
-            string responseStr = await this.Request(() => this._httpClient.PostAsync(this._settings.Host + url, JsonContent.Create(data, options: this._serializerOptions)));
+            string responseStr = await Request(() => PostAsync(_settings.Host, url, JsonContent.Create(data, options: _serializerOptions)), contextId);
 
             return JsonSerializer.Deserialize<TValue>(responseStr);
         }
 
-        private async Task Post(string url, object data) => await this.Request(() => this._httpClient.PostAsync(this._settings.Host + url, JsonContent.Create(data, options: this._serializerOptions)));
+        private async Task Post(string url, object data, Guid contextId)
+        {
+            await Request(() => PostAsync(_settings.Host, url, JsonContent.Create(data, options: _serializerOptions)), contextId);
+        }
 
-        private async Task<string> Request(Func<Task<HttpResponseMessage>> toInvoke)
+        private async Task<string> Request(Func<Task<ClientResponse>> toInvoke, Guid contextId)
         {
             do
             {
-                HttpResponseMessage r = await toInvoke.Invoke();
+                ClientResponse r = await toInvoke.Invoke();
 
-                string responseStr = await r.Content.ReadAsStringAsync();
+                string responseStr = r.Body;
 
-                if ((int)r.StatusCode >= 400)
+                if (r.Status == (int)LlamaStatusCodes.NoModelLoaded)
+                {
+                    await LoadModel(_modelSettings);
+                    continue;
+                }
+
+                if (r.Status == (int)LlamaStatusCodes.NoContextLoaded)
+                {
+                    if (contextId == Guid.Empty)
+                    {
+                        throw new InvalidOperationException("Server requires context load but no context id proviced");
+                    }
+
+                    await LoadContext(_contextSettings, contextId);
+                    continue;
+                }
+
+                if (r.Status >= 400)
                 {
                     throw new Exception(responseStr);
                 }
 
-                if (r.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+                if (r.Status == (int)LlamaStatusCodes.NotReady)
                 {
                     await Task.Delay(1000);
                     continue;
                 }
 
                 return responseStr;
-            } while (true);
-        }
-
-        private async Task WaitForResponse(string url, object data)
-        {
-            Job j = await this.Post<Job>(url, data);
-
-            do
-            {
-                JobResponse jobResponse = await this.Get<JobResponse>($"/Llama/job/{j.Id}");
-
-                if (jobResponse.State == JobState.Success)
-                {
-                    return;
-                }
-
-                if (jobResponse.State == JobState.Failure)
-                {
-                    throw new Exception();
-                }
-
-                await Task.Delay(this._settings.PollingFrequencyMs);
-            } while (true);
-        }
-
-        private async Task<TOut> WaitForResponse<TOut>(string url, object data)
-        {
-            Job j = await this.Post<Job>(url, data);
-
-            do
-            {
-                JobResponse<TOut> jobResponse = await this.Get<JobResponse<TOut>>($"/Llama/job/{j.Id}");
-
-                if (jobResponse.State == JobState.Success)
-                {
-                    return jobResponse.Result;
-                }
-
-                if (jobResponse.State == JobState.Failure)
-                {
-                    throw new Exception();
-                }
-
-                await Task.Delay(this._settings.PollingFrequencyMs);
             } while (true);
         }
     }

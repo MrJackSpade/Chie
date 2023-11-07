@@ -8,9 +8,6 @@
             Min = min;
         }
 
-        public static implicit operator uint(WrapAroundCounter c) => c.Value;
-      
-
         public WrapAroundCounter(uint max)
         {
             Min = 0;
@@ -22,6 +19,8 @@
         public uint Min { get; private set; }
 
         public uint Value { get; private set; }
+
+        public static implicit operator uint(WrapAroundCounter c) => c.Value;
 
         public void Increment()
         {

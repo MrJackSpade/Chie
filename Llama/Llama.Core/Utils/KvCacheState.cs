@@ -38,7 +38,7 @@ namespace Llama.Core.Utils
 
         public void ClearTransformations()
         {
-            for(int i = 0; i < _transformations.Length;  i++)
+            for (int i = 0; i < _transformations.Length; i++)
             {
                 _transformations[i] = null;
             }
@@ -81,7 +81,7 @@ namespace Llama.Core.Utils
 
         public void Move(uint oldIndex, uint newIndex)
         {
-            if(IsSet(newIndex))
+            if (IsSet(newIndex))
             {
                 throw new Exception("New location already has token set");
             }

@@ -6,8 +6,11 @@ namespace Llama.Data.Native
     public struct LlamaKvCell
     {
         public int pos;
+
         public int delta;
+
         public int value;
+
         public IntPtr seq_id; // 64-bit representation for the std::set<llama_seq_id>
 
         public int p1;

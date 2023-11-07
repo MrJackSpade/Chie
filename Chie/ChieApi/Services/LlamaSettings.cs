@@ -79,5 +79,17 @@ namespace ChieApi.Services
         public bool UseSessionData { get; set; }
 
         public bool VerbosePrompt { get; set; }
+
+        public LlamaRopeScalingType RopeScalingType { get; set; } = LlamaRopeScalingType.Linear;
+
+        public float YarnExtFactor { get; set; } = -1.0f;
+
+        public float YarnAttnFactor { get; set; } = 1.0f;
+
+        public float YarnBetaFast { get; set; } = 32.0f;
+
+        public float YarnBetaSlow { get; set; } = 1.0f;
+
+        public uint YarnOrigCtx { get; set; } = 0;
     }
 }

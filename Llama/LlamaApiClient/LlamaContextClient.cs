@@ -2,6 +2,7 @@
 using Llama.Data.Interfaces;
 using Llama.Data.Models;
 using LlamaApi.Models.Request;
+using LlamaApi.Shared.Models.Request;
 using LlamaApi.Shared.Models.Response;
 
 namespace LlamaApiClient
@@ -10,9 +11,9 @@ namespace LlamaApiClient
     {
         private readonly LogitRuleCollection _logitRules = new();
 
-        private Guid _contextGuid = Guid.NewGuid();
+        private Guid _contextGuid = Guid.Parse("5e375ced-115d-4b98-9ca3-c80254f90ba1");
 
-        public LlamaContextClient(LlamaClientSettings settings) : base(settings)
+        public LlamaContextClient(LlamaClientSettings settings, LlamaContextSettings contextSettings, LlamaModelSettings modelSettings, ContextRequestSettings contextRequestSettings) : base(settings, contextSettings, modelSettings, contextRequestSettings)
         {
         }
 
@@ -32,15 +33,6 @@ namespace LlamaApiClient
 
         public InferenceEnumerator Infer() => this.Infer(this._contextGuid, this._logitRules);
 
-        public override async Task<ContextState> LoadContext(LlamaContextSettings settings, Action<ContextRequest> settingsAction)
-        {
-            ContextState state = await base.LoadContext(settings, settingsAction);
-
-            this._contextGuid = state.Id;
-
-            return state;
-        }
-
         public Task<ResponseLlamaToken> Predict(LogitRuleCollection? rules) => this.Predict(this._contextGuid, rules);
 
         public Task<IReadOnlyLlamaTokenCollection> Tokenize(string s) => this.Tokenize(this._contextGuid, s);
@@ -50,5 +42,12 @@ namespace LlamaApiClient
         public Task<ContextState> Write(IEnumerable<RequestLlamaToken> requestLlamaTokens, int startIndex = -1) => this.Write(this._contextGuid, requestLlamaTokens, startIndex);
 
         public Task<ContextState> Write(string s, int startIndex = -1) => this.Write(this._contextGuid, s, startIndex);
+
+        protected async Task<ContextState> LoadContext(LlamaContextSettings settings)
+        {
+            ContextState state = await base.LoadContext(settings, _contextGuid);
+
+            return state;
+        }
     }
 }

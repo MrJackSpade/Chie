@@ -28,6 +28,19 @@ namespace Llama.Data
         public uint Seed { get; set; } = (uint)new Random().Next();
 
         public uint ThreadCount { get; set; } = (uint)Math.Max(Environment.ProcessorCount / 2, 1);
+
         public bool GenerateEmbedding { get; set; }
+
+        public LlamaRopeScalingType RopeScalingType { get; set; } = LlamaRopeScalingType.Unspecified;
+
+        public float YarnExtFactor { get; set; } = -1.0f;
+
+        public float YarnAttnFactor { get; set; } = 1.0f;
+
+        public float YarnBetaFast { get; set; } = 32.0f;
+
+        public float YarnBetaSlow { get; set; } = 1.0f;
+
+        public uint YarnOrigCtx { get; set; } = 0;
     }
 }

@@ -8,14 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="NewFolder\**" />
     <Compile Remove="SummarizationData\**" />
-    <Content Remove="NewFolder\**" />
     <Content Remove="SummarizationData\**" />
-    <EmbeddedResource Remove="NewFolder\**" />
     <EmbeddedResource Remove="SummarizationData\**" />
     <None Remove="Ai\**\*.txt" />
-    <None Remove="NewFolder\**" />
     <None Remove="SummarizationData\**" />
   </ItemGroup>
 

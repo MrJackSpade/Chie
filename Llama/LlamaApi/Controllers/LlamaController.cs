@@ -12,14 +12,13 @@ using Llama.Data.Scheduler;
 using Llama.Extensions;
 using Llama.Native;
 using LlamaApi.Exceptions;
-using LlamaApi.Interfaces;
 using LlamaApi.Models;
 using LlamaApi.Models.Request;
 using LlamaApi.Models.Response;
+using LlamaApi.Shared.Models;
 using LlamaApi.Shared.Models.Request;
 using LlamaApi.Shared.Models.Response;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json.Nodes;
 
 namespace LlamaApi.Controllers
 {
@@ -29,93 +28,75 @@ namespace LlamaApi.Controllers
     {
         private readonly IExecutionScheduler _contextExecutionScheduler;
 
-        private readonly IJobService _jobService;
-
         private readonly LoadedModel _loadedModel;
 
-        public LlamaController(IExecutionScheduler contextExecutionScheduler, LoadedModel loadedModel, IJobService jobService)
+        public LlamaController(IExecutionScheduler contextExecutionScheduler, LoadedModel loadedModel)
         {
             this._contextExecutionScheduler = contextExecutionScheduler;
             this._loadedModel = loadedModel;
-            this._jobService = jobService;
-        }
-
-        [HttpPost("buffer")]
-        public Job Buffer(ContextSnapshotRequest request)
-        {
-            return this._jobService.Enqueue(() =>
-            {
-                ContextInstance context = this._loadedModel.GetContext(request.ContextId);
-
-                return new ContextSnapshotResponse()
-                {
-                    Tokens = context.Context.Buffer.Select(t => new ResponseLlamaToken(t)).ToArray()
-                };
-            }, ExecutionPriority.Immediate);
         }
 
         [HttpPost("context")]
-        public Job Context(ContextRequest request)
+        public ContextResponse Context(ContextRequest request)
         {
-            return this._jobService.Enqueue(() =>
+            this._loadedModel.Lock();
+
+            Guid? contextId = request?.ContextId;
+
+            try
             {
-                this._loadedModel.Lock();
-
-                try
+                if (this._loadedModel?.Id != request.ModelId)
                 {
-                    if (this._loadedModel?.Id != request.ModelId)
-                    {
-                        throw new ModelNotLoadedException();
-                    }
+                    return StatusCode<ContextResponse>(LlamaStatusCodes.NoModelLoaded);
+                }
 
-                    if (request.ContextId.HasValue && this._loadedModel.Evaluator.ContainsKey(request.ContextId.Value))
-                    {
-                        ContextInstance contextEvaluator = this._loadedModel.GetContext(request.ContextId.Value);
+                if (contextId.HasValue && this._loadedModel.Evaluator.ContainsKey(contextId.Value))
+                {
+                    ContextInstance contextEvaluator = this._loadedModel.GetContext(contextId.Value);
 
-                        return new ContextResponse()
-                        {
-                            State = new ContextState()
-                            {
-                                Id = request.ContextId ?? Guid.NewGuid(),
-                                AvailableBuffer = contextEvaluator.Context.AvailableBuffer,
-                                IsLoaded = true,
-                                Size = contextEvaluator.Context.Size
-                            }
-                        };
-                    }
-
-                    SafeLlamaContextHandle safeLlamaContextHandle = NativeApi.LoadContext(this._loadedModel.Instance.Handle, request.Settings);
-
-                    LlamaContextWrapper wrapper = new(this._contextExecutionScheduler,
-                                                       safeLlamaContextHandle,
-                                                       this._loadedModel.Instance.Handle,
-                                                       request.Settings,
-                                                       this.GetSimpleSamplers(request),
-                                                       this.GetFinalSampler(request)
-                                                       );
-
-                    ContextInstance evaluator = new(wrapper);
-
-                    ContextResponse response = new()
+                    return new ContextResponse()
                     {
                         State = new ContextState()
                         {
-                            Id = request.ContextId ?? Guid.NewGuid(),
-                            AvailableBuffer = wrapper.AvailableBuffer,
+                            Id = contextId ?? Guid.NewGuid(),
+                            AvailableBuffer = contextEvaluator.Context.AvailableBuffer,
                             IsLoaded = true,
-                            Size = wrapper.Size
+                            Size = contextEvaluator.Context.Size
                         }
                     };
-
-                    this._loadedModel.Evaluator.Add(response.State.Id, evaluator);
-
-                    return response;
                 }
-                finally
+
+                SafeLlamaContextHandle safeLlamaContextHandle = NativeApi.LoadContext(this._loadedModel.Instance.Handle, request.Settings);
+
+                LlamaContextWrapper wrapper = new(this._contextExecutionScheduler,
+                                                   safeLlamaContextHandle,
+                                                   this._loadedModel.Instance.Handle,
+                                                   request.Settings,
+                                                   this.GetSimpleSamplers(request),
+                                                   this.GetFinalSampler(request)
+                                                   );
+
+                ContextInstance evaluator = new(wrapper);
+
+                ContextResponse response = new()
                 {
-                    this._loadedModel.Unlock();
-                }
-            }, request.Priority);
+                    State = new ContextState()
+                    {
+                        Id = contextId ?? Guid.NewGuid(),
+                        AvailableBuffer = wrapper.AvailableBuffer,
+                        IsLoaded = true,
+                        Size = wrapper.Size
+                    }
+                };
+
+                this._loadedModel.Evaluator.Add(response.State.Id, evaluator);
+
+                return response;
+            }
+            finally
+            {
+                this._loadedModel.Unlock();
+            }
         }
 
         [HttpPost("context/dispose")]
@@ -129,129 +110,99 @@ namespace LlamaApi.Controllers
         }
 
         [HttpPost("eval")]
-        public Job Eval(EvaluateRequest request)
+        public EvaluationResponse Eval(EvaluateRequest request)
         {
-            return this._jobService.Enqueue(() =>
+            if (!TryLoadContext(request.ContextId, out ContextInstance context, out EvaluationResponse response))
             {
-                ContextInstance context = this._loadedModel.GetContext(request.ContextId);
-
-                context.Evaluate(request.Priority);
-
-                return new EvaluationResponse()
-                {
-                    AvailableBuffer = context.Context.AvailableBuffer,
-                    Id = request.ContextId,
-                    IsLoaded = true,
-                    Evaluated = 0
-                };
-            }, request.Priority);
-        }
-
-        [HttpPost("evaluated")]
-        public Job Evaluated(ContextSnapshotRequest request)
-        {
-            return this._jobService.Enqueue(() =>
-            {
-                ContextInstance context = this._loadedModel.GetContext(request.ContextId);
-
-                return new ContextSnapshotResponse()
-                {
-                    Tokens = context.Context.Evaluated.Select(t => new ResponseLlamaToken(t)).ToArray()
-                };
-            }, ExecutionPriority.Immediate);
-        }
-
-        [HttpPost("getlogits")]
-        public Job GetLogits(GetLogitsRequest request)
-        {
-            return this._jobService.Enqueue(() =>
-            {
-                ContextInstance context = this._loadedModel.GetContext(request.ContextId);
-
-                Span<float> logits = context.Context.GetLogits();
-
-                GetLogitsResponse response = new();
-
-                response.SetValue(logits);
-
                 return response;
-            }, request.Priority);
-        }
-
-        [HttpGet("job/{id}")]
-        public JobResponse? Job(long id)
-        {
-            if (id == 0)
-            {
-                return null;
             }
 
-            Job? j = this._jobService.Get(id);
+            context.Evaluate(request.Priority);
 
-            if (j is null)
+            return new EvaluationResponse()
             {
-                return null;
-            }
-
-            JsonNode result = null;
-
-            if (j.State == JobState.Success && !string.IsNullOrWhiteSpace(j.Result))
-            {
-                result = JsonNode.Parse(j.Result);
-            }
-
-            return new JobResponse()
-            {
-                State = j.State,
-                Result = result,
-                Id = id
+                AvailableBuffer = context.Context.AvailableBuffer,
+                Id = request.ContextId,
+                IsLoaded = true,
+                Evaluated = 0
             };
         }
 
-        [HttpPost("model")]
-        public Job Model(ModelRequest request)
+        [HttpPost("evaluated")]
+        public ContextSnapshotResponse Evaluated(ContextSnapshotRequest request)
         {
-            return this._jobService.Enqueue(() =>
+            if (!TryLoadContext(request.ContextId, out ContextInstance context, out ContextSnapshotResponse response))
             {
-                this._loadedModel.Lock();
+                return response;
+            }
 
-                try
+            return new ContextSnapshotResponse()
+            {
+                Tokens = context.Context.Evaluated.Select(t => new ResponseLlamaToken(t)).ToArray()
+            };
+        }
+
+        [HttpPost("getlogits")]
+        public GetLogitsResponse GetLogits(GetLogitsRequest request)
+        {
+            if (!TryLoadContext(request.ContextId, out ContextInstance context, out GetLogitsResponse response))
+            {
+                return response;
+            }
+
+            Span<float> logits = context.Context.GetLogits();
+
+            response = new();
+
+            response.SetValue(logits);
+
+            return response;
+        }
+
+        [HttpPost("model")]
+        public ModelResponse Model(ModelRequest request)
+        {
+            this._loadedModel.Lock();
+
+            try
+            {
+                if (this._loadedModel.Instance != null)
                 {
-                    if (this._loadedModel.Instance != null)
+                    if (this._loadedModel.Id == request.ModelId && this._loadedModel.Settings.Model == request.Settings.Model)
                     {
-                        if (this._loadedModel.Id == request.ModelId && this._loadedModel.Settings.Model == request.Settings.Model)
+                        return new ModelResponse()
                         {
-                            return new ModelResponse()
-                            {
-                                Id = this._loadedModel.Id
-                            };
-                        }
-
-                        throw new DuplicateModelLoadException();
+                            Id = this._loadedModel.Id
+                        };
                     }
 
-                    this._loadedModel.Instance = NativeApi.LoadModel(request.Settings);
-
-                    this._loadedModel.Settings = request.Settings;
-
-                    this._loadedModel.Id = request.ModelId ?? Guid.NewGuid();
-
-                    return new ModelResponse()
-                    {
-                        Id = this._loadedModel.Id
-                    };
+                    throw new DuplicateModelLoadException();
                 }
-                finally
+
+                this._loadedModel.Instance = NativeApi.LoadModel(request.Settings);
+
+                this._loadedModel.Settings = request.Settings;
+
+                this._loadedModel.Id = request.ModelId ?? Guid.NewGuid();
+
+                return new ModelResponse()
                 {
-                    this._loadedModel.Unlock();
-                }
-            }, ExecutionPriority.Immediate);
+                    Id = this._loadedModel.Id
+                };
+            }
+            finally
+            {
+                this._loadedModel.Unlock();
+            }
         }
 
         [HttpPost("predict")]
         public PredictResponse Predict(PredictRequest request)
         {
-            ContextInstance context = this._loadedModel.GetContext(request.ContextId);
+            if (!TryLoadContext(request.ContextId, out ContextInstance context, out PredictResponse response))
+            {
+                return response;
+            }
 
             LlamaToken predicted = context.Predict(request.Priority, request.LogitRules);
 
@@ -261,31 +212,65 @@ namespace LlamaApi.Controllers
             };
         }
 
-        [HttpPost("predictasync")]
-        public Job PredictAsync(PredictRequest request) => this._jobService.Enqueue(() => this.Predict(request), request.Priority);
-
         [HttpGet("/")]
         public IActionResult State() => this.Content("OK");
 
-        [HttpPost("tokenize")]
-        public Job Tokenize(TokenizeRequest request)
+        public T StatusCode<T>(LlamaStatusCodes status)
         {
-            return this._jobService.Enqueue(() =>
+            T result = default;
+
+            this.HttpContext.Response.StatusCode = (int)status;
+
+            return result;
+        }
+
+        [HttpPost("tokenize")]
+        public TokenizeResponse Tokenize(TokenizeRequest request)
+        {
+            if (this._loadedModel?.Instance is null)
             {
-                List<int> tokens = NativeApi.LlamaTokenize(this._loadedModel.Instance.Handle, request.Content!, false);
+                return StatusCode<TokenizeResponse>(LlamaStatusCodes.NoModelLoaded);
+            }
 
-                List<LlamaToken> toReturn = new();
+            List<int> tokens = NativeApi.LlamaTokenize(this._loadedModel.Instance.Handle, request.Content!, false);
 
-                foreach (int token in tokens)
+            List<LlamaToken> toReturn = new();
+
+            foreach (int token in tokens)
+            {
+                if (token == 0)
                 {
-                    toReturn.Add(new LlamaToken(token, NativeApi.TokenToPiece(this._loadedModel.Instance.Handle, token)));
+                    throw new InvalidOperationException("Null token detected in tokenize response");
                 }
 
-                return new TokenizeResponse()
-                {
-                    Tokens = toReturn.ToArray()
-                };
-            }, request.Priority);
+                toReturn.Add(new LlamaToken(token, NativeApi.TokenToPiece(this._loadedModel.Instance.Handle, token)));
+            }
+
+            return new TokenizeResponse()
+            {
+                Tokens = toReturn.Select(t => new ResponseLlamaToken(t)).ToArray()
+            };
+        }
+
+        public bool TryLoadContext<T>(Guid guid, out ContextInstance context, out T response)
+        {
+            response = default;
+
+            bool success = true;
+
+            if (this._loadedModel?.Instance is null)
+            {
+                response = StatusCode<T>(LlamaStatusCodes.NoModelLoaded);
+                success = false;
+            }
+
+            if (!this._loadedModel.TryGetContext(guid, out context))
+            {
+                response = StatusCode<T>(LlamaStatusCodes.NoContextLoaded);
+                success = false;
+            }
+
+            return success;
         }
 
         [HttpPost("write")]
@@ -296,7 +281,10 @@ namespace LlamaApi.Controllers
                 throw new NotImplementedException();
             }
 
-            ContextInstance context = this._loadedModel.GetContext(request.ContextId);
+            if (!TryLoadContext(request.ContextId, out ContextInstance context, out WriteTokenResponse response))
+            {
+                return response;
+            }
 
             LlamaTokenCollection toWrite = new();
 
@@ -325,11 +313,10 @@ namespace LlamaApi.Controllers
             };
         }
 
-        [HttpPost("writeasync")]
-        public Job WriteAsync(WriteTokenRequest request) => this._jobService.Enqueue(() => this.Write(request), request.Priority);
-
-        private ITokenSelector GetFinalSampler(ContextRequest request)
+        private ITokenSelector GetFinalSampler(ContextRequest contextRequest)
         {
+            ContextRequestSettings request = contextRequest.ContextRequestSettings;
+
             if (request.TemperatureSamplerSettings != null)
             {
                 if (request.TemperatureSamplerSettings.Temperature < 0)
@@ -360,8 +347,10 @@ namespace LlamaApi.Controllers
             throw new NotImplementedException();
         }
 
-        private IEnumerable<ISimpleSampler> GetSimpleSamplers(ContextRequest request)
+        private IEnumerable<ISimpleSampler> GetSimpleSamplers(ContextRequest contextRequest)
         {
+            ContextRequestSettings request = contextRequest.ContextRequestSettings;
+
             if (request.RepetitionSamplerSettings != null)
             {
                 yield return new RepetitionSampler(request.RepetitionSamplerSettings);

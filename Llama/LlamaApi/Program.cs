@@ -1,11 +1,11 @@
 using Llama.Data.Scheduler;
-using LlamaApi.Extensions;
 using LlamaApi.Interfaces;
 using LlamaApi.Models;
 using LlamaApi.Services;
 using LlamaApi.Shared.Converters;
 using LlamaApi.Utils;
-using Logging;
+using Serilog;
+using System.Text;
 using System.Text.Json.Serialization;
 
 namespace LlamaApi
@@ -14,6 +14,8 @@ namespace LlamaApi
     {
         public static void Main(string[] args)
         {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
             IConfigurationBuilder configurationBuilder = new ConfigurationBuilder().AddUserSecrets<Program>();
 
             IConfiguration configuration = configurationBuilder.Build();
@@ -30,22 +32,19 @@ namespace LlamaApi
                 c.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
             });
 
-            builder.Services.RegisterSecret<DatabaseConnectionSettings>(configuration);
-            builder.Services.AddSingleton<IHasConnectionString>((s) => s.GetRequiredService<DatabaseConnectionSettings>());
             builder.Services.AddSingleton<IExecutionScheduler, ExecutionScheduler>();
             builder.Services.AddSingleton<ThreadManager>();
             builder.Services.AddSingleton<LoadedModel>();
-            builder.Services.AddTransient<IJobService, JobService>();
             builder.Services.AddSingleton<IContextService, ContextService>();
-            builder.Services.AddSingleton<JobServiceSettings>();
 
-            LoggingApiClient loggingClient = new(new LoggingApiClientSettings()
-            {
-                Host = "http://127.0.0.1:10020",
-                ApplicationName = "LlamaApi"
-            });
+            // Configure Serilog
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .WriteTo.Console()
+                .WriteTo.File("logs/LlamaApi.log", rollingInterval: RollingInterval.Day)
+                .CreateLogger();
 
-            builder.Services.AddSingleton<ILogger>(loggingClient);
+            builder.Host.UseSerilog(); // Use the Serilog logger
 
             WebApplication app = builder.Build();
 
@@ -53,11 +52,7 @@ namespace LlamaApi
 
             app.MapControllers();
 
-            //app.UseMiddleware<RequestLoggingMiddleware>();
-
             app.Run();
-
-            loggingClient.Dispose();
         }
     }
 }

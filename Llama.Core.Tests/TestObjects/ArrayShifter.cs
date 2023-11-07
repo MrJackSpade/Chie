@@ -1,13 +1,11 @@
 ﻿using Llama.Core.Interfaces;
 using Llama.Core.Utils;
-using Llama.Data.Collections;
 using Llama.Data.Models;
 
 namespace Llama.Core.Tests.TestObjects
 {
     public class ArrayShifter<T> : IArrayShifter<T>
     {
-
         private readonly IndexedItem[] _underlyingData;
 
         public ArrayShifter(KvCacheState<T> startingState)
@@ -30,7 +28,7 @@ namespace Llama.Core.Tests.TestObjects
 
                 foreach (IndexedItem item in _underlyingData)
                 {
-                    if(item is null)
+                    if (item is null)
                     {
                         continue;
                     }
@@ -56,9 +54,9 @@ namespace Llama.Core.Tests.TestObjects
 
         public void Decode(BatchDecode<T> batch)
         {
-            foreach(BatchItem<T> item in batch.Items)
+            foreach (BatchItem<T> item in batch.Items)
             {
-                for(int i = 0; i < _underlyingData.Length; i++)
+                for (int i = 0; i < _underlyingData.Length; i++)
                 {
                     if (_underlyingData[i] is null)
                     {
@@ -102,11 +100,11 @@ namespace Llama.Core.Tests.TestObjects
 
         public void RemoveCacheTokens(uint sequenceId, uint startPos, uint endPos)
         {
-            for(int i = 0; i < _underlyingData.Length; i++)
+            for (int i = 0; i < _underlyingData.Length; i++)
             {
                 IndexedItem item = _underlyingData[i];
 
-                if(item != null && item.Pos >= startPos && item.Pos < endPos)
+                if (item != null && item.Pos >= startPos && item.Pos < endPos)
                 {
                     _underlyingData[i] = null;
                 }
@@ -130,15 +128,6 @@ namespace Llama.Core.Tests.TestObjects
             }
         }
 
-        private class IndexedItem
-        {
-            public int Delta { get; set; }
-
-            public int Pos { get; set; }
-
-            public T Value { get; set; }
-        }
-
         public class Operation
         {
             public Operation(string name, params int[] args)
@@ -155,6 +144,15 @@ namespace Llama.Core.Tests.TestObjects
             {
                 return $"{OperationName}({string.Join(", ", Parameters)})";
             }
+        }
+
+        private class IndexedItem
+        {
+            public int Delta { get; set; }
+
+            public int Pos { get; set; }
+
+            public T Value { get; set; }
         }
     }
 }

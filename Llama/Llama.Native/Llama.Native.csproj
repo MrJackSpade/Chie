@@ -22,6 +22,10 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="System.Text.Encoding" Version="4.3.0" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="7.0.0" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Llama.Data\Llama.Data.csproj" />
   </ItemGroup>
 </Project>

@@ -44,9 +44,6 @@ namespace Llama.Native
         [DllImport(LIBRARY_NAME, EntryPoint = "llama_context_default_params")]
         public static extern LlamaContextParams ContextDefaultParams();
 
-        [DllImport(LIBRARY_NAME, EntryPoint = "llama_get_kv_cache")]
-        public static extern IntPtr GetKvCache(SafeLlamaContextHandle ctx);
-
         /// <summary>
         /// Copy all tokens that belong to the specified source sequence to another destination sequence.
         /// Note that this does not allocate extra KV cache memory - it simply assigns the tokens to the new sequence.
@@ -115,6 +112,9 @@ namespace Llama.Native
         /// <returns></returns>
         [DllImport(LIBRARY_NAME, EntryPoint = "llama_get_embeddings")]
         public static extern float* GetEmbeddings(SafeLlamaContextHandle ctx);
+
+        [DllImport(LIBRARY_NAME, EntryPoint = "llama_get_kv_cache")]
+        public static extern IntPtr GetKvCache(SafeLlamaContextHandle ctx);
 
         /// <summary>
         /// Token logits obtained from the last call to llama_eval()
@@ -223,14 +223,6 @@ namespace Llama.Native
 
         [DllImport(LIBRARY_NAME, EntryPoint = "llama_print_timings")]
         public static extern void PrintTimings(SafeLlamaContextHandle ctx);
-
-        /// <summary>
-        /// Remove all tokens data of cells in [start, end)
-        /// start < 0 : [0,  end]
-        /// end < 0 : [start, inf)
-        /// </summary>
-        [DllImport(LIBRARY_NAME, EntryPoint = "llama_kv_cache_tokens_rm")]
-        public static extern void RemoveCacheTokens(SafeLlamaContextHandle handle, int start, int end);
 
         /// <summary>
         /// Removes all tokens that belong to the specified sequence and have positions in [startPos, endPos)

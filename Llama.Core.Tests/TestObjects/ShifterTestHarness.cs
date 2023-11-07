@@ -20,11 +20,11 @@ namespace Llama.Core.Tests.TestObjects
             Synchronizer = new PointerArraySynchronizer<char>(Shifter, batchSize, '\0');
         }
 
-        public int Pointer => (int)Buffer.Pointer;
-
         public PointerArray<char> Buffer { get; private set; }
 
         public KvCacheState<char> Evaluated { get; private set; }
+
+        public int Pointer => (int)Buffer.Pointer;
 
         public ArrayShifter<char> Shifter { get; private set; }
 
