@@ -18,6 +18,7 @@ using LlamaApi.Models.Response;
 using LlamaApi.Shared.Models;
 using LlamaApi.Shared.Models.Request;
 using LlamaApi.Shared.Models.Response;
+using LlamaApi.Shared.Serializers;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LlamaApi.Controllers
@@ -34,6 +35,101 @@ namespace LlamaApi.Controllers
         {
             this._contextExecutionScheduler = contextExecutionScheduler;
             this._loadedModel = loadedModel;
+        }
+
+        [HttpPost("request")]
+        public async Task<IActionResult> RequestCollection()
+        {
+            // Read the content as a string (assuming it's sent as plain text)
+            string contentAsBase64 = new StreamReader(HttpContext.Request.BodyReader.AsStream()).ReadToEnd();
+
+            try
+            {
+                // Convert the base64 string to byte array
+                byte[] fileBytes = Convert.FromBase64String(contentAsBase64);
+
+                RequestCollection requests = DataSerializer.Deserialize<RequestCollection>(fileBytes);
+
+                ResponseCollection responses = new();
+
+                foreach(object o in requests.Requests)
+                {
+                    object r = null;
+                    bool found = false;
+
+                    if (o is ContextDisposeRequest cdr)
+                    {
+                        throw new NotImplementedException();
+                    }
+
+                    if (o is ContextRequest cr)
+                    {
+                        r = Context(cr);
+                        found = true;
+                    }
+
+                    if (o is ContextSnapshotRequest csr)
+                    {
+                        r = this.Evaluated(csr);
+                        found = true;
+                    }
+
+                    if (o is EvaluateRequest er)
+                    {
+                        r = this.Eval(er);
+                        found = true;
+                    }
+
+                    if (o is GetLogitsRequest glr)
+                    {
+                        r = this.GetLogits(glr);
+                        found = true;
+                    }
+
+                    if (o is ModelRequest mr)
+                    {
+                        r = this.Model(mr);
+                        found = true;
+                    }
+
+                    if (o is PredictRequest pr)
+                    {
+                        r = this.Predict(pr);
+                        found = true;
+                    }
+
+                    if (o is TokenizeRequest tr)
+                    {
+                        r = this.Tokenize(tr);
+                        found = true;
+                    }
+
+                    if (o is WriteTokenRequest wtr)
+                    {
+                        r = this.Write(wtr);
+                        found = true;
+                    }
+
+                    if (!found)
+                    {
+                        throw new NotImplementedException();
+                    }
+                    
+                    responses.Responses.Add(r);
+                }
+
+                byte[] responseData = DataSerializer.Serialize(responses);
+
+                string responseStr = Convert.ToBase64String(responseData);
+
+                return Content(responseStr);
+            }
+
+            catch (FormatException ex)
+            {
+                // Handle the exception if the string is not a valid base64 string
+                return BadRequest("Invalid Base64 string.");
+            }
         }
 
         [HttpPost("context")]
@@ -168,7 +264,7 @@ namespace LlamaApi.Controllers
             {
                 if (this._loadedModel.Instance != null)
                 {
-                    if (this._loadedModel.Id == request.ModelId && this._loadedModel.Settings.Model == request.Settings.Model)
+                    if (this._loadedModel.Settings.Model == request.Settings.Model)
                     {
                         return new ModelResponse()
                         {
@@ -183,7 +279,7 @@ namespace LlamaApi.Controllers
 
                 this._loadedModel.Settings = request.Settings;
 
-                this._loadedModel.Id = request.ModelId ?? Guid.NewGuid();
+                this._loadedModel.Id = request.ModelId;
 
                 return new ModelResponse()
                 {
@@ -317,16 +413,9 @@ namespace LlamaApi.Controllers
         {
             ContextRequestSettings request = contextRequest.ContextRequestSettings;
 
-            if (request.TemperatureSamplerSettings != null)
+            if (request.MirostatTempSamplerSettings != null)
             {
-                if (request.TemperatureSamplerSettings.Temperature < 0)
-                {
-                    return new GreedySampler();
-                }
-                else
-                {
-                    return new TemperatureSampler(request.TemperatureSamplerSettings);
-                }
+                return new MirostatTempSampler(request.MirostatTempSamplerSettings);
             }
 
             if (request.MirostatSamplerSettings != null)
@@ -339,9 +428,16 @@ namespace LlamaApi.Controllers
                 };
             }
 
-            if (request.MirostatTempSamplerSettings != null)
+            if (request.TemperatureSamplerSettings != null)
             {
-                return new MirostatTempSampler(request.MirostatTempSamplerSettings);
+                if (request.TemperatureSamplerSettings.Temperature < 0)
+                {
+                    return new GreedySampler();
+                }
+                else
+                {
+                    return new TemperatureSampler(request.TemperatureSamplerSettings);
+                }
             }
 
             throw new NotImplementedException();

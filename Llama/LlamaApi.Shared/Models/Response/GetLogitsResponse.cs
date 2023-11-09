@@ -1,5 +1,4 @@
 ﻿using System.Buffers.Binary;
-using System.Text.Json.Serialization;
 
 namespace LlamaApi.Shared.Models.Response
 {
@@ -7,7 +6,6 @@ namespace LlamaApi.Shared.Models.Response
     {
         private const int FLOAT_SIZE = sizeof(float);
 
-        [JsonPropertyName("data")]
         public byte[] Data { get; set; } = Array.Empty<byte>();
 
         public IEnumerable<float> GetValue()

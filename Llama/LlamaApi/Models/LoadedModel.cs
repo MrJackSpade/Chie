@@ -32,6 +32,8 @@ namespace LlamaApi.Models
             return context;
         }
 
+        public void Lock() => this._semaphore.Wait();
+
         public bool TryGetContext(Guid id, out ContextInstance? context)
         {
             if (this.Instance is null)
@@ -41,8 +43,6 @@ namespace LlamaApi.Models
 
             return this.Evaluator.TryGetValue(id, out context);
         }
-
-        public void Lock() => this._semaphore.Wait();
 
         public void Unlock() => this._semaphore.Release();
     }

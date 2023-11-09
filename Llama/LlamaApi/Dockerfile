@@ -1,10 +1,18 @@
-#See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
+# Use the NVIDIA base image
+FROM nvidia/cuda:12.2.2-runtime-ubuntu22.04 AS base
 
-FROM mcr.microsoft.com/dotnet/aspnet:6.0 AS base
+# Update packages
+run apt-get update
+RUN apt-get install -y python3 python3-pip aspnetcore-runtime-6.0
+RUN ln -s /usr/bin/python3 /usr/bin/python 
+RUN pip3 install runpod 
+
+# Set the working directory and expose the necessary ports
 WORKDIR /app
 EXPOSE 80
 EXPOSE 443
 
+# Use the .NET SDK to build the project
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /src
 COPY ["Llama/LlamaApi/LlamaApi.csproj", "Llama/LlamaApi/"]
@@ -19,22 +27,31 @@ COPY ["Llama/LlamaApi.Shared/LlamaApi.Shared.csproj", "Llama/LlamaApi.Shared/"]
 RUN dotnet restore "Llama/LlamaApi/LlamaApi.csproj"
 COPY . .
 WORKDIR "/src/Llama/LlamaApi"
-RUN dotnet build "LlamaApi.csproj" -c Release -o /app/build
+RUN dotnet build "LlamaApi.csproj" --v:q -c Release -o /app/build    
 
+FROM nvidia/cuda:12.2.2-devel-ubuntu22.04 AS nativebuild
+WORKDIR /src
+COPY Llama/llama.cpp .
+RUN apt-get update
+RUN apt-get install -y cmake
+RUN mkdir build && \
+    cd build && \
+    cmake .. -DBUILD_SHARED_LIBS=ON -DLLAMA_CUBLAS=ON -DLLAMA_AVX2=ON -DLLAMA_AVX=ON -DLLAMA_CUDA_F16=ON -DCMAKE_CXX_FLAGS="-w" -DCMAKE_C_FLAGS="-w" && \
+    cmake --build . --verbose --config Release
+
+# Publish the project
 FROM build AS publish
 RUN dotnet publish "LlamaApi.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
+# Set up the final image
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-
-# Install Python
-RUN apt-get update 
-RUN apt-get install -y python3 
-RUN apt-get install -y python3-pip
-RUN ln -s /usr/bin/python3 /usr/bin/python
+#COPY --from=nativebuild  /src/build/libggml_shared.so .
+#COPY --from=nativebuild  /src/build/libggml_static.a .
+#COPY --from=nativebuild  /src/build/libllama.so .
+COPY --from=nativebuild  /src/build .
 RUN rm -rf /var/lib/apt/lists/*
 
-RUN pip install runpod
-
+# Set the command to run the application
 CMD python -u /app/handler.py

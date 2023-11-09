@@ -1,6 +1,6 @@
 ﻿namespace Llama.Data.Enums
 {
-    public enum MemoryMode
+    public enum MemoryMode : byte
     {
         Float16,
 

@@ -52,7 +52,51 @@ namespace LlamaApi
 
             app.MapControllers();
 
+            Console.WriteLine("Testing Llama Interop...");
+
+            Llama.Native.NativeApi.Test();
+
+            AppDomain.CurrentDomain.FirstChanceException += CurrentDomain_FirstChanceException;
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             app.Run();
+        }
+
+        private static void CurrentDomain_FirstChanceException(object? sender, System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs e)
+        {
+            LogError(e?.Exception);
+        }
+
+        private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            try
+            {
+                if (e.ExceptionObject is Exception ex)
+                {
+                    LogError(ex);
+                }
+                else
+                {
+                    Log.Logger.Error(e.ExceptionObject?.ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+        }
+
+        private static void LogError(Exception? e)
+        {
+            try
+            {
+                Console.WriteLine(e!.ToString());
+
+                Log.Logger.Error(e!.ToString());
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
         }
     }
 }

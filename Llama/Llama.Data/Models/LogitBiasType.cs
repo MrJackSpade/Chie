@@ -1,6 +1,6 @@
 ﻿namespace Llama.Data.Models
 {
-    public enum LogitBiasType
+    public enum LogitBiasType : byte
     {
         Additive,
 

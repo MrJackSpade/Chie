@@ -1,0 +1,1 @@
+docker run -p 5059:5000 -p 22:22 --gpus all -v D:\Chie\Models:/runpod-volume/models/ -it mrjackspade/llama-api:latest /bin/bash

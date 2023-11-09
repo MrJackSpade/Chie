@@ -89,7 +89,7 @@ namespace ChieApi
 
 			LlamaClientSettings clientSettings = new("http://localhost:5059");
 			_ = builder.Services.AddSingleton(clientSettings);
-			_ = builder.Services.AddSingleton<LlamaContextClient, RunpodClient>();
+			_ = builder.Services.AddSingleton<LlamaContextClient>();
 			_ = builder.Services.AddSingleton((s) =>
 			{
                 CharacterConfiguration _characterConfiguration = s.GetRequiredService<CharacterConfiguration>();

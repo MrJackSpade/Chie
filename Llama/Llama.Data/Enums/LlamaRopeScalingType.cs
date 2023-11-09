@@ -3,7 +3,7 @@
     /// <summary>
     /// Represents the RoPE scaling types for a llama context.
     /// </summary>
-    public enum LlamaRopeScalingType
+    public enum LlamaRopeScalingType : sbyte
     {
         Unspecified = -1,
 

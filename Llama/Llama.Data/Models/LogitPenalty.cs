@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace Llama.Data.Models
+﻿namespace Llama.Data.Models
 {
     public class LogitPenalty : LogitRule
     {
@@ -11,7 +9,6 @@ namespace Llama.Data.Models
             this.Value = value;
         }
 
-        [JsonConstructor]
         public LogitPenalty()
         { }
 

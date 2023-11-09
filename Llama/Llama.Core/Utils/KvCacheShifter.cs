@@ -160,9 +160,6 @@ namespace Llama.Core.Utils
 
                 Eval(b1, b2);
             }
-
-            var cells = NativeApi.GetKvCells(this._handle);
-            var evaluated = NativeApi.GetEvaluated(this._handle, this._model);
         }
 
         private void Log(BatchDecode<int> idBatch)

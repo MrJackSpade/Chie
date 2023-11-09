@@ -3,6 +3,7 @@ import requests
 import runpod
 import requests
 import time
+import json
 
 # Start the .NET application as a subprocess
 subprocess.Popen(["dotnet", "LlamaApi.dll"])
@@ -21,24 +22,59 @@ def wait_for_service_to_be_ready(internal_url, retries=30, delay=1):
     return False
 
 def handler(job):
+    # Only skip the check if the service is already known to be ready
+    if handler.service_ready is not True:
+        handler.service_ready = wait_for_service_to_be_ready("http://localhost:5000/")
+    
+    if handler.service_ready:
+        # The service is ready, perform the job processing
+        print("Processing job...")
+        # Your job processing logic here
+    else:
+        # Service is not ready, handler.service_ready is set to None for a retry on next call
+        print("Cannot process job, service is not ready.")
+        handler.service_ready = None
+
     # Parse the job input, which is a JSON object containing the request details.
     job_input = job["input"]
 
-    service_ready = wait_for_service_to_be_ready("http://localhost:80/")
+    # Construct the internal request URL. Assume your .NET app is listening on localhost:80.
+    internal_url = f"http://localhost:5000{job_input['url']}"
 
-    # Construct the internal request URL. Assume your .NET app is listening on localhost:5000.
-    internal_url = f"http://localhost:80{job_input['url']}"
+    # Initialize an empty response dictionary
+    response_data = {}
 
     # Make the internal request and capture the response.
-    if job_input['method'].lower() == 'post':
-        response = requests.post(internal_url, json=job_input['body'])
-    else:
-        # Add handling for other HTTP methods as needed.
-        response = requests.get(internal_url)
+    try:
+        if job_input['method'].lower() == 'post':
+            response = requests.post(internal_url, json=job_input['body'])
+        else:
+            # Add handling for other HTTP methods as needed.
+            response = requests.get(internal_url)
 
-    # Return the response text or JSON as required.
-    # This can be tailored based on the expected response format.
-    return response.text or response.json()
+        # Set the status code in the response data
+        response_data['status'] = response.status_code
+
+        # Check if the response is JSON
+        if 'application/json' in response.headers.get('Content-Type', ''):
+            # If it is, convert it to a JSON string while ensuring it is escaped
+            response_data['body'] = json.dumps(response.json())
+        else:
+            # If the response is not JSON, just return it as a raw string
+            response_data['body'] = response.text
+
+    except requests.exceptions.RequestException as e:
+        # Handle any exceptions that occur during the HTTP request.
+        response_data = {
+            'status': 500,
+            'body': str(e)
+        }
+
+    # Return the response_data as a JSON object.
+    return json.dumps(response_data)
+
+# Initialize the function attribute to None
+handler.service_ready = None
 
 # Start the Runpod serverless handler.
 runpod.serverless.start({"handler": handler})

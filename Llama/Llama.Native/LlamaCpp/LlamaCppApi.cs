@@ -6,7 +6,13 @@ namespace Llama.Native
 {
     internal unsafe partial class LlamaCppApi
     {
+#if WINDOWS
+
         private const string LIBRARY_NAME = "llama";
+
+#else
+        private const string LIBRARY_NAME = "libllama.so";
+#endif
 
         static LlamaCppApi()
         {

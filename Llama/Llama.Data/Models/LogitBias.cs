@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace Llama.Data.Models
+﻿namespace Llama.Data.Models
 {
     public class LogitBias : LogitRule
     {
@@ -12,7 +10,6 @@ namespace Llama.Data.Models
             this.LogitBiasType = logitBiasType;
         }
 
-        [JsonConstructor]
         public LogitBias()
         { }
 

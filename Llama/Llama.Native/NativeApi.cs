@@ -319,6 +319,8 @@ namespace Llama.Native
         public static void ShiftCacheTokens(SafeLlamaContextHandle handle, uint sequenceId, uint startPos, uint endPos, int delta)
             => LlamaCppApi.ShiftCacheTokens(handle, (int)sequenceId, (int)startPos, (int)endPos, delta);
 
+        public static void Test() => LlamaCppApi.EmptyCall();
+
         public static string TokenToPiece(this SafeLlamaModelHandle ctx, int token)
         {
             // Assuming a buffer size of 256, adjust as needed.

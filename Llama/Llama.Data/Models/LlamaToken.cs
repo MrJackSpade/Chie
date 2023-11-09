@@ -20,8 +20,6 @@ namespace Llama.Data.Models
 
         public static LlamaToken Null => new(0, "█");
 
-        public object Data { get; set; }
-
         public int Id { get; private set; }
 
         public string? Value { get; private set; }

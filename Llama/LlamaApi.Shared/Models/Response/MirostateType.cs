@@ -1,6 +1,6 @@
 ﻿namespace LlamaApi.Shared.Models.Response
 {
-    public enum MirostatType
+    public enum MirostatType : byte
     {
         None = 0,
 

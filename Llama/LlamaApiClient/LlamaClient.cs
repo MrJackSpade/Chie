@@ -8,6 +8,7 @@ using LlamaApi.Shared.Converters;
 using LlamaApi.Shared.Models;
 using LlamaApi.Shared.Models.Request;
 using LlamaApi.Shared.Models.Response;
+using LlamaApi.Shared.Serializers;
 using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -61,7 +62,7 @@ namespace LlamaApiClient
 
         public async Task Eval(Guid contextId)
         {
-            EvaluationResponse response = await Post<EvaluationResponse>("/Llama/eval", new EvaluateRequest()
+            EvaluationResponse response = await PostCollection<EvaluationResponse>("/Llama/eval", new EvaluateRequest()
             {
                 ContextId = contextId
             }, contextId);
@@ -87,7 +88,7 @@ namespace LlamaApiClient
                 ContextId = contextId
             };
 
-            GetLogitsResponse response = await Post<GetLogitsResponse>("/Llama/getlogits", request, contextId);
+            GetLogitsResponse response = await PostCollection<GetLogitsResponse>("/Llama/getlogits", request, contextId);
 
             return response.GetValue().ToArray();
         }
@@ -112,6 +113,17 @@ namespace LlamaApiClient
             };
         }
 
+        public virtual async Task<ClientResponse> PostAsync(string host, string url, string content)
+        {
+            HttpResponseMessage hr = await HttpClient.PostAsync(host + url, new StringContent(content));
+
+            return new ClientResponse()
+            {
+                Body = await hr.Content.ReadAsStringAsync(),
+                Status = (int)hr.StatusCode
+            };
+        }
+
         public async Task<ResponseLlamaToken> Predict(Guid contextId, LogitRuleCollection? ruleCollection = null)
         {
             PredictRequest request = new()
@@ -126,7 +138,7 @@ namespace LlamaApiClient
 
             PredictResponse response;
 
-            response = await Post<PredictResponse>("/Llama/predict", request, contextId);
+            response = await PostCollection<PredictResponse>("/Llama/predict", request, contextId);
 
             return response.Predicted;
         }
@@ -138,7 +150,7 @@ namespace LlamaApiClient
                 return new LlamaTokenCollection();
             }
 
-            TokenizeResponse response = await Post<TokenizeResponse>("/Llama/tokenize", new TokenizeRequest()
+            TokenizeResponse response = await PostCollection<TokenizeResponse>("/Llama/tokenize", new TokenizeRequest()
             {
                 Content = s,
                 ContextId = contextId
@@ -168,7 +180,7 @@ namespace LlamaApiClient
 
             WriteTokenResponse response;
 
-            response = await Post<WriteTokenResponse>("/Llama/write", request, contextId);
+            response = await PostCollection<WriteTokenResponse>("/Llama/write", request, contextId);
 
             return response.State;
         }
@@ -190,14 +202,14 @@ namespace LlamaApiClient
                 ContextRequestSettings = _contextRequestSettings
             };
 
-            ContextResponse loadResponse = await Post<ContextResponse>("/Llama/context", cr, contextId);
+            ContextResponse loadResponse = await PostCollection<ContextResponse>("/Llama/context", cr, contextId);
 
             return loadResponse.State;
         }
 
         protected async Task<ModelResponse> LoadModel(LlamaModelSettings settings)
         {
-            return await Post<ModelResponse>("/Llama/model", new ModelRequest()
+            return await PostCollection<ModelResponse>("/Llama/model", new ModelRequest()
             {
                 Settings = settings,
                 ModelId = _modelGuid
@@ -215,7 +227,26 @@ namespace LlamaApiClient
         {
             string responseStr = await Request(() => PostAsync(_settings.Host, url, JsonContent.Create(data, options: _serializerOptions)), contextId);
 
-            return JsonSerializer.Deserialize<TValue>(responseStr);
+            return JsonSerializer.Deserialize<TValue>(responseStr, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
+        }
+
+        private async Task<TValue> PostCollection<TValue>(string url, object data, Guid contextId)
+        {
+            RequestCollection requestCollection = new ();
+
+            requestCollection.Requests.Add(data);
+
+            byte[] bytes = DataSerializer.Serialize(requestCollection);
+
+            string b64 = Convert.ToBase64String(bytes);
+
+            string responseStr = await Request(() => PostAsync(_settings.Host, "/Llama/Request", b64), contextId);
+
+            byte[] r_bytes = Convert.FromBase64String(responseStr);
+
+            ResponseCollection responseCollection = DataSerializer.Deserialize<ResponseCollection>(r_bytes);
+
+            return (TValue)responseCollection.Responses.Single();
         }
 
         private async Task Post(string url, object data, Guid contextId)

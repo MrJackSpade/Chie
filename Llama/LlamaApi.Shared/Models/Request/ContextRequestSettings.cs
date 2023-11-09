@@ -1,25 +1,19 @@
 ﻿using Llama.Core.Samplers.Mirostat;
 using Llama.Data.Models.Settings;
-using System.Text.Json.Serialization;
 using MirostatSamplerSettings = LlamaApi.Models.Request.MirostatSamplerSettings;
 
 namespace LlamaApi.Shared.Models.Request
 {
     public class ContextRequestSettings
     {
-        [JsonPropertyName("ComplexPresence")]
-        public ComplexPresencePenaltySettings? ComplexPresencePenaltySettings { get; set; }
+        public ComplexPresencePenaltySettings ComplexPresencePenaltySettings { get; set; } = new();
 
-        [JsonPropertyName("mirostat")]
-        public MirostatSamplerSettings? MirostatSamplerSettings { get; set; }
+        public MirostatSamplerSettings MirostatSamplerSettings { get; set; } = new();
 
-        [JsonPropertyName("mirostatTemp")]
-        public MirostatTempSamplerSettings? MirostatTempSamplerSettings { get; set; }
+        public MirostatTempSamplerSettings MirostatTempSamplerSettings { get; set; } = new();
 
-        [JsonPropertyName("repetition")]
-        public RepetitionSamplerSettings? RepetitionSamplerSettings { get; set; }
+        public RepetitionSamplerSettings RepetitionSamplerSettings { get; set; } = new();
 
-        [JsonPropertyName("temperature")]
-        public TemperatureSamplerSettings? TemperatureSamplerSettings { get; set; }
+        public TemperatureSamplerSettings TemperatureSamplerSettings { get; set; } = new();
     }
 }

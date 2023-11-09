@@ -1,6 +1,6 @@
 ﻿namespace Llama.Data.Scheduler
 {
-    public enum ExecutionPriority
+    public enum ExecutionPriority : byte
     {
         Immediate = 0,
 

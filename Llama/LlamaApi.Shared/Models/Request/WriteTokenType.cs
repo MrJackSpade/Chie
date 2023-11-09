@@ -1,6 +1,6 @@
 ﻿namespace LlamaApi.Models.Request
 {
-    public enum WriteTokenType
+    public enum WriteTokenType : byte
     {
         Undefined,
 

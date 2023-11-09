@@ -392,7 +392,7 @@ namespace ChieApi.Services
 
                 LlamaToken selected = new(enumerator.Current.Id, enumerator.Current.Value);
 
-                Debug.WriteLine($"Predict: {enumerator.Current.Id} ({enumerator.Current.EscapedValue})");
+                Debug.WriteLine($"Predict: {enumerator.Current.Id} ({enumerator.Current.Value})");
 
                 await foreach (LlamaToken llamaToken in _transformers.Transform(enumerator, selected))
                 {

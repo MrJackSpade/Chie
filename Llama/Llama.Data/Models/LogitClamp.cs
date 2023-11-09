@@ -1,12 +1,9 @@
-﻿using System.Text.Json.Serialization;
-
-namespace Llama.Data.Models
+﻿namespace Llama.Data.Models
 {
     public class LogitClamp : LogitRule
     {
         private float _startValue;
 
-        [JsonConstructor]
         public LogitClamp()
         { }
 

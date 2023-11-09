@@ -11,9 +11,23 @@ namespace Llama.Data.Native
 
         public int value;
 
-        public IntPtr seq_id; // 64-bit representation for the std::set<llama_seq_id>
+        public long seq_id;
 
         public int p1;
+
+#if WINDOWS
+
+#else
+
+        public long P2;
+
+        public long P3;
+
+        public long P4;
+
+        public long P5;
+
+#endif
 
         public override string ToString()
         {
