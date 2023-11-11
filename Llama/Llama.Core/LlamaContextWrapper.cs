@@ -59,8 +59,7 @@ namespace Llama.Core
             }
 
             _synchronizer = new PointerArraySynchronizer<LlamaToken>(
-                new KvCacheShifter(settings.EvalThreadCount, handle, modelHandle),
-                settings.BatchSize,
+                new KvCacheShifter(settings.EvalThreadCount, settings.BatchSize, handle, modelHandle),
                 LlamaToken.Null
                 );
 

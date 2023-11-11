@@ -14,5 +14,7 @@
         public string Host { get; set; }
 
         public int PollingFrequencyMs { get; set; } = 100;
+
+        public Guid LlamaContextId { get; set; } = Guid.Empty;
     }
 }

@@ -6,7 +6,7 @@ namespace Llama.Core.Tests.TestObjects
 {
     internal class ShifterTestHarness
     {
-        public ShifterTestHarness(char[] evaluated, char[] buffer, int bufferPointer = -1, uint batchSize = 2)
+        public ShifterTestHarness(char[] evaluated, char[] buffer, int bufferPointer = -1)
         {
             uint len = (uint)Math.Max(evaluated.Length, buffer.Length);
             uint bp = (uint)(bufferPointer == -1 ? buffer.Length : bufferPointer);
@@ -17,7 +17,7 @@ namespace Llama.Core.Tests.TestObjects
             };
 
             Shifter = new ArrayShifter<char>(Evaluated);
-            Synchronizer = new PointerArraySynchronizer<char>(Shifter, batchSize, '\0');
+            Synchronizer = new PointerArraySynchronizer<char>(Shifter, '\0');
         }
 
         public PointerArray<char> Buffer { get; private set; }
@@ -30,9 +30,9 @@ namespace Llama.Core.Tests.TestObjects
 
         public PointerArraySynchronizer<char> Synchronizer { get; private set; }
 
-        public static ShifterTestHarness CreateEndExecute(char[] evaluated, char[] buffer, int bufferPointer = -1, uint batchSize = 2)
+        public static ShifterTestHarness CreateEndExecute(char[] evaluated, char[] buffer, int bufferPointer = -1)
         {
-            ShifterTestHarness shifterTestHarness = new(evaluated, buffer, bufferPointer, batchSize);
+            ShifterTestHarness shifterTestHarness = new(evaluated, buffer, bufferPointer);
 
             shifterTestHarness.Sync();
 

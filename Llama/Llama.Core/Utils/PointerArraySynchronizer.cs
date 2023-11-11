@@ -9,14 +9,11 @@ namespace Llama.Core.Utils
     {
         protected IArrayShifter<T> _arrayShifter;
 
-        private readonly uint _batchSize;
-
         private readonly T _defaultToken;
 
-        public PointerArraySynchronizer(IArrayShifter<T> shifter, uint batchSize, T defaultT)
+        public PointerArraySynchronizer(IArrayShifter<T> shifter, T defaultT)
         {
             _arrayShifter = shifter;
-            _batchSize = batchSize;
             _defaultToken = defaultT;
         }
 
@@ -114,21 +111,56 @@ namespace Llama.Core.Utils
             }
         }
 
-        private void Decode(KvCacheState<T> kvCache, BatchDecode<T> llamaBatch, bool force = false)
+        private void Decode(KvCacheState<T> kvCache, BatchDecode<T> llamaBatch)
         {
-            if (force || llamaBatch.Items.Count == _batchSize)
+            if (llamaBatch.Items.Count > 0)
             {
-                if (llamaBatch.Items.Count > 0)
+                _arrayShifter.Decode(llamaBatch);
+
+                foreach (BatchItem<T> item in llamaBatch.Items)
                 {
-                    _arrayShifter.Decode(llamaBatch);
-
-                    foreach (BatchItem<T> item in llamaBatch.Items)
-                    {
-                        kvCache[item.Position] = item.Token;
-                    }
-
-                    llamaBatch.Clear();
+                    kvCache[item.Position] = item.Token;
                 }
+
+                llamaBatch.Clear();
+            }
+        }
+
+        private void DefragPostBuffer(KvCacheState<T> kvCache, PointerArray<T> buffer)
+        {
+            uint ii = buffer.Length - 1;
+
+            //Next pass. Find unused tokens and try and see if we have free space for them
+            //To save cache shit later
+            for (uint i = buffer.Length - 1; i <= 0; i--)
+            {
+                if (ii == buffer.Pointer)
+                {
+                    //No more space!
+                    break;
+                }
+
+                //Already moved, no worries
+                if (kvCache.IsMoved(i))
+                {
+                    continue;
+                }
+
+                //something new already assigned
+                if (kvCache.IsSet(ii))
+                {
+                    continue;
+                }
+
+                if (kvCache.IsDefault(i))
+                {
+                    continue;
+                }
+
+                //Mark it to move to this space
+                kvCache.Move(i, ii);
+
+                ii--;
             }
         }
 
@@ -147,11 +179,9 @@ namespace Llama.Core.Utils
                 {
                     llamaBatch.AddItem(buffer[i], i);
                 }
-
-                Decode(kvCache, llamaBatch);
             }
 
-            Decode(kvCache, llamaBatch, true);
+            Decode(kvCache, llamaBatch);
         }
 
         private void FindTokenReplacements(KvCacheState<T> kvCache, PointerArray<T> buffer)
@@ -264,44 +294,6 @@ namespace Llama.Core.Utils
                 _arrayShifter.ShiftCacheToken(0, tempPos, 0 - (int)kvCache.Length);
                 //Adjust the actual buffer for reals
                 kvCache[si.NewIndex] = si.Item;
-            }
-        }
-
-        private void DefragPostBuffer(KvCacheState<T> kvCache, PointerArray<T> buffer)
-        {
-            uint ii = buffer.Length - 1;
-
-            //Next pass. Find unused tokens and try and see if we have free space for them
-            //To save cache shit later
-            for (uint i = buffer.Length - 1; i <= 0; i--)
-            {
-                if (ii == buffer.Pointer)
-                {
-                    //No more space!
-                    break;
-                }
-
-                //Already moved, no worries
-                if (kvCache.IsMoved(i))
-                {
-                    continue;
-                }
-
-                //something new already assigned
-                if (kvCache.IsSet(ii))
-                {
-                    continue;
-                }
-
-                if (kvCache.IsDefault(i))
-                {
-                    continue;
-                }
-
-                //Mark it to move to this space
-                kvCache.Move(i, ii);
-
-                ii--;
             }
         }
     }

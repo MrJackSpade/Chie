@@ -44,10 +44,11 @@ def handler(job):
     # Initialize an empty response dictionary
     response_data = {}
 
-    # Make the internal request and capture the response.
+
     try:
         if job_input['method'].lower() == 'post':
-            response = requests.post(internal_url, json=job_input['body'])
+            # If job_input['body'] is a base64 encoded string
+            response = requests.post(internal_url, data=job_input['body'])
         else:
             # Add handling for other HTTP methods as needed.
             response = requests.get(internal_url)
@@ -55,13 +56,14 @@ def handler(job):
         # Set the status code in the response data
         response_data['status'] = response.status_code
 
-        # Check if the response is JSON
-        if 'application/json' in response.headers.get('Content-Type', ''):
-            # If it is, convert it to a JSON string while ensuring it is escaped
-            response_data['body'] = json.dumps(response.json())
-        else:
-            # If the response is not JSON, just return it as a raw string
-            response_data['body'] = response.text
+        # Since you're keeping the response as base64, no need to decode it.
+        # Just return it as a string.
+        response_data['body'] = response.text
+
+    except Exception as e:
+        # Handle any exceptions that might occur
+        response_data['status'] = 'Error'
+        response_data['body'] = str(e)
 
     except requests.exceptions.RequestException as e:
         # Handle any exceptions that occur during the HTTP request.

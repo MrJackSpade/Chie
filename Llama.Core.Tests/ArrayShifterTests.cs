@@ -72,7 +72,7 @@ namespace Llama.Core.Tests
 
             DummyShifter shifter = new();
 
-            PointerArraySynchronizer<LlamaToken> syncer = new(shifter, 512, LlamaToken.Null);
+            PointerArraySynchronizer<LlamaToken> syncer = new(shifter, LlamaToken.Null);
 
             KvCacheState<LlamaToken> cacheState = new(evaluated, LlamaToken.Null);
 

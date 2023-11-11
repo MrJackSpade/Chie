@@ -6,12 +6,21 @@
     {
         private List<BatchItem<T>> _items = new();
 
+        public int Count => _items.Count;
+
         public float[] Embeddings { get; set; }
 
         public IReadOnlyList<BatchItem<T>> Items => this._items;
 
         public byte[] Logits { get; set; }
 
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="token"></param>
+        /// <param name="position"></param>
+        /// <param name="sequenceIds">Defaults to { 0 }</param>
+        /// <param name="includeLogits">Defaults to false</param>
         public void AddItem(T token, uint position, int[] sequenceIds = null, bool includeLogits = false)
         {
             BatchItem<T> item = new()
@@ -51,10 +60,40 @@
 
             return result;
         }
+
+        public bool TryRemove(uint positionToRemove, out BatchItem<T> found)
+        {
+            for(int i = 0; i < _items.Count; i++)
+            {
+                if (_items[i].Position == positionToRemove)
+                {
+                    found = _items[i];
+
+                    _items.RemoveAt(i);
+
+                    return true;
+                }
+            }
+
+            found = null;
+
+            return false;   
+        }
     }
 
     public class BatchItem<T>
     {
+        public BatchItem()
+        {
+        }
+
+        public BatchItem(T token, uint pos, int[]? seqIds = null)
+        {
+            Token = token;
+            Position = pos;
+            SequenceIds = seqIds ?? new int[] { 0 };
+        }
+
         public bool IncludeLogits { get; set; }
 
         public uint Position { get; set; }

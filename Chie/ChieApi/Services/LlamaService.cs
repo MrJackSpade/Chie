@@ -37,7 +37,7 @@ namespace ChieApi.Services
 
         private readonly ChatRepository _chatService;
 
-        private readonly LlamaContextClient _client;
+        private readonly LlamaClient _client;
 
         private readonly List<ITextCleaner> _inputCleaner;
 
@@ -67,7 +67,7 @@ namespace ChieApi.Services
 
         private Task<SummaryResponse>? _summaryTask;
 
-        public LlamaService(UserDataRepository userDataService, SummarizationService summarizationService, DictionaryRepository dictionaryService, CharacterConfiguration characterConfiguration, LlamaContextClient client, LlamaContextModel contextModel, LlamaTokenCache llamaTokenCache, ILogger logger, ChatRepository chatService, LogitService logitService)
+        public LlamaService(UserDataRepository userDataService, SummarizationService summarizationService, DictionaryRepository dictionaryService, CharacterConfiguration characterConfiguration, LlamaClient client, LlamaContextModel contextModel, LlamaTokenCache llamaTokenCache, ILogger logger, ChatRepository chatService, LogitService logitService)
         {
             _userDataService = userDataService;
             _summarizationService = summarizationService;
@@ -373,7 +373,7 @@ namespace ChieApi.Services
                 throw new Exception("Context length too long?");
             }
 
-            await _client.Eval(contextState, 0);
+            await _client.Write(contextState, 0);
 
             CurrentResponse = string.Empty;
         }
@@ -392,7 +392,8 @@ namespace ChieApi.Services
 
                 LlamaToken selected = new(enumerator.Current.Id, enumerator.Current.Value);
 
-                Debug.WriteLine($"Predict: {enumerator.Current.Id} ({enumerator.Current.Value})");
+                Console.WriteLine($"Predict: {enumerator.Current.Id} ({enumerator.Current.Value})");
+                Debug.Write($"{enumerator.Current.Value}");
 
                 await foreach (LlamaToken llamaToken in _transformers.Transform(enumerator, selected))
                 {
@@ -481,7 +482,10 @@ namespace ChieApi.Services
             }
 
             _context = await _contextModel.GetState();
-            await _client.Eval(Context, 0);
+            
+            await _client.Write(Context, 0);
+            await _client.Eval();
+
             LoopingThread = new Thread(async () => await LoopProcess());
             LoopingThread.Start();
         }
@@ -523,7 +527,8 @@ namespace ChieApi.Services
 
             _context = contextState;
 
-            await _client.Eval(contextState, 0);
+            await _client.Write(contextState, 0);
+            await _client.Eval();
         }
 
         private async Task ReadNextResponse(TryGetLastBotMessage shouldAppend)

@@ -1,14 +1,15 @@
 ﻿using Llama.Data;
 using LlamaApi.Shared.Models.Request;
 using LlamaApiClient;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace ChieApi.Clients
 {
-    public class RunpodClient : LlamaContextClient
+    public class RunpodClient : LlamaClient
     {
-        private const string API_KEY = "Y2501TD117ZJ43A7OL428ZMWHG047IOFOXUSNMMA";
+        private const string API_KEY = "TJYYVDPEFW5H5Z33G9XZATVN5723N8PU1UD0VDMG";
 
         private const string RUN_ASYNC = "https://api.runpod.ai/v2/5mnz7udeuuxn1t/run";
 
@@ -62,6 +63,28 @@ namespace ChieApi.Clients
             return hr;
         }
 
+        public override async Task<ClientResponse> PostAsync(string host, string url, string content)
+        {
+            if (string.IsNullOrEmpty(host))
+            {
+                throw new ArgumentException($"'{nameof(host)}' cannot be null or empty.", nameof(host));
+            }
+
+            if (string.IsNullOrEmpty(url))
+            {
+                throw new ArgumentException($"'{nameof(url)}' cannot be null or empty.", nameof(url));
+            }
+
+            if (content is null)
+            {
+                throw new ArgumentNullException(nameof(content));
+            }
+
+            ClientResponse hr = await WrapAndExecute(url, "post", content);
+
+            return hr;
+        }
+
         public static JsonElement RemoveNullProperties(JsonElement element)
         {
             switch (element.ValueKind)
@@ -105,6 +128,8 @@ namespace ChieApi.Clients
 
         private async Task<ClientResponse> WrapAndExecute(string url, string method, string? body = null)
         {
+            body = body.Trim();
+
             JsonObject json = new()
             {
                 ["url"] = url,
@@ -113,7 +138,14 @@ namespace ChieApi.Clients
 
             if (body != null)
             {
-                json["body"] = JsonNode.Parse(body);
+                if(body.StartsWith("{") && body.EndsWith("}"))
+                {
+                    json["body"] = JsonNode.Parse(body);
+                }
+                else
+                {
+                    json["body"] = body;
+                }
             }
 
             JsonObject wrapper = new()
@@ -126,6 +158,8 @@ namespace ChieApi.Clients
 
             JsonContent newContent = JsonContent.Create(wrapper);
 
+            Stopwatch requestStopwatch = Stopwatch.StartNew();
+
             HttpResponseMessage hr = await HttpClient.PostAsync(RUN_SYNC, newContent);
 
             string response = await hr.Content.ReadAsStringAsync();
@@ -137,7 +171,7 @@ namespace ChieApi.Clients
 
             while (status is "IN_QUEUE" or "IN_PROGRESS")
             {
-                await Task.Delay(1000);
+                await Task.Delay(50);
 
                 hr = await HttpClient.GetAsync(STATUS + $"/{id}");
 
@@ -148,7 +182,11 @@ namespace ChieApi.Clients
                 status = responseObject["status"]!.ToString();
             }
 
-            System.Diagnostics.Debug.WriteLine(responseObject["executionTime"].ToString());
+            requestStopwatch.Stop();
+
+            string debugLog = $"[{DateTime.Now:HH:mm:ss}] RequestTime: {requestStopwatch.ElapsedMilliseconds:N0}ms; DelayTime: {int.Parse(responseObject["delayTime"].ToString()):N0}; ExecutionTime: {int.Parse(responseObject["executionTime"].ToString()):N0}ms";
+            
+            System.Diagnostics.Debug.WriteLine(debugLog);
 
             JsonObject output = (JsonObject)JsonNode.Parse(responseObject["output"].ToString());
 

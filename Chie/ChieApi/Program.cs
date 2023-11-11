@@ -52,8 +52,9 @@ namespace ChieApi
 			builder.Services.RegisterSecret<BlipApiClientSettings>(configuration);
 			builder.Services.RegisterSecret<SummaryApiClientSettings>(configuration);
 			builder.Services.RegisterSecret<BoredomTaskSettings>(configuration);
+            builder.Services.RegisterSecret<LlamaClientSettings>(configuration);
 
-			_ = builder.Services.AddSingleton<ChatRepository>();
+            _ = builder.Services.AddSingleton<ChatRepository>();
 			_ = builder.Services.AddSingleton<ILogger, LoggingApiClient>();
 
 			_ = builder.Services.AddSingleton<UserDataRepository>();
@@ -80,16 +81,28 @@ namespace ChieApi
 			_ = builder.Services.AddSingleton<LlamaContextModel>();
 			_ = builder.Services.AddSingleton(s =>
 			{
-				LlamaContextClient client = s.GetService<LlamaContextClient>();
+				LlamaClient client = s.GetService<LlamaClient>();
 				return new LlamaTokenCache(client.Tokenize);
 			});
 
 			_ = builder.Services.AddSingleton<SummarizationService>();
 			_ = builder.Services.AddSingleton<DictionaryRepository>();
 
-			LlamaClientSettings clientSettings = new("http://localhost:5059");
-			_ = builder.Services.AddSingleton(clientSettings);
-			_ = builder.Services.AddSingleton<LlamaContextClient>();
+			_ = builder.Services.AddSingleton((s) =>
+			{
+				LlamaClientSettings settings = s.GetRequiredService<LlamaClientSettings>();
+				LlamaContextSettings contextSettings = s.GetRequiredService<LlamaContextSettings>();
+				LlamaModelSettings llamaModelSettings = s.GetRequiredService<LlamaModelSettings>();
+				ContextRequestSettings contextRequestSettings = s.GetRequiredService<ContextRequestSettings>();
+
+				if(settings.Host.Contains("api.runpod.ai", StringComparison.OrdinalIgnoreCase))
+				{
+					return new RunpodClient(settings, contextSettings, llamaModelSettings, contextRequestSettings);
+				} else
+				{
+                    return new LlamaClient(settings, contextSettings, llamaModelSettings, contextRequestSettings);
+                }
+            });
 			_ = builder.Services.AddSingleton((s) =>
 			{
                 CharacterConfiguration _characterConfiguration = s.GetRequiredService<CharacterConfiguration>();

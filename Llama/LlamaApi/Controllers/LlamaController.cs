@@ -37,101 +37,6 @@ namespace LlamaApi.Controllers
             this._loadedModel = loadedModel;
         }
 
-        [HttpPost("request")]
-        public async Task<IActionResult> RequestCollection()
-        {
-            // Read the content as a string (assuming it's sent as plain text)
-            string contentAsBase64 = new StreamReader(HttpContext.Request.BodyReader.AsStream()).ReadToEnd();
-
-            try
-            {
-                // Convert the base64 string to byte array
-                byte[] fileBytes = Convert.FromBase64String(contentAsBase64);
-
-                RequestCollection requests = DataSerializer.Deserialize<RequestCollection>(fileBytes);
-
-                ResponseCollection responses = new();
-
-                foreach(object o in requests.Requests)
-                {
-                    object r = null;
-                    bool found = false;
-
-                    if (o is ContextDisposeRequest cdr)
-                    {
-                        throw new NotImplementedException();
-                    }
-
-                    if (o is ContextRequest cr)
-                    {
-                        r = Context(cr);
-                        found = true;
-                    }
-
-                    if (o is ContextSnapshotRequest csr)
-                    {
-                        r = this.Evaluated(csr);
-                        found = true;
-                    }
-
-                    if (o is EvaluateRequest er)
-                    {
-                        r = this.Eval(er);
-                        found = true;
-                    }
-
-                    if (o is GetLogitsRequest glr)
-                    {
-                        r = this.GetLogits(glr);
-                        found = true;
-                    }
-
-                    if (o is ModelRequest mr)
-                    {
-                        r = this.Model(mr);
-                        found = true;
-                    }
-
-                    if (o is PredictRequest pr)
-                    {
-                        r = this.Predict(pr);
-                        found = true;
-                    }
-
-                    if (o is TokenizeRequest tr)
-                    {
-                        r = this.Tokenize(tr);
-                        found = true;
-                    }
-
-                    if (o is WriteTokenRequest wtr)
-                    {
-                        r = this.Write(wtr);
-                        found = true;
-                    }
-
-                    if (!found)
-                    {
-                        throw new NotImplementedException();
-                    }
-                    
-                    responses.Responses.Add(r);
-                }
-
-                byte[] responseData = DataSerializer.Serialize(responses);
-
-                string responseStr = Convert.ToBase64String(responseData);
-
-                return Content(responseStr);
-            }
-
-            catch (FormatException ex)
-            {
-                // Handle the exception if the string is not a valid base64 string
-                return BadRequest("Invalid Base64 string.");
-            }
-        }
-
         [HttpPost("context")]
         public ContextResponse Context(ContextRequest request)
         {
@@ -186,6 +91,22 @@ namespace LlamaApi.Controllers
                 };
 
                 this._loadedModel.Evaluator.Add(response.State.Id, evaluator);
+
+                //for (int i = 0; i < 1; i++)
+                //{
+                //    WriteTokenRequest writeTokenRequest = new() { ContextId = response.State.Id, Priority = ExecutionPriority.Immediate, StartIndex = 0, Tokens = new List<RequestLlamaToken>(), WriteTokenType = WriteTokenType.Overwrite };
+
+                //    Random r = new();
+
+                //    for (int ii = 0; ii < request.Settings.ContextSize - 2000; ii++)
+                //    {
+                //        writeTokenRequest.Tokens.Add(new RequestLlamaToken() { TokenId = r.Next(1, 10000) });
+                //    }
+
+                //    this.Write(writeTokenRequest);
+
+                //    this.Eval(new EvaluateRequest() { ContextId = response.State.Id, Priority = ExecutionPriority.Immediate });
+                //}
 
                 return response;
             }
@@ -306,6 +227,100 @@ namespace LlamaApi.Controllers
             {
                 Predicted = new ResponseLlamaToken(predicted)
             };
+        }
+
+        [HttpPost("request")]
+        public async Task<IActionResult> RequestCollection()
+        {
+            // Read the content as a string (assuming it's sent as plain text)
+            string contentAsBase64 = new StreamReader(HttpContext.Request.BodyReader.AsStream()).ReadToEnd();
+
+            try
+            {
+                // Convert the base64 string to byte array
+                byte[] fileBytes = Convert.FromBase64String(contentAsBase64);
+
+                RequestCollection requests = DataSerializer.Deserialize<RequestCollection>(fileBytes);
+
+                ResponseCollection responses = new();
+
+                foreach (object o in requests.Requests)
+                {
+                    object r = null;
+                    bool found = false;
+
+                    if (o is ContextDisposeRequest cdr)
+                    {
+                        throw new NotImplementedException();
+                    }
+
+                    if (o is ContextRequest cr)
+                    {
+                        r = Context(cr);
+                        found = true;
+                    }
+
+                    if (o is ContextSnapshotRequest csr)
+                    {
+                        r = this.Evaluated(csr);
+                        found = true;
+                    }
+
+                    if (o is EvaluateRequest er)
+                    {
+                        r = this.Eval(er);
+                        found = true;
+                    }
+
+                    if (o is GetLogitsRequest glr)
+                    {
+                        r = this.GetLogits(glr);
+                        found = true;
+                    }
+
+                    if (o is ModelRequest mr)
+                    {
+                        r = this.Model(mr);
+                        found = true;
+                    }
+
+                    if (o is PredictRequest pr)
+                    {
+                        r = this.Predict(pr);
+                        found = true;
+                    }
+
+                    if (o is TokenizeRequest tr)
+                    {
+                        r = this.Tokenize(tr);
+                        found = true;
+                    }
+
+                    if (o is WriteTokenRequest wtr)
+                    {
+                        r = this.Write(wtr);
+                        found = true;
+                    }
+
+                    if (!found)
+                    {
+                        throw new NotImplementedException();
+                    }
+
+                    responses.Responses.Add(r);
+                }
+
+                byte[] responseData = DataSerializer.Serialize(responses);
+
+                string responseStr = Convert.ToBase64String(responseData);
+
+                return Content(responseStr);
+            }
+            catch (FormatException ex)
+            {
+                // Handle the exception if the string is not a valid base64 string
+                return BadRequest("Invalid Base64 string.");
+            }
         }
 
         [HttpGet("/")]
