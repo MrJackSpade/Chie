@@ -64,8 +64,6 @@ namespace Llama.Core.Samplers.Mirostat
             float tau = this._settings.Target;
             float eta = this._settings.LearningRate;
 
-            Debug.WriteLine($"Temp: {this._temp}");
-
             bool topOnly = false;
             int top_x = 0;
 
@@ -145,12 +143,12 @@ namespace Llama.Core.Samplers.Mirostat
                 candidateBuilder.Append(this.GetDisplayString(sampleContext, candidateSpan[i]));
             }
 
-            Debug.WriteLine(candidateBuilder.ToString());
-
             //Calculate surprise based on the original P to
             //ensure that wonky probability fuckery doesn't mess
             //up the surprise calculations
             float original_p = this.GetBackupP(x);
+            
+            string muCalc = string.Empty;
 
             if (!topOnly || this._settings.FactorPreservedWords)
             {
@@ -167,9 +165,11 @@ namespace Llama.Core.Samplers.Mirostat
                     this._temp = nuTemp;
                     this._mu = nuMu;
                 }
+
+                muCalc = $"Ob: {observed_surprise:0.00}; Adj: {adj:0.00};";
             }
 
-            Debug.WriteLine($"mu: {this._mu}");
+            Debug.WriteLine($"T: {this._temp:0.00}; Mu: {this._mu:0.00}; {muCalc} {candidateBuilder}");
 
             return x;
         }

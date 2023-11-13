@@ -1,4 +1,5 @@
 ﻿using Llama.Core.Interfaces;
+using Llama.Core.Utils;
 using Llama.Data.Models;
 
 namespace Llama.Core.Tests.TestObjects
@@ -39,6 +40,10 @@ namespace Llama.Core.Tests.TestObjects
         }
 
         public void ShiftCacheTokens(uint sequenceId, uint startPos, uint endPos, int delta)
+        {
+        }
+
+        public void Validate(KvCacheState<LlamaToken> kvCache)
         {
         }
     }

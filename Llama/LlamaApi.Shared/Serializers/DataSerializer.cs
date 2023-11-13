@@ -347,15 +347,30 @@ namespace LlamaApi.Shared.Serializers
 
         public static ContextRequestSettings DeserializeContextRequestSettings(BinaryReader reader)
         {
-            return new ContextRequestSettings()
+            MirostatType mirostatType = DeserializeMirostatType(reader);
+
+            ContextRequestSettings settings = new()
             {
                 ComplexPresencePenaltySettings = DeserializeComplexPresencePenaltySettings(reader),
-                MirostatSamplerSettings = DeserializeMirostatSamplerSettings(reader),
-                MirostatTempSamplerSettings = DeserializeMirostatTempSamplerSettings(reader),
                 RepetitionSamplerSettings = DeserializeRepetitionSamplerSettings(reader),
-                TemperatureSamplerSettings = DeserializeTemperatureSamplerSettings(reader)
-
             };
+
+            if(mirostatType == MirostatType.None)
+            {
+                settings.TemperatureSamplerSettings = DeserializeTemperatureSamplerSettings(reader);
+            }
+
+            if(mirostatType is MirostatType.One or MirostatType.Two)
+            {
+                settings.MirostatSamplerSettings = DeserializeMirostatSamplerSettings(reader);
+            }
+
+            if (mirostatType == MirostatType.Three)
+            {
+                settings.MirostatTempSamplerSettings = DeserializeMirostatTempSamplerSettings(reader);
+            }
+
+            return settings;
         }
 
         public static ContextResponse DeserializeContextResponse(BinaryReader reader)
@@ -1322,11 +1337,37 @@ namespace LlamaApi.Shared.Serializers
 
         public static void Serialize(ContextRequestSettings request, BinaryWriter writer)
         {
+            MirostatType type = MirostatType.None;
+
+            if(request.MirostatSamplerSettings != null)
+            {
+                type = request.MirostatSamplerSettings.MirostatType;
+            }
+
+            if(request.MirostatTempSamplerSettings != null)
+            {
+                type = MirostatType.Three;
+            }
+
+            Serialize(type, writer);
             Serialize(request.ComplexPresencePenaltySettings, writer);
-            Serialize(request.MirostatSamplerSettings, writer);
-            Serialize(request.MirostatTempSamplerSettings, writer);
             Serialize(request.RepetitionSamplerSettings, writer);
-            Serialize(request.TemperatureSamplerSettings, writer);
+
+            switch (type)
+            {
+                case MirostatType.None:
+                    Serialize(request.TemperatureSamplerSettings, writer);
+                    break;
+                case MirostatType.One:
+                case MirostatType.Two:
+                    Serialize(request.MirostatSamplerSettings!, writer);
+                    break;
+                case MirostatType.Three:
+                    Serialize(request.MirostatTempSamplerSettings!, writer);
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
         }
 
         public static void Serialize(ContextRequest request, BinaryWriter writer)

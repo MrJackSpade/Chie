@@ -25,9 +25,9 @@ namespace ChieApi.Services
 {
     public partial class LlamaService
     {
-        public const int SUMMARY_TARGET = 2000;
+        public const int SUMMARY_TARGET = 0;
 
-        private const int SUMMARY_CHUNKS = 12;
+        private const int SUMMARY_CHUNKS = 14;
 
         private readonly AutoResetEvent _acceptingInput = new(false);
 
@@ -273,8 +273,6 @@ namespace ChieApi.Services
                     _logger.LogWarning($"Client not idle. Skipping ({chatEntries.Length}) messages.");
                     return 0;
                 }
-
-                _logger.LogInformation("Sending messages to client...");
 
                 foreach (ChatEntry chat in chatEntries)
                 {
@@ -703,9 +701,17 @@ namespace ChieApi.Services
 
                 _contextModel.Summary = new LlamaTokenBlock(tokens, LlamaTokenType.Undefined);
 
+                int dropped = 0;
+
                 while (messages[0].Id < summary.FirstId)
                 {
+                    dropped++;
                     messages.Dequeue();
+                }
+
+                if(dropped > 0)
+                {
+                    Debug.WriteLine($"Dropped {dropped} from history");
                 }
 
                 _summaryTask = null;

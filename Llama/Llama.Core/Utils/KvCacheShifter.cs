@@ -78,6 +78,10 @@ namespace Llama.Core.Utils
         public void ShiftCacheTokens(uint sequenceId, uint startPos, uint endPos, int delta)
             => NativeApi.ShiftCacheTokens(_handle, sequenceId, startPos, endPos, delta);
 
+        public void Validate(KvCacheState<LlamaToken> kvCache)
+        {
+        }
+
         private void Log(BatchDecode<int> idBatch)
         {
             if (!Directory.Exists("Logs"))

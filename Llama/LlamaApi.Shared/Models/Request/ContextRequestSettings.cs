@@ -8,12 +8,12 @@ namespace LlamaApi.Shared.Models.Request
     {
         public ComplexPresencePenaltySettings ComplexPresencePenaltySettings { get; set; } = new();
 
-        public MirostatSamplerSettings MirostatSamplerSettings { get; set; } = new();
+        public MirostatSamplerSettings? MirostatSamplerSettings { get; set; }
 
-        public MirostatTempSamplerSettings MirostatTempSamplerSettings { get; set; } = new();
+        public MirostatTempSamplerSettings? MirostatTempSamplerSettings { get; set; }
 
         public RepetitionSamplerSettings RepetitionSamplerSettings { get; set; } = new();
 
-        public TemperatureSamplerSettings TemperatureSamplerSettings { get; set; } = new();
+        public TemperatureSamplerSettings? TemperatureSamplerSettings { get; set; }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Llama.Core.Interfaces;
 using Llama.Data.Collections;
 using Llama.Data.Models;
+using Llama.Native;
 using System.Diagnostics;
 
 namespace Llama.Core.Utils
@@ -35,21 +36,9 @@ namespace Llama.Core.Utils
 
         public void Sync(KvCacheState<T> kvCache, PointerArray<T> buffer)
         {
-#if DEBUG
-            Log(kvCache, buffer);
-#endif
-
-            Debug.WriteLine("Transforming... ");
-            Debug.WriteLine($"\tBuffer Pointer: {buffer.Pointer}");
-
             TranformCache(kvCache, buffer);
-
-            Debug.WriteLine("Filling... ");
-            Debug.WriteLine($"\tBuffer Pointer: {buffer.Pointer}");
             FillCache(kvCache, buffer);
-
-            Debug.WriteLine("Done Evaluating. ");
-            Debug.WriteLine($"\tBuffer Pointer: {buffer.Pointer}");
+            //this._arrayShifter.Validate(kvCache);
         }
 
         public void TranformCache(KvCacheState<T> kvCache, PointerArray<T> buffer)

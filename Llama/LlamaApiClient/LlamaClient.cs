@@ -138,7 +138,7 @@ namespace LlamaApiClient
 
             if (ruleCollection != null)
             {
-                request.LogitRules = new LogitRuleCollection();
+                request.LogitRules = ruleCollection;
             }
 
             PredictResponse response;
