@@ -1,11 +1,13 @@
 ﻿using ChieApi.Interfaces;
 using Llama.Data.Extensions;
 using Llama.Data.Models;
+using LlamaApi.Shared.Interfaces;
 using LlamaApiClient;
+using Loxifi.AsyncExtensions;
 
 namespace ChieApi.TokenTransformers
 {
-    public class RoleplayEnforcingTransformer : IPostAccept
+    public class RoleplayEnforcingTransformer : IPostAccept, ITokenTransformer
     {
         private const int END_ASTERISK = 29930;
 
@@ -19,9 +21,9 @@ namespace ChieApi.TokenTransformers
 
         public RoleplayEnforcingTransformer(float enforceSlope, float lengthenSlope, float lengthenOffset)
         {
-            this._enforceSlope = enforceSlope;
-            this._lengthenSlope = lengthenSlope;
-            this._lengthenOffset = lengthenOffset;
+            _enforceSlope = enforceSlope;
+            _lengthenSlope = lengthenSlope;
+            _lengthenOffset = lengthenOffset;
         }
 
         public int GetNextAsterisk(string writtenTrimmed)
@@ -36,12 +38,13 @@ namespace ChieApi.TokenTransformers
             return asteriskCount % 2 == 1 ? START_ASTERISK : END_ASTERISK;
         }
 
+
         public void PostAccept(InferenceEnumerator enumerator)
         {
             string writtenTrimmed = enumerator.Enumerated.ToString()?.Trim() ?? string.Empty;
 
-            int next = this.GetNextAsterisk(writtenTrimmed);
-            int not = this.GetNotNextAsterisk(writtenTrimmed);
+            int next = GetNextAsterisk(writtenTrimmed);
+            int not = GetNotNextAsterisk(writtenTrimmed);
 
             int asteriskCount = writtenTrimmed.Count(c => c == '*');
             bool endsWith = writtenTrimmed.EndsWith("*");
@@ -49,7 +52,7 @@ namespace ChieApi.TokenTransformers
             //If we have zero asterisks, set the start value and block the end
             if (asteriskCount == 0)
             {
-                float mod = 1 + (writtenTrimmed.Length * this._enforceSlope);
+                float mod = 1 + (writtenTrimmed.Length * _enforceSlope);
                 enumerator.SetBias(START_ASTERISK, mod, LogitRuleLifetime.Token, LogitBiasType.Multiplicative);
                 enumerator.SetBias(END_ASTERISK, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
             }
@@ -67,7 +70,7 @@ namespace ChieApi.TokenTransformers
                 string spaceTrimmed = chunk.Replace("  ", " ");
                 int spaceCount = chunk.Count(c => c == ' ');
 
-                float baseF = this._lengthenOffset;
+                float baseF = _lengthenOffset;
                 float adj = spaceCount * _lengthenSlope;
                 float bias = 0 - baseF + adj;
 
@@ -82,6 +85,40 @@ namespace ChieApi.TokenTransformers
             else
             {
                 enumerator.SetBias(not, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
+            }
+        }
+
+        public async IAsyncEnumerable<LlamaToken> TransformToken(InferenceEnumerator enumerator, IAsyncEnumerable<LlamaToken> selectedTokens)
+        {
+            string writtenTrimmed = enumerator.Enumerated.ToString()?.Trim() ?? string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(writtenTrimmed) && writtenTrimmed[^1] == '*')
+            {
+                bool inAsterisks = writtenTrimmed.Count(c => c == '*') % 2 == 1;
+
+                List<LlamaToken> lTokens = await selectedTokens.ToList();
+
+                LlamaToken firstToken = lTokens[0];
+
+                if (!string.IsNullOrWhiteSpace(firstToken.Value) && firstToken.Value[0] != ' ')
+                {
+                    yield break;
+                }
+                else
+                {
+                    foreach (LlamaToken lt in lTokens)
+                    {
+                        yield return lt;
+                    }
+                }
+            }
+            else
+            {
+
+                await foreach (LlamaToken token in selectedTokens)
+                {
+                    yield return token;
+                }
             }
         }
     }

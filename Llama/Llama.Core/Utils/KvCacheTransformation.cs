@@ -20,9 +20,9 @@
 
         public T Item { get; set; }
 
-        public uint NewIndex { get; set; }
+        public uint NewIndex { get; private set; }
 
-        public uint OriginalIndex { get; set; }
+        public uint OriginalIndex { get; private set; }
 
         public override string ToString()
         {

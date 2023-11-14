@@ -101,8 +101,11 @@ namespace Llama.Native
 
                 thisBatchSize = (uint)thisBatch.Count;
 
-                //Log progress for sanity
-                Debug.WriteLine($"[{decoded + thisBatchSize}/{toDecode}]");
+                if (thisBatchSize > 1)
+                {
+                    //Log progress for sanity
+                    Debug.WriteLine($"[{decoded + thisBatchSize}/{toDecode}]");
+                }
 
                 //Actually process this batch
                 int result = ProcessBatch(handle, thisBatch);

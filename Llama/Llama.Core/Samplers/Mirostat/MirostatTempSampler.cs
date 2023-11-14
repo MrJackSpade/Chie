@@ -143,6 +143,8 @@ namespace Llama.Core.Samplers.Mirostat
                 candidateBuilder.Append(this.GetDisplayString(sampleContext, candidateSpan[i]));
             }
 
+            candidateBuilder.Append(']');
+
             //Calculate surprise based on the original P to
             //ensure that wonky probability fuckery doesn't mess
             //up the surprise calculations
