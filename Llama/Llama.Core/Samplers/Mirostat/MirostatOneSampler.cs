@@ -38,7 +38,7 @@ namespace Llama.Core.Samplers.Mirostat
 
         public int SampleNext(SampleContext sampleContext)
         {
-            Span<LlamaTokenData> candidateSpan = sampleContext.Candidates.data.Span;
+            Span<LlamaTokenData> candidateSpan = sampleContext.Candidates.Data.Span;
 
             SamplingApi.Temperature(sampleContext.ContextHandle, sampleContext.Candidates, this._settings.Temperature);
 
@@ -46,14 +46,14 @@ namespace Llama.Core.Samplers.Mirostat
             float eta = this._settings.Eta;
             float m = this._settings.M;
 
-            float n = sampleContext.Candidates.data.Length;
+            float n = sampleContext.Candidates.Data.Length;
 
             SamplingApi.SoftMax(sampleContext.ContextHandle, sampleContext.Candidates);
 
             float sum_ti_bi = 0.0f;
             float sum_ti_sq = 0.0f;
 
-            for (int i = 0; i < m - 1 && i < (int)sampleContext.Candidates.size - 1; i++)
+            for (int i = 0; i < m - 1 && i < (int)sampleContext.Candidates.Size - 1; i++)
             {
                 float ti = (float)Math.Log((i + 2) / (double)(i + 1));
                 float b_i = (float)Math.Log(candidateSpan[i].p / candidateSpan[i + 1].p);
@@ -97,16 +97,16 @@ namespace Llama.Core.Samplers.Mirostat
             // Compute error as the difference between observed surprise and target surprise value
             int x_idx = 0;
 
-            for (int i = 0; i < (int)sampleContext.Candidates.size; i++)
+            for (int i = 0; i < (int)sampleContext.Candidates.Size; i++)
             {
-                if (sampleContext.Candidates.data.Span[i].id == x)
+                if (sampleContext.Candidates.Data.Span[i].id == x)
                 {
                     x_idx = i;
                     break;
                 }
             }
 
-            float observed_surprise = -(float)(Math.Log(sampleContext.Candidates.data.Span[x_idx].p) / Math.Log(2));
+            float observed_surprise = -(float)(Math.Log(sampleContext.Candidates.Data.Span[x_idx].p) / Math.Log(2));
             float e = observed_surprise - tau;
 
             // Update mu using the learning rate and error

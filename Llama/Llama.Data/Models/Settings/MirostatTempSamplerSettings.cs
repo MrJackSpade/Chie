@@ -30,9 +30,9 @@
         public float LearningRate { get; set; } = 0.25f;
 
         /// <summary>
-        /// Default 0.01
+        /// Default 0.95
         /// </summary>
-        public float MinP { get; set; } = 0.15f;
+        public float Tfs { get; set; } = 0.95f;
 
         /// <summary>
         /// If true, Mirostat will only use TOPK sampling for new words
@@ -48,10 +48,5 @@
         /// Default 40
         /// </summary>
         public float TemperatureLearningRate { get; set; } = 0.05f;
-
-        /// <summary>
-        /// Default 40
-        /// </summary>
-        public int TopK { get; set; } = 40;
     }
 }

@@ -633,11 +633,10 @@ namespace LlamaApi.Shared.Serializers
                 FactorPreservedWords = DeserializeBool(reader),
                 InitialTemperature = DeserializeFloat(reader),
                 LearningRate = DeserializeFloat(reader),
-                MinP = DeserializeFloat(reader),
+                Tfs = DeserializeFloat(reader),
                 PreserveWords = DeserializeBool(reader),
                 Target = DeserializeFloat(reader),
-                TemperatureLearningRate = DeserializeFloat(reader),
-                TopK = DeserializeInt(reader)
+                TemperatureLearningRate = DeserializeFloat(reader)
             };
         }
 
@@ -1162,11 +1161,10 @@ namespace LlamaApi.Shared.Serializers
             Serialize(request.FactorPreservedWords, writer);
             Serialize(request.InitialTemperature, writer);
             Serialize(request.LearningRate, writer);
-            Serialize(request.MinP, writer);
+            Serialize(request.Tfs, writer);
             Serialize(request.PreserveWords, writer);
             Serialize(request.Target, writer);
             Serialize(request.TemperatureLearningRate, writer);
-            Serialize(request.TopK, writer);
         }
 
         public static void Serialize(MemoryMode request, BinaryWriter writer)

@@ -7,14 +7,14 @@ namespace Llama.Data.Extensions
     {
         public static float GetProbability(this SampleContext context, int tokenId)
         {
-            Span<LlamaTokenData> span = context.Candidates.data.Span;
+            Span<LlamaTokenData> span = context.Candidates.Data.Span;
             LlamaTokenData existing = span[tokenId];
             return existing.logit;
         }
 
         public static void SetBias(this SampleContext context, int tokenId, float probability, LogitBiasType logitBiasType)
         {
-            Span<LlamaTokenData> span = context.Candidates.data.Span;
+            Span<LlamaTokenData> span = context.Candidates.Data.Span;
             LlamaTokenData existing = span[tokenId];
 
             int mod = existing.logit > 0 ? 1 : -1;
@@ -39,7 +39,7 @@ namespace Llama.Data.Extensions
 
         public static void SetPenalty(this SampleContext context, int tokenId, float probability)
         {
-            Span<LlamaTokenData> span = context.Candidates.data.Span;
+            Span<LlamaTokenData> span = context.Candidates.Data.Span;
             LlamaTokenData existing = span[tokenId];
 
             float newValue = existing.logit / probability;
@@ -59,7 +59,7 @@ namespace Llama.Data.Extensions
 
         public static void SetProbability(this SampleContext context, int tokenId, float probability)
         {
-            Span<LlamaTokenData> span = context.Candidates.data.Span;
+            Span<LlamaTokenData> span = context.Candidates.Data.Span;
             LlamaTokenData existing = span[tokenId];
             span[tokenId] = new LlamaTokenData()
             {

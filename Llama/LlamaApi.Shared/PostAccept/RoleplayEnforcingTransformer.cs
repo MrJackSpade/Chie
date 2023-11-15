@@ -38,7 +38,6 @@ namespace ChieApi.TokenTransformers
             return asteriskCount % 2 == 1 ? START_ASTERISK : END_ASTERISK;
         }
 
-
         public void PostAccept(InferenceEnumerator enumerator)
         {
             string writtenTrimmed = enumerator.Enumerated.ToString()?.Trim() ?? string.Empty;

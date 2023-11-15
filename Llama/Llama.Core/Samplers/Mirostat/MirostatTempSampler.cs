@@ -55,9 +55,10 @@ namespace Llama.Core.Samplers.Mirostat
         {
             //Softmax for backup
             SamplingApi.SoftMax(sampleContext.ContextHandle, sampleContext.Candidates);
-            Span<LlamaTokenData> candidateSpan = sampleContext.Candidates.data.Span;
+            Span<LlamaTokenData> candidateSpan = sampleContext.Candidates.Data.Span;
             this.Copy(candidateSpan);
 
+            SamplingApi.TailFree(sampleContext.ContextHandle, sampleContext.Candidates, this._settings.Tfs, 1);
             SamplingApi.Temperature(sampleContext.ContextHandle, sampleContext.Candidates, this._temp);
             SamplingApi.SoftMax(sampleContext.ContextHandle, sampleContext.Candidates);
 
@@ -81,33 +82,6 @@ namespace Llama.Core.Samplers.Mirostat
             }
             else
             {
-                int n_keep = candidateSpan.Length;
-                float min_p = 1;
-
-                if (this._settings.MinP > 0)
-                {
-                    min_p = this._settings.MinP;
-                }
-
-                if (this._settings.TopK > 0)
-                {
-                    n_keep = this._settings.TopK;
-                }
-
-                // Sample the next word X using top-k sampling
-                SamplingApi.TopK(sampleContext.ContextHandle, sampleContext.Candidates, n_keep, 1);
-
-                float cut_p = candidateSpan[0].p * min_p;
-
-                for (int i = 0; i < candidateSpan.Length; i++)
-                {
-                    if (i >= n_keep || candidateSpan[i].p < cut_p)
-                    {
-                        //How else do I supress this?
-                        candidateSpan[i].logit = float.NegativeInfinity;
-                    }
-                }
-
                 SamplingApi.SoftMax(sampleContext.ContextHandle, sampleContext.Candidates);
                 x = SamplingApi.Token(sampleContext.ContextHandle, sampleContext.Candidates);
             }
@@ -115,7 +89,7 @@ namespace Llama.Core.Samplers.Mirostat
             // Compute error as the difference between observed surprise and target surprise value
             int x_idx = 0;
 
-            for (int i = 0; i < (int)sampleContext.Candidates.size; i++)
+            for (int i = 0; i < (int)sampleContext.Candidates.Size; i++)
             {
                 if (candidateSpan[i].id == x)
                 {
@@ -126,9 +100,18 @@ namespace Llama.Core.Samplers.Mirostat
 
             StringBuilder candidateBuilder = new();
 
+            float selectedP = candidateSpan[x_idx].p;
+
             candidateBuilder.Append($"[{this.GetDisplayString(sampleContext, candidateSpan[x_idx])}] || ");
 
-            for (int i = 0; i < (topOnly ? 1 : 10); i++)
+            ulong displayCount = Math.Min(10, sampleContext.Candidates.Size);
+
+            if(topOnly)
+            {
+                displayCount = 1;
+            }
+
+            for (int i = 0; i < (int)displayCount; i++)
             {
                 if (candidateSpan[i].p == 0)
                 {
@@ -148,7 +131,7 @@ namespace Llama.Core.Samplers.Mirostat
             //Calculate surprise based on the original P to
             //ensure that wonky probability fuckery doesn't mess
             //up the surprise calculations
-            float original_p = this.GetBackupP(x);
+            float original_p = this.GetOriginalP(x);
             
             string muCalc = string.Empty;
 
@@ -195,7 +178,7 @@ namespace Llama.Core.Samplers.Mirostat
             sampleContext.CopyTo(target);
         }
 
-        private float GetBackupP(int id)
+        private float GetOriginalP(int id)
         {
             foreach (LlamaTokenData ltd in this._tempCandidates)
             {

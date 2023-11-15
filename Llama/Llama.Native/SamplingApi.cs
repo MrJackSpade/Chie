@@ -14,12 +14,12 @@ namespace Llama.Native
         /// <param name="penalty"></param>
         public static void ComplexPresencePenalty(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, int[] check_tokens, int minGroupLength, float scalePerGroup, float scalePerLength)
         {
-            System.Buffers.MemoryHandle handle = candidates.data.Pin();
+            System.Buffers.MemoryHandle handle = candidates.Data.Pin();
             LlamaTokenDataArrayNative st = new()
             {
                 data = new IntPtr(handle.Pointer),
-                size = candidates.size,
-                sorted = candidates.sorted
+                size = candidates.Size,
+                sorted = candidates.Sorted
             };
 
             LlamaCppApi.ComplexPresencePenalty(ctx, new IntPtr(&st), check_tokens, (ulong)check_tokens.Length, minGroupLength, scalePerGroup, scalePerLength);
@@ -36,12 +36,13 @@ namespace Llama.Native
         /// <param name="alpha_presence"></param>
         public static void RepetitionPenalties(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, int[] check_tokens, float penalty, float alpha_frequency, float alpha_presence)
         {
-            System.Buffers.MemoryHandle handle = candidates.data.Pin();
+            System.Buffers.MemoryHandle handle = candidates.Data.Pin();
+
             LlamaTokenDataArrayNative st = new()
             {
                 data = new IntPtr(handle.Pointer),
-                size = candidates.size,
-                sorted = candidates.sorted
+                size = candidates.Size,
+                sorted = candidates.Sorted
             };
 
             LlamaCppApi.RepetitionPenalties(ctx, new IntPtr(&st), check_tokens, (ulong)check_tokens.Length, penalty, alpha_frequency, alpha_presence);
@@ -54,14 +55,19 @@ namespace Llama.Native
         /// <param name="candidates">Pointer to LlamaTokenDataArray</param>
         public static void SoftMax(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates)
         {
-            System.Buffers.MemoryHandle handle = candidates.data.Pin();
+            System.Buffers.MemoryHandle handle = candidates.Data.Pin();
+
             LlamaTokenDataArrayNative st = new()
             {
                 data = new IntPtr(handle.Pointer),
-                size = candidates.size,
-                sorted = candidates.sorted
+                size = candidates.Size,
+                sorted = candidates.Sorted
             };
+
             LlamaCppApi.SampleSoftmax(ctx, new IntPtr(&st));
+
+            candidates.Size = st.size;
+            candidates.Sorted = st.sorted;
         }
 
         /// <summary>
@@ -73,26 +79,34 @@ namespace Llama.Native
         /// <param name="min_keep"></param>
         public static void TailFree(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, float z, ulong min_keep)
         {
-            System.Buffers.MemoryHandle handle = candidates.data.Pin();
+            System.Buffers.MemoryHandle handle = candidates.Data.Pin();
             LlamaTokenDataArrayNative st = new()
             {
                 data = new IntPtr(handle.Pointer),
-                size = candidates.size,
-                sorted = candidates.sorted
+                size = candidates.Size,
+                sorted = candidates.Sorted
             };
+
             LlamaCppApi.SampleTailFree(ctx, new IntPtr(&st), z, min_keep);
+
+            candidates.Size = st.size;
+            candidates.Sorted = st.sorted;
         }
 
         public static void Temperature(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, float temp)
         {
-            System.Buffers.MemoryHandle handle = candidates.data.Pin();
+            System.Buffers.MemoryHandle handle = candidates.Data.Pin();
             LlamaTokenDataArrayNative st = new()
             {
                 data = new IntPtr(handle.Pointer),
-                size = candidates.size,
-                sorted = candidates.sorted
+                size = candidates.Size,
+                sorted = candidates.Sorted
             };
+
             LlamaCppApi.SampleTemperature(ctx, new IntPtr(&st), temp);
+
+            candidates.Size = st.size;
+            candidates.Sorted = st.sorted;
         }
 
         /// <summary>
@@ -103,13 +117,14 @@ namespace Llama.Native
         /// <returns></returns>
         public static int Token(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates)
         {
-            System.Buffers.MemoryHandle handle = candidates.data.Pin();
+            System.Buffers.MemoryHandle handle = candidates.Data.Pin();
             LlamaTokenDataArrayNative st = new()
             {
                 data = new IntPtr(handle.Pointer),
-                size = candidates.size,
-                sorted = candidates.sorted
+                size = candidates.Size,
+                sorted = candidates.Sorted
             };
+
             return LlamaCppApi.SampleToken(ctx, new IntPtr(&st));
         }
 
@@ -121,13 +136,14 @@ namespace Llama.Native
         /// <returns></returns>
         public static int TokenGreedy(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates)
         {
-            System.Buffers.MemoryHandle handle = candidates.data.Pin();
+            System.Buffers.MemoryHandle handle = candidates.Data.Pin();
             LlamaTokenDataArrayNative st = new()
             {
                 data = new IntPtr(handle.Pointer),
-                size = candidates.size,
-                sorted = candidates.sorted
+                size = candidates.Size,
+                sorted = candidates.Sorted
             };
+
             return LlamaCppApi.SampleTokenGreedy(ctx, new IntPtr(&st));
         }
 
@@ -143,12 +159,12 @@ namespace Llama.Native
         /// <returns></returns>
         public static int TokenMirostat(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, float tau, float eta, int m, ref float mu)
         {
-            System.Buffers.MemoryHandle handle = candidates.data.Pin();
+            System.Buffers.MemoryHandle handle = candidates.Data.Pin();
             LlamaTokenDataArrayNative st = new()
             {
                 data = new IntPtr(handle.Pointer),
-                size = candidates.size,
-                sorted = candidates.sorted
+                size = candidates.Size,
+                sorted = candidates.Sorted
             };
             int res;
             fixed (float* pmu = &mu)
@@ -170,12 +186,12 @@ namespace Llama.Native
         /// <returns></returns>
         public static int TokenMirostatV2(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, float tau, float eta, ref float mu)
         {
-            System.Buffers.MemoryHandle handle = candidates.data.Pin();
+            System.Buffers.MemoryHandle handle = candidates.Data.Pin();
             LlamaTokenDataArrayNative st = new()
             {
                 data = new IntPtr(handle.Pointer),
-                size = candidates.size,
-                sorted = candidates.sorted
+                size = candidates.Size,
+                sorted = candidates.Sorted
             };
             int res;
             fixed (float* pmu = &mu)
@@ -195,15 +211,18 @@ namespace Llama.Native
         /// <param name="min_keep"></param>
         public static void TopK(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, int k, ulong min_keep)
         {
-            System.Buffers.MemoryHandle handle = candidates.data.Pin();
+            System.Buffers.MemoryHandle handle = candidates.Data.Pin();
             LlamaTokenDataArrayNative st = new()
             {
                 data = new IntPtr(handle.Pointer),
-                size = candidates.size,
-                sorted = candidates.sorted
+                size = candidates.Size,
+                sorted = candidates.Sorted
             };
 
             LlamaCppApi.SampleTopK(ctx, new IntPtr(&st), k, min_keep);
+
+            candidates.Size = st.size;
+            candidates.Sorted = st.sorted;
         }
 
         /// <summary>
@@ -215,14 +234,18 @@ namespace Llama.Native
         /// <param name="min_keep"></param>
         public static void TopP(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, float p, ulong min_keep)
         {
-            System.Buffers.MemoryHandle handle = candidates.data.Pin();
+            System.Buffers.MemoryHandle handle = candidates.Data.Pin();
             LlamaTokenDataArrayNative st = new()
             {
                 data = new IntPtr(handle.Pointer),
-                size = candidates.size,
-                sorted = candidates.sorted
+                size = candidates.Size,
+                sorted = candidates.Sorted
             };
+
             LlamaCppApi.SampleTopP(ctx, new IntPtr(&st), p, min_keep);
+
+            candidates.Size = st.size;
+            candidates.Sorted = st.sorted;
         }
 
         /// <summary>
@@ -234,14 +257,18 @@ namespace Llama.Native
         /// <param name="min_keep"></param>
         public static void Typical(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, float p, ulong min_keep)
         {
-            System.Buffers.MemoryHandle handle = candidates.data.Pin();
+            System.Buffers.MemoryHandle handle = candidates.Data.Pin();
             LlamaTokenDataArrayNative st = new()
             {
                 data = new IntPtr(handle.Pointer),
-                size = candidates.size,
-                sorted = candidates.sorted
+                size = candidates.Size,
+                sorted = candidates.Sorted
             };
+
             LlamaCppApi.SampleTypical(ctx, new IntPtr(&st), p, min_keep);
+
+            candidates.Size = st.size;
+            candidates.Sorted = st.sorted;
         }
     }
 }

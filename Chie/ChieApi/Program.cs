@@ -130,7 +130,7 @@ namespace ChieApi
                             Target = _characterConfiguration.MiroStatEntropy,
                             LearningRate = _characterConfiguration.LearningRate,
                             InitialTemperature = _characterConfiguration.Temperature,
-                            TopK = _characterConfiguration.TopK
+                            Tfs = _characterConfiguration.Tfs
                         };
                     }
                     else
