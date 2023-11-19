@@ -355,12 +355,12 @@ namespace LlamaApi.Shared.Serializers
                 RepetitionSamplerSettings = DeserializeRepetitionSamplerSettings(reader),
             };
 
-            if(mirostatType == MirostatType.None)
+            if (mirostatType == MirostatType.None)
             {
                 settings.TemperatureSamplerSettings = DeserializeTemperatureSamplerSettings(reader);
             }
 
-            if(mirostatType is MirostatType.One or MirostatType.Two)
+            if (mirostatType is MirostatType.One or MirostatType.Two)
             {
                 settings.MirostatSamplerSettings = DeserializeMirostatSamplerSettings(reader);
             }
@@ -375,7 +375,6 @@ namespace LlamaApi.Shared.Serializers
 
         public static ContextResponse DeserializeContextResponse(BinaryReader reader)
         {
-
             return new ContextResponse()
             {
                 State = DeserializeContextState(reader)
@@ -480,11 +479,6 @@ namespace LlamaApi.Shared.Serializers
             return tokens;
         }
 
-        public static MemoryMode DeserializeMemoryMode(BinaryReader reader)
-        {
-            return (MemoryMode)reader.ReadByte();
-        }
-
         public static LlamaContextSettings DeserializeLlamaContextSettings(BinaryReader reader)
         {
             return new LlamaContextSettings()
@@ -552,15 +546,6 @@ namespace LlamaApi.Shared.Serializers
                 Type = DeserializeLogitClampType(reader)
             };
         }
-        public static RequestType DeserializeRequestType(BinaryReader reader)
-        {
-            return (RequestType)reader.ReadByte();
-        }
-
-        public static ResponseType DeserializeResponseType(BinaryReader reader)
-        {
-            return (ResponseType)reader.ReadByte();
-        }
 
         public static LogitClampType DeserializeLogitClampType(BinaryReader reader)
         {
@@ -612,6 +597,11 @@ namespace LlamaApi.Shared.Serializers
         public static LogitRuleType DeserializeLogitRuleType(BinaryReader reader)
         {
             return (LogitRuleType)reader.ReadByte();
+        }
+
+        public static MemoryMode DeserializeMemoryMode(BinaryReader reader)
+        {
+            return (MemoryMode)reader.ReadByte();
         }
 
         public static MirostatSamplerSettings DeserializeMirostatSamplerSettings(BinaryReader reader)
@@ -709,30 +699,39 @@ namespace LlamaApi.Shared.Serializers
                     case RequestType.ContextDisposeRequest:
                         toAdd = DeserializeContextDisposeRequest(reader);
                         break;
+
                     case RequestType.ContextRequest:
                         toAdd = DeserializeContextRequest(reader);
                         break;
+
                     case RequestType.ContextSnapshotRequest:
                         toAdd = DeserializeContextSnapshotRequest(reader);
                         break;
+
                     case RequestType.EvaluateRequest:
                         toAdd = DeserializeEvaluateRequest(reader);
                         break;
+
                     case RequestType.GetLogitsRequest:
                         toAdd = DeserializeGetLogitsRequest(reader);
                         break;
+
                     case RequestType.ModelRequest:
                         toAdd = DeserializeModelRequest(reader);
                         break;
+
                     case RequestType.PredictRequest:
                         toAdd = DeserializePredictRequest(reader);
                         break;
+
                     case RequestType.TokenizeRequest:
                         toAdd = DeserializeTokenizeRequest(reader);
                         break;
+
                     case RequestType.WriteTokenRequest:
                         toAdd = DeserializeWriteTokenRequest(reader);
                         break;
+
                     default:
                         throw new NotImplementedException();
                 }
@@ -749,6 +748,11 @@ namespace LlamaApi.Shared.Serializers
             {
                 TokenId = DeserializeInt(reader)
             };
+        }
+
+        public static RequestType DeserializeRequestType(BinaryReader reader)
+        {
+            return (RequestType)reader.ReadByte();
         }
 
         public static ResponseCollection DeserializeResponseCollection(BinaryReader reader)
@@ -768,27 +772,35 @@ namespace LlamaApi.Shared.Serializers
                     case ResponseType.ContextResponse:
                         toAdd = DeserializeContextResponse(reader);
                         break;
+
                     case ResponseType.ContextSnapshotResponse:
                         toAdd = DeserializeContextSnapshotResponse(reader);
                         break;
+
                     case ResponseType.EvaluationResponse:
                         toAdd = DeserializeEvaluationResponse(reader);
                         break;
+
                     case ResponseType.GetLogitsResponse:
                         toAdd = DeserializeGetLogitsResponse(reader);
                         break;
+
                     case ResponseType.ModelResponse:
                         toAdd = DeserializeModelResponse(reader);
                         break;
+
                     case ResponseType.PredictResponse:
                         toAdd = DeserializePredictResponse(reader);
                         break;
+
                     case ResponseType.TokenizeResponse:
                         toAdd = DeserializeTokenizeResponse(reader);
                         break;
+
                     case ResponseType.WriteTokenResponse:
                         toAdd = DeserializeWriteTokenResponse(reader);
                         break;
+
                     default:
                         throw new NotImplementedException();
                 }
@@ -820,6 +832,11 @@ namespace LlamaApi.Shared.Serializers
             }
 
             return responseLlamaTokens;
+        }
+
+        public static ResponseType DeserializeResponseType(BinaryReader reader)
+        {
+            return (ResponseType)reader.ReadByte();
         }
 
         public static string DeserializeString(BinaryReader reader)
@@ -879,7 +896,6 @@ namespace LlamaApi.Shared.Serializers
                 StartIndex = DeserializeInt(reader),
                 Tokens = DeserializeListRequestLlamaToken(reader),
                 WriteTokenType = DeserializeWriteTokenType(reader)
-
             };
         }
 
@@ -891,9 +907,14 @@ namespace LlamaApi.Shared.Serializers
             };
         }
 
+        public static WriteTokenType DeserializeWriteTokenType(BinaryReader reader)
+        {
+            return (WriteTokenType)reader.ReadByte();
+        }
+
         public static byte[] Serialize(ResponseCollection response)
         {
-            MemoryStream stream = new();   
+            MemoryStream stream = new();
 
             BinaryWriter writer = new(stream);
 
@@ -981,11 +1002,6 @@ namespace LlamaApi.Shared.Serializers
 
                 throw new NotImplementedException();
             }
-        }
-
-        public static WriteTokenType DeserializeWriteTokenType(BinaryReader reader)
-        {
-            return (WriteTokenType)reader.ReadByte();
         }
 
         public static void Serialize(RequestType requestType, BinaryWriter writer)
@@ -1337,12 +1353,12 @@ namespace LlamaApi.Shared.Serializers
         {
             MirostatType type = MirostatType.None;
 
-            if(request.MirostatSamplerSettings != null)
+            if (request.MirostatSamplerSettings != null)
             {
                 type = request.MirostatSamplerSettings.MirostatType;
             }
 
-            if(request.MirostatTempSamplerSettings != null)
+            if (request.MirostatTempSamplerSettings != null)
             {
                 type = MirostatType.Three;
             }
@@ -1356,13 +1372,16 @@ namespace LlamaApi.Shared.Serializers
                 case MirostatType.None:
                     Serialize(request.TemperatureSamplerSettings, writer);
                     break;
+
                 case MirostatType.One:
                 case MirostatType.Two:
                     Serialize(request.MirostatSamplerSettings!, writer);
                     break;
+
                 case MirostatType.Three:
                     Serialize(request.MirostatTempSamplerSettings!, writer);
                     break;
+
                 default:
                     throw new NotImplementedException();
             }

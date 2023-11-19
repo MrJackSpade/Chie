@@ -11,9 +11,9 @@ namespace ChieApi.Services
 
         private const int MAX_IN_TOKENS = 750;
 
-        private readonly ISummaryApiClient _summaryApiClient;
-
         private readonly Dictionary<string, int> _cachedTokenCount = new();
+
+        private readonly ISummaryApiClient _summaryApiClient;
 
         public SummarizationService(ISummaryApiClient summaryApiClient)
         {
@@ -27,7 +27,7 @@ namespace ChieApi.Services
 
         public async Task<int> GetTokenCount(string message)
         {
-            if(!_cachedTokenCount.TryGetValue(message, out int count))
+            if (!_cachedTokenCount.TryGetValue(message, out int count))
             {
                 TokenizeResponse response = await this._summaryApiClient.Tokenize(message + "\n");
 
@@ -49,7 +49,7 @@ namespace ChieApi.Services
 
             //Messages go back in time so we're going to keep track of which
             //ones weve tested so we know what we need to keep in the cache for the next run.
-            //Since the window will always move forward, there shouldn't be a scenario where 
+            //Since the window will always move forward, there shouldn't be a scenario where
             //a message isn't checked on one run, and IS checked on the next run
             HashSet<string> checkedMessages = new();
 
@@ -131,11 +131,11 @@ namespace ChieApi.Services
                 toAppend.Clear();
             } while (!completeSummarization);
 
-            //Before we exist we need to check all the cached messages to make sure 
+            //Before we exist we need to check all the cached messages to make sure
             //we actually used them, and if not, remove them from the cache
-            foreach(string key in _cachedTokenCount.Keys.ToList())
+            foreach (string key in _cachedTokenCount.Keys.ToList())
             {
-                if(!checkedMessages.Contains(key))
+                if (!checkedMessages.Contains(key))
                 {
                     _cachedTokenCount.Remove(key);
                 }

@@ -6,7 +6,7 @@ using LlamaApi.Shared.Models.Response;
 
 namespace LlamaApiClient
 {
-    public partial class InferenceEnumerator
+    public class InferenceEnumerator
     {
         private readonly Func<RequestLlamaToken, Task> _accept;
 
@@ -84,7 +84,14 @@ namespace LlamaApiClient
             this._logitRuleCollection.AddOrUpdate(rule);
         }
 
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+        public void Dispose()
+        {
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return ValueTask.CompletedTask;
+        }
 
         public void MoveBack()
         {

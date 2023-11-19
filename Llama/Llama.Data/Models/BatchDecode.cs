@@ -63,7 +63,7 @@
 
         public bool TryRemove(uint positionToRemove, out BatchItem<T> found)
         {
-            for(int i = 0; i < _items.Count; i++)
+            for (int i = 0; i < _items.Count; i++)
             {
                 if (_items[i].Position == positionToRemove)
                 {
@@ -77,7 +77,7 @@
 
             found = null;
 
-            return false;   
+            return false;
         }
     }
 

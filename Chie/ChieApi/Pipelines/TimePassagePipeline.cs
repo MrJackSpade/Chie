@@ -7,9 +7,9 @@ namespace ChieApi.Pipelines
 {
     public class TimePassagePipeline : IRequestPipeline
     {
-        private readonly ChatRepository _chatService;
-
         private readonly string _characterName;
+
+        private readonly ChatRepository _chatService;
 
         public TimePassagePipeline(ChatRepository databaseService, CharacterConfiguration characterConfiguration)
         {

@@ -18,8 +18,6 @@
   "RepeatPenalty": 1.175,
   "Threads": 18,
   "LogitBias": {
-    "2": "0.8",
-    "13": "0.8",
     "320": "-inf",
     "396": "-inf",
     "518": "-inf",

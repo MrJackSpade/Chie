@@ -3,10 +3,10 @@ using DiscordGpt.Models;
 
 namespace DiscordGpt.Interfaces
 {
-	public interface IActiveMessageContainer : ISingletonContainer<ActiveMessage>
-	{
-		Task Create(ISocketMessageChannel channel, long messageId, bool startVisible);
+    public interface IActiveMessageContainer : ISingletonContainer<ActiveMessage>
+    {
+        Task Create(ISocketMessageChannel channel, long messageId, bool startVisible);
 
-		Task Finalize(string content);
-	}
+        Task Finalize(string content);
+    }
 }

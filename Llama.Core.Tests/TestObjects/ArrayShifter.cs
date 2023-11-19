@@ -1,7 +1,6 @@
 ﻿using Llama.Core.Interfaces;
 using Llama.Core.Utils;
 using Llama.Data.Models;
-using Llama.Native;
 
 namespace Llama.Core.Tests.TestObjects
 {
@@ -131,7 +130,6 @@ namespace Llama.Core.Tests.TestObjects
 
         public void Validate(KvCacheState<T> kvCache)
         {
-            
         }
 
         public class Operation

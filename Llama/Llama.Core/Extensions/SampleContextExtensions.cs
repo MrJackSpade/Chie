@@ -1,25 +1,41 @@
 ﻿using Llama.Data.Models;
 using Llama.Data.Native;
 
-namespace Llama.Data.Extensions
+namespace Llama.Core.Extensions
 {
     public static class SampleContextExtensions
     {
+        public static float GetOriginalProbability(this SampleContext context, int tokenId)
+        {
+            foreach (LlamaTokenData ltd in context.OriginalCandidates)
+            {
+                if (ltd.id == tokenId)
+                {
+                    return ltd.p;
+                }
+            }
+
+            throw new InvalidDataException();
+        }
+
         public static float GetProbability(this SampleContext context, int tokenId)
         {
             Span<LlamaTokenData> span = context.Candidates.Data.Span;
-            LlamaTokenData existing = span[tokenId];
+            int index = GetTokenIndex(context, tokenId);
+            LlamaTokenData existing = span[index];
             return existing.logit;
         }
 
         public static void SetBias(this SampleContext context, int tokenId, float probability, LogitBiasType logitBiasType)
         {
             Span<LlamaTokenData> span = context.Candidates.Data.Span;
-            LlamaTokenData existing = span[tokenId];
+            int index = GetTokenIndex(context, tokenId);
+
+            LlamaTokenData existing = span[index];
 
             int mod = existing.logit > 0 ? 1 : -1;
 
-            span[tokenId] = logitBiasType switch
+            span[index] = logitBiasType switch
             {
                 LogitBiasType.Additive => new LlamaTokenData()
                 {
@@ -40,7 +56,9 @@ namespace Llama.Data.Extensions
         public static void SetPenalty(this SampleContext context, int tokenId, float probability)
         {
             Span<LlamaTokenData> span = context.Candidates.Data.Span;
-            LlamaTokenData existing = span[tokenId];
+            int index = GetTokenIndex(context, tokenId);
+
+            LlamaTokenData existing = span[index];
 
             float newValue = existing.logit / probability;
 
@@ -49,7 +67,7 @@ namespace Llama.Data.Extensions
                 newValue = existing.logit * probability;
             }
 
-            span[tokenId] = new LlamaTokenData()
+            span[index] = new LlamaTokenData()
             {
                 id = existing.id,
                 logit = newValue,
@@ -60,8 +78,10 @@ namespace Llama.Data.Extensions
         public static void SetProbability(this SampleContext context, int tokenId, float probability)
         {
             Span<LlamaTokenData> span = context.Candidates.Data.Span;
-            LlamaTokenData existing = span[tokenId];
-            span[tokenId] = new LlamaTokenData()
+            int index = GetTokenIndex(context, tokenId);
+
+            LlamaTokenData existing = span[index];
+            span[index] = new LlamaTokenData()
             {
                 id = existing.id,
                 logit = probability,
@@ -75,6 +95,19 @@ namespace Llama.Data.Extensions
             {
                 context.SetProbability(llamaToken.Key.Id, llamaToken.Value);
             }
+        }
+
+        private static int GetTokenIndex(this SampleContext context, int tokenId)
+        {
+            for (int i = 0; i < context.Candidates.Data.Span.Length; i++)
+            {
+                if (context.Candidates.Data.Span[i].id == tokenId)
+                {
+                    return i;
+                }
+            }
+
+            throw new KeyNotFoundException();
         }
     }
 }

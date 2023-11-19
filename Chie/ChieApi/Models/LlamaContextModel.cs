@@ -53,15 +53,15 @@ namespace ChieApi.Models
                 yield return token;
             }
 
-			foreach (KeyValuePair<string, LlamaUserSummary> kvp in this.UserSummaries.OrderBy(k => k.Key))
-			{
-				await foreach (LlamaToken token in this.GetAllTokens(kvp.Value, true))
-				{
-					yield return token;
-				}
-			}
+            foreach (KeyValuePair<string, LlamaUserSummary> kvp in this.UserSummaries.OrderBy(k => k.Key))
+            {
+                await foreach (LlamaToken token in this.GetAllTokens(kvp.Value, true))
+                {
+                    yield return token;
+                }
+            }
 
-			await foreach (LlamaToken token in this.GetAllTokens(this.AssistantBlock))
+            await foreach (LlamaToken token in this.GetAllTokens(this.AssistantBlock))
             {
                 yield return token;
             }

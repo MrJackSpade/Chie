@@ -5,67 +5,68 @@ using DiscordGpt.Interfaces;
 
 namespace DiscordGpt.Models
 {
-	public class ActiveMessageContainer : IActiveMessageContainer
-	{
-		private ActiveMessage _lastActiveMessage;
+    public class ActiveMessageContainer : IActiveMessageContainer
+    {
+        private ActiveMessage _lastActiveMessage;
 
-		public ActiveMessage? Value { get; private set; }
+        public ActiveMessage? Value { get; private set; }
 
-		public void Clear()
-		{
-			this.Value?.Dispose();
-			this.Value = null;
-		}
+        public void Clear()
+        {
+            this.Value?.Dispose();
+            this.Value = null;
+        }
 
-		public async Task Create(ISocketMessageChannel channel, long messageId, bool startVisible)
-		{
-			if (this._lastActiveMessage != null)
-			{
-				await this._lastActiveMessage.RemoveReact();
-			}
+        public async Task Create(ISocketMessageChannel channel, long messageId, bool startVisible)
+        {
+            if (this._lastActiveMessage != null)
+            {
+                await this._lastActiveMessage.RemoveReact();
+            }
 
-			RestUserMessage message = null;
+            RestUserMessage message = null;
 
-			if (!startVisible)
-			{
-				message = await channel.SendFileAsync(Files.TYPING_GIF);
-			} else
-			{
-				message = await channel.SendMessageAsync(".");
-			}
+            if (!startVisible)
+            {
+                message = await channel.SendFileAsync(Files.TYPING_GIF);
+            }
+            else
+            {
+                message = await channel.SendMessageAsync(".");
+            }
 
-			this.Clear();
+            this.Clear();
 
-			ActiveMessage newActiveMessage = new(message, messageId);
+            ActiveMessage newActiveMessage = new(message, messageId);
 
-			this.Value = newActiveMessage;
+            this.Value = newActiveMessage;
 
-			await newActiveMessage.SetUp(startVisible);
-		}
+            await newActiveMessage.SetUp(startVisible);
+        }
 
-		public async Task Finalize(string content)
-		{
-			if (this.Value is null)
-			{
-				return;
-			}
+        public async Task Finalize(string content)
+        {
+            if (this.Value is null)
+            {
+                return;
+            }
 
-			if (!string.IsNullOrWhiteSpace(content))
-			{
-				await this.Value.SetContent(content);
-				await this.Value.SetVisible(true);
-			}
+            if (!string.IsNullOrWhiteSpace(content))
+            {
+                await this.Value.SetContent(content);
+                await this.Value.SetVisible(true);
+            }
 
-			this.Value.Dispose();
+            this.Value.Dispose();
 
-			if (!this.Value.Deleted)
-			{
-				this._lastActiveMessage = this.Value;
-			}
+            if (!this.Value.Deleted)
+            {
+                this._lastActiveMessage = this.Value;
+            }
 
-			this.Value = null;
-		}
+            this.Value = null;
+        }
 
-		public void SetValue(ActiveMessage value) => this.Value = value;
-	}
+        public void SetValue(ActiveMessage value) => this.Value = value;
+    }
 }

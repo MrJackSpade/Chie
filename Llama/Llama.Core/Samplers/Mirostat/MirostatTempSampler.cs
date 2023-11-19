@@ -1,4 +1,5 @@
-﻿using Llama.Data.Interfaces;
+﻿using Llama.Core.Extensions;
+using Llama.Data.Interfaces;
 using Llama.Data.Models;
 using Llama.Data.Native;
 using Llama.Native;
@@ -16,8 +17,6 @@ namespace Llama.Core.Samplers.Mirostat
         private float _mu;
 
         private float _temp;
-
-        private LlamaTokenData[] _tempCandidates;
 
         public MirostatTempSampler(MirostatTempSamplerSettings settings)
         {
@@ -56,7 +55,6 @@ namespace Llama.Core.Samplers.Mirostat
             //Softmax for backup
             SamplingApi.SoftMax(sampleContext.ContextHandle, sampleContext.Candidates);
             Span<LlamaTokenData> candidateSpan = sampleContext.Candidates.Data.Span;
-            this.Copy(candidateSpan);
 
             SamplingApi.TailFree(sampleContext.ContextHandle, sampleContext.Candidates, this._settings.Tfs, 1);
             SamplingApi.Temperature(sampleContext.ContextHandle, sampleContext.Candidates, this._temp);
@@ -70,7 +68,7 @@ namespace Llama.Core.Samplers.Mirostat
 
             if (this._settings.PreserveWords)
             {
-                top_x = SamplingApi.TokenGreedy(sampleContext.ContextHandle, sampleContext.Candidates);
+                top_x = sampleContext.OriginalCandidates[0].id;
                 topOnly = !this.CheckIfWord(sampleContext.ModelHandle, top_x);
             }
 
@@ -102,28 +100,31 @@ namespace Llama.Core.Samplers.Mirostat
 
             float selectedP = candidateSpan[x_idx].p;
 
-            candidateBuilder.Append($"[{this.GetDisplayString(sampleContext, candidateSpan[x_idx])}] || ");
-
-            ulong displayCount = Math.Min(10, sampleContext.Candidates.Size);
-
-            if(topOnly)
+            if (topOnly)
             {
-                displayCount = 1;
+                candidateBuilder.Append(" [SINGLE] ");
+                candidateBuilder.Append(this.GetDisplayString(sampleContext, sampleContext.OriginalCandidates[0]));
             }
-
-            for (int i = 0; i < (int)displayCount; i++)
+            else
             {
-                if (candidateSpan[i].p == 0)
-                {
-                    break;
-                }
+                candidateBuilder.Append($"[{this.GetDisplayString(sampleContext, candidateSpan[x_idx])}] || ");
 
-                if (i > 0)
-                {
-                    candidateBuilder.Append(" | ");
-                }
+                ulong displayCount = Math.Min(10, sampleContext.Candidates.Size);
 
-                candidateBuilder.Append(this.GetDisplayString(sampleContext, candidateSpan[i]));
+                for (int i = 0; i < (int)displayCount; i++)
+                {
+                    if (candidateSpan[i].p == 0)
+                    {
+                        break;
+                    }
+
+                    if (i > 0)
+                    {
+                        candidateBuilder.Append(" | ");
+                    }
+
+                    candidateBuilder.Append(this.GetDisplayString(sampleContext, candidateSpan[i]));
+                }
             }
 
             candidateBuilder.Append(']');
@@ -131,8 +132,8 @@ namespace Llama.Core.Samplers.Mirostat
             //Calculate surprise based on the original P to
             //ensure that wonky probability fuckery doesn't mess
             //up the surprise calculations
-            float original_p = this.GetOriginalP(x);
-            
+            float original_p = sampleContext.GetOriginalProbability(x);
+
             string muCalc = string.Empty;
 
             if (!topOnly || this._settings.FactorPreservedWords)
@@ -169,26 +170,6 @@ namespace Llama.Core.Samplers.Mirostat
             }
 
             return word;
-        }
-
-        private void Copy(Span<LlamaTokenData> sampleContext)
-        {
-            this._tempCandidates ??= new LlamaTokenData[sampleContext.Length];
-            Span<LlamaTokenData> target = new(this._tempCandidates, 0, this._tempCandidates.Length);
-            sampleContext.CopyTo(target);
-        }
-
-        private float GetOriginalP(int id)
-        {
-            foreach (LlamaTokenData ltd in this._tempCandidates)
-            {
-                if (ltd.id == id)
-                {
-                    return ltd.p;
-                }
-            }
-
-            throw new InvalidDataException();
         }
     }
 }

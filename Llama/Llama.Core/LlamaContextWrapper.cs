@@ -1,6 +1,6 @@
 ﻿using Llama.Core.Exceptions;
+using Llama.Core.Extensions;
 using Llama.Core.Interfaces;
-using Llama.Core.Samplers.FrequencyAndPresence;
 using Llama.Core.Utils;
 using Llama.Data;
 using Llama.Data.Collections;
@@ -10,6 +10,7 @@ using Llama.Data.Models;
 using Llama.Data.Native;
 using Llama.Data.Scheduler;
 using Llama.Extensions;
+using Llama.Native;
 
 namespace Llama.Core
 {
@@ -143,8 +144,13 @@ namespace Llama.Core
                 Candidates = candidates,
                 ContextHandle = Handle,
                 ContextTokens = Evaluated,
-                ModelHandle = ModelHandle
+                ModelHandle = ModelHandle,
+                OriginalCandidates = new LlamaTokenData[candidates.Size]
             };
+
+            SamplingApi.SoftMax(this.Handle, sampleContext.Candidates);
+            Span<LlamaTokenData> target = new(sampleContext.OriginalCandidates, 0, sampleContext.OriginalCandidates.Length);
+            sampleContext.Candidates.Data.Span.CopyTo(target);
 
             foreach (LogitClamp clamp in logitRules.OfType<LogitClamp>())
             {
@@ -152,7 +158,7 @@ namespace Llama.Core
             }
 
             //TODO: Fix cheap hack
-            foreach (ISimpleSampler simpleSampler in this._simpleSamplers.Where(s => s.GetType() != typeof(ComplexPresenceSampler)))
+            foreach (ISimpleSampler simpleSampler in this._simpleSamplers)
             {
                 simpleSampler.SampleNext(sampleContext);
             }
@@ -164,12 +170,6 @@ namespace Llama.Core
             }
 
             sampleContext.Update(no_penalize);
-
-            //TODO: Fix cheap hack
-            foreach (ISimpleSampler simpleSampler in this._simpleSamplers.Where(s => s.GetType() == typeof(ComplexPresenceSampler)))
-            {
-                simpleSampler.SampleNext(sampleContext);
-            }
 
             //Apply bias
             foreach (LogitBias bias in logitRules.OfType<LogitBias>())
@@ -214,54 +214,54 @@ namespace Llama.Core
         private LlamaTokenCollection NoPenalize()
         {
             LlamaTokenCollection collection = new();
-            collection.Append(this.GetToken(13));//NL
+            //collection.Append(this.GetToken(13));//NL
             collection.Append(this.GetToken(334));// *
             collection.Append(this.GetToken(29930));//*
-            collection.Append(this.GetToken(368));//ly
-            collection.Append(this.GetToken(297));//in
-            collection.Append(this.GetToken(591));//we
-            collection.Append(this.GetToken(411));//with
-            collection.Append(this.GetToken(373));//on
-            collection.Append(this.GetToken(596));//your
-            collection.Append(this.GetToken(445));//this
-            collection.Append(this.GetToken(1048));//about
-            collection.Append(this.GetToken(408));//as
-            collection.Append(this.GetToken(367));//be
-            collection.Append(this.GetToken(338));//is
-            collection.Append(this.GetToken(470));//or
-            collection.Append(this.GetToken(727));//there
-            collection.Append(this.GetToken(267));//es
-            collection.Append(this.GetToken(1749));//our
-            collection.Append(this.GetToken(541));//but
-            collection.Append(this.GetToken(769));//then
-            collection.Append(this.GetToken(515));//from
-            collection.Append(this.GetToken(451));//not
-            collection.Append(this.GetToken(491));//by
-            collection.Append(this.GetToken(577));//so
-            collection.Append(this.GetToken(502));//us
-            collection.Append(this.GetToken(526));//are
-            collection.Append(this.GetToken(437));//do
-            collection.Append(this.GetToken(565));//if
-            collection.Append(this.GetToken(471));//was
-            collection.Append(this.GetToken(2086));//too
-            collection.Append(this.GetToken(304));//to
-            collection.Append(this.GetToken(590));//my
-            collection.Append(this.GetToken(902));//her
-            collection.Append(this.GetToken(1075));//him
-            collection.Append(this.GetToken(670));//his
-            collection.Append(this.GetToken(7955));//hers
-            collection.Append(this.GetToken(29892));//,
-            collection.Append(this.GetToken(322));//and
-            collection.Append(this.GetToken(306));//I
-            collection.Append(this.GetToken(310));//of
-            collection.Append(this.GetToken(29879));//s
-            collection.Append(this.GetToken(29991));//!
-            collection.Append(this.GetToken(278));//the
-            collection.Append(this.GetToken(592));//me
-            collection.Append(this.GetToken(263));//a
-            collection.Append(this.GetToken(363));//for
-            collection.Append(this.GetToken(372));//it
-            collection.Append(this.GetToken(393));//that
+            //collection.Append(this.GetToken(368));//ly
+            //collection.Append(this.GetToken(297));//in
+            //collection.Append(this.GetToken(591));//we
+            //collection.Append(this.GetToken(411));//with
+            //collection.Append(this.GetToken(373));//on
+            //collection.Append(this.GetToken(596));//your
+            //collection.Append(this.GetToken(445));//this
+            //collection.Append(this.GetToken(1048));//about
+            //collection.Append(this.GetToken(408));//as
+            //collection.Append(this.GetToken(367));//be
+            //collection.Append(this.GetToken(338));//is
+            //collection.Append(this.GetToken(470));//or
+            //collection.Append(this.GetToken(727));//there
+            //collection.Append(this.GetToken(267));//es
+            ////collection.Append(this.GetToken(1749));//our
+            //collection.Append(this.GetToken(541));//but
+            //collection.Append(this.GetToken(769));//then
+            //collection.Append(this.GetToken(515));//from
+            //collection.Append(this.GetToken(451));//not
+            //collection.Append(this.GetToken(491));//by
+            //collection.Append(this.GetToken(577));//so
+            //collection.Append(this.GetToken(502));//us
+            //collection.Append(this.GetToken(526));//are
+            //collection.Append(this.GetToken(437));//do
+            //collection.Append(this.GetToken(565));//if
+            //collection.Append(this.GetToken(471));//was
+            //collection.Append(this.GetToken(2086));//too
+            //collection.Append(this.GetToken(304));//to
+            //collection.Append(this.GetToken(590));//my
+            //collection.Append(this.GetToken(902));//her
+            //collection.Append(this.GetToken(1075));//him
+            //collection.Append(this.GetToken(670));//his
+            //collection.Append(this.GetToken(7955));//hers
+            ////collection.Append(this.GetToken(29892));//,
+            ////collection.Append(this.GetToken(322));//and
+            ////collection.Append(this.GetToken(306));//I
+            //collection.Append(this.GetToken(310));//of
+            //collection.Append(this.GetToken(29879));//s
+            //collection.Append(this.GetToken(29991));//!
+            //collection.Append(this.GetToken(278));//the
+            //collection.Append(this.GetToken(592));//me
+            //collection.Append(this.GetToken(263));//a
+            //collection.Append(this.GetToken(363));//for
+            //collection.Append(this.GetToken(372));//it
+            //collection.Append(this.GetToken(393));//that
             return collection;
         }
     }

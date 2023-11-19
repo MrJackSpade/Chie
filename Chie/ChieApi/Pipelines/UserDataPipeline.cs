@@ -8,11 +8,11 @@ namespace ChieApi.Pipelines
 {
     public partial class UserDataPipeline : IRequestPipeline
     {
+        private readonly string? _characterName;
+
         private readonly HashSet<string> _returnedData = new();
 
         private readonly UserDataRepository _userDataService;
-
-        private readonly string? _characterName;
 
         public UserDataPipeline(UserDataRepository userDataService, CharacterConfiguration characterConfiguration)
         {

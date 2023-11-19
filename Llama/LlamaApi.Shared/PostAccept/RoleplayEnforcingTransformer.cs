@@ -113,7 +113,6 @@ namespace ChieApi.TokenTransformers
             }
             else
             {
-
                 await foreach (LlamaToken token in selectedTokens)
                 {
                     yield return token;

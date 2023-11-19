@@ -100,11 +100,15 @@ namespace LlamaApiClient
 
         public InferenceEnumerator Infer()
         {
-            return new InferenceEnumerator(
+            InferenceEnumerator toReturn = new(
                 Predict,
                 (t) => Write(t),
                 this._logitRules
             );
+
+            this._logitRules.Remove(LogitRuleLifetime.Inferrence);
+
+            return toReturn;
         }
 
         public virtual async Task<ClientResponse> PostAsync(string host, string url, JsonContent content)
@@ -224,17 +228,6 @@ namespace LlamaApiClient
             });
         }
 
-        private async Task Post(string url, object data)
-        {
-            await Request(() => PostAsync(_settings.Host, url, JsonContent.Create(data, options: _serializerOptions)));
-        }
-
-        private async Task<TValue> QueueAndFlush<TValue>(object request)
-        {
-            this._queuedRequests.Add(request);
-            return await FlushQueue<TValue>();
-        }
-
         private async Task<TValue> FlushQueue<TValue>()
         {
             RequestCollection requestCollection = new();
@@ -257,6 +250,17 @@ namespace LlamaApiClient
             ResponseCollection responseCollection = DataSerializer.Deserialize<ResponseCollection>(r_bytes);
 
             return (TValue)responseCollection.Responses.Last();
+        }
+
+        private async Task Post(string url, object data)
+        {
+            await Request(() => PostAsync(_settings.Host, url, JsonContent.Create(data, options: _serializerOptions)));
+        }
+
+        private async Task<TValue> QueueAndFlush<TValue>(object request)
+        {
+            this._queuedRequests.Add(request);
+            return await FlushQueue<TValue>();
         }
 
         private async Task<string> Request(Func<Task<ClientResponse>> toInvoke)

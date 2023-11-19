@@ -34,18 +34,52 @@ namespace Llama.Native
         /// <param name="last_tokens_size"></param>
         /// <param name="alpha_frequency"></param>
         /// <param name="alpha_presence"></param>
-        public static void RepetitionPenalties(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, int[] check_tokens, float penalty, float alpha_frequency, float alpha_presence)
+        public static void RepetitionPenalties(LlamaTokenDataArray candidates, int[] lastTokens, float penaltyRepeat, float penaltyFreq, float penaltyPresent, float slopeRepeat = 0)
         {
-            System.Buffers.MemoryHandle handle = candidates.Data.Pin();
-
-            LlamaTokenDataArrayNative st = new()
+            // Early return condition
+            if (lastTokens.Length == 0 || (penaltyRepeat == 1.0f && penaltyFreq == 0.0f && penaltyPresent == 0.0f))
             {
-                data = new IntPtr(handle.Pointer),
-                size = candidates.Size,
-                sorted = candidates.Sorted
-            };
+                return;
+            }
 
-            LlamaCppApi.RepetitionPenalties(ctx, new IntPtr(&st), check_tokens, (ulong)check_tokens.Length, penalty, alpha_frequency, alpha_presence);
+            // Create a frequency map
+            Dictionary<int, FoundTokenData> tokenCount = new();
+            for (int i = 0; i < lastTokens.Length; i++)
+            {
+                if (!tokenCount.TryGetValue(lastTokens[i], out FoundTokenData ftd))
+                {
+                    ftd = new FoundTokenData();
+                    tokenCount[lastTokens[i]] = ftd;
+                }
+
+                ftd.Count++;
+                ftd.LastIndex = i;
+            }
+
+            // Apply penalties
+            for (int i = 0; i < (int)candidates.Size; i++)
+            {
+                if (!tokenCount.TryGetValue(candidates.Data.Span[i].id, out FoundTokenData ftd))
+                {
+                    continue;
+                }
+
+                float adjPenalty = CalculateAdjustedPenalty(penaltyRepeat, slopeRepeat, ftd.LastIndex, lastTokens.Length);
+
+                // Applying penalties
+                if (candidates.Data.Span[i].logit <= 0)
+                {
+                    candidates.Data.Span[i].logit *= adjPenalty;
+                }
+                else
+                {
+                    candidates.Data.Span[i].logit /= adjPenalty;
+                }
+
+                candidates.Data.Span[i].logit -= ftd.Count * penaltyFreq + (ftd.Count > 0 ? 1f : 0f) * penaltyPresent;
+            }
+
+            candidates.Sorted = false;
         }
 
         /// <summary>
@@ -269,6 +303,38 @@ namespace Llama.Native
 
             candidates.Size = st.size;
             candidates.Sorted = st.sorted;
+        }
+
+        // Assumptions:
+        // ftd.LastIndex is a value that decreases as we get closer to the token we want to apply the penalty to.
+        // lastTokens.Length is the total number of tokens we're considering.
+        // penaltyRepeat is the original penalty value.
+        // slope controls the rate of change of the penalty.
+        private static float CalculateAdjustedPenalty(float penaltyRepeat, float slope, int ftdLastIndex, int lastTokensLength)
+        {
+            if (slope == 0)
+            {
+                // When slope is 0, penaltyRepeat remains unchanged
+                return penaltyRepeat;
+            }
+            else
+            {
+                // Calculate the normalized position of ftd.LastIndex in the range [0, lastTokens.Length]
+                float normalizedIndex = (float)ftdLastIndex / lastTokensLength;
+
+                // Adjust the penaltyRepeat to approach 1 as ftd.LastIndex approaches 0
+                // This creates a linear interpolation between penaltyRepeat and 1, controlled by slope
+                float adjustedPenalty = ((1 - normalizedIndex) * slope * (1 - penaltyRepeat)) + penaltyRepeat;
+
+                return adjustedPenalty;
+            }
+        }
+
+        private class FoundTokenData
+        {
+            public int Count { get; set; } = 0;
+
+            public int LastIndex { get; set; } = 0;
         }
     }
 }

@@ -6,7 +6,7 @@ using Loxifi.AsyncExtensions;
 
 namespace ChieApi.TokenTransformers
 {
-    public class TextTruncationTransformer : ITokenTransformer, ITextCleaner
+    public class ResponseLengthManager : ITokenTransformer, ITextCleaner
     {
         private readonly int _base;
 
@@ -22,7 +22,16 @@ namespace ChieApi.TokenTransformers
 
         private readonly Random _random = new();
 
-        public TextTruncationTransformer(int hardmax, int max, int min, int b, string endChars, IDictionaryService dictionaryService)
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="hardmax">The point at which text will be cut regardless of punctuation</param>
+        /// <param name="max">The point at which text will be cut at the next punctuation</param>
+        /// <param name="min">The point at which random rolls will begin occuring to truncate the text, also the target for lengthening</param>
+        /// <param name="b">The point used as the base for determining the truncation percentage</param>
+        /// <param name="endChars">Characters that are safe to truncate after</param>
+        /// <param name="dictionaryService"></param>
+        public ResponseLengthManager(int hardmax, int max, int min, int b, string endChars, IDictionaryService dictionaryService)
         {
             _min = min;
             _max = max;

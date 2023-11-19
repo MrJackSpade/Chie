@@ -68,6 +68,7 @@ namespace Llama.Core.Interfaces
         /// endPos < 0 : [startPos, inf)
         /// </summary>
         void ShiftCacheTokens(uint sequenceId, uint startPos, uint endPos, int delta);
+
         void Validate(KvCacheState<T> kvCache);
     }
 }

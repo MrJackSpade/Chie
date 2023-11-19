@@ -22,6 +22,47 @@ namespace ChieApi.Clients
             HttpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {API_KEY}");
         }
 
+        public static JsonElement RemoveNullProperties(JsonElement element)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    Dictionary<string, JsonElement> obj = new();
+                    foreach (JsonProperty prop in element.EnumerateObject())
+                    {
+                        if (prop.Value.ValueKind != JsonValueKind.Null)
+                        {
+                            obj[prop.Name] = RemoveNullProperties(prop.Value);
+                        }
+                    }
+
+                    return JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(obj));
+
+                case JsonValueKind.Array:
+                    List<JsonElement> array = new();
+                    foreach (JsonElement item in element.EnumerateArray())
+                    {
+                        array.Add(RemoveNullProperties(item));
+                    }
+
+                    return JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(array));
+
+                default:
+                    return element;
+            }
+        }
+
+        // To use this method with a JsonObject, first convert it to a JsonElement.
+        public static JsonObject RemoveNullPropertiesFromJsonObject(JsonObject jsonObject)
+        {
+            JsonSerializerOptions options = new() { WriteIndented = true };
+            string json = JsonSerializer.Serialize(jsonObject, options);
+            JsonElement jsonElement = JsonSerializer.Deserialize<JsonElement>(json);
+
+            JsonElement cleanedElement = RemoveNullProperties(jsonElement);
+            return JsonSerializer.Deserialize<JsonObject>(cleanedElement.GetRawText(), options);
+        }
+
         public override async Task<ClientResponse> GetAsync(string host, string url)
         {
             if (string.IsNullOrEmpty(host))
@@ -85,47 +126,6 @@ namespace ChieApi.Clients
             return hr;
         }
 
-        public static JsonElement RemoveNullProperties(JsonElement element)
-        {
-            switch (element.ValueKind)
-            {
-                case JsonValueKind.Object:
-                    Dictionary<string, JsonElement> obj = new();
-                    foreach (JsonProperty prop in element.EnumerateObject())
-                    {
-                        if (prop.Value.ValueKind != JsonValueKind.Null)
-                        {
-                            obj[prop.Name] = RemoveNullProperties(prop.Value);
-                        }
-                    }
-
-                    return JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(obj));
-
-                case JsonValueKind.Array:
-                    List<JsonElement> array = new();
-                    foreach (JsonElement item in element.EnumerateArray())
-                    {
-                        array.Add(RemoveNullProperties(item));
-                    }
-
-                    return JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(array));
-
-                default:
-                    return element;
-            }
-        }
-
-        // To use this method with a JsonObject, first convert it to a JsonElement.
-        public static JsonObject RemoveNullPropertiesFromJsonObject(JsonObject jsonObject)
-        {
-            JsonSerializerOptions options = new() { WriteIndented = true };
-            string json = JsonSerializer.Serialize(jsonObject, options);
-            JsonElement jsonElement = JsonSerializer.Deserialize<JsonElement>(json);
-
-            JsonElement cleanedElement = RemoveNullProperties(jsonElement);
-            return JsonSerializer.Deserialize<JsonObject>(cleanedElement.GetRawText(), options);
-        }
-
         private async Task<ClientResponse> WrapAndExecute(string url, string method, string? body = null)
         {
             body = body.Trim();
@@ -138,7 +138,7 @@ namespace ChieApi.Clients
 
             if (body != null)
             {
-                if(body.StartsWith("{") && body.EndsWith("}"))
+                if (body.StartsWith("{") && body.EndsWith("}"))
                 {
                     json["body"] = JsonNode.Parse(body);
                 }
@@ -185,7 +185,7 @@ namespace ChieApi.Clients
             requestStopwatch.Stop();
 
             string debugLog = $"[{DateTime.Now:HH:mm:ss}] RequestTime: {requestStopwatch.ElapsedMilliseconds:N0}ms; DelayTime: {int.Parse(responseObject["delayTime"].ToString()):N0}; ExecutionTime: {int.Parse(responseObject["executionTime"].ToString()):N0}ms";
-            
+
             System.Diagnostics.Debug.WriteLine(debugLog);
 
             JsonObject output = (JsonObject)JsonNode.Parse(responseObject["output"].ToString());

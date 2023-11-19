@@ -1,6 +1,5 @@
 ﻿using ChieApi.Extensions;
 using LlamaApi.Shared.Interfaces;
-using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 namespace ChieApi.CleanupPipeline
@@ -57,20 +56,6 @@ namespace ChieApi.CleanupPipeline
         {
         }
 
-        public static bool EndsWithPunctuation(string sentence)
-        {
-            string punctuation = ",.!?";
-
-            if(string.IsNullOrEmpty(sentence)) 
-            {
-                return false;
-            }
-
-            char c = sentence[^1];
-
-            return punctuation.Contains(c);
-        }
-
         public static string CorrectPunctuation(string text)
         {
             // Splitting the text based on common punctuation
@@ -104,7 +89,8 @@ namespace ChieApi.CleanupPipeline
                         if (EndsWithPunctuation(sentences[i]))
                         {
                             sentences[i] = sentence[..^1] + "?";
-                        } else
+                        }
+                        else
                         {
                             sentences[i] = sentence + "?";
                         }
@@ -114,6 +100,20 @@ namespace ChieApi.CleanupPipeline
 
             // Join the corrected sentences back together
             return string.Join(" ", sentences);
+        }
+
+        public static bool EndsWithPunctuation(string sentence)
+        {
+            string punctuation = ",.!?";
+
+            if (string.IsNullOrEmpty(sentence))
+            {
+                return false;
+            }
+
+            char c = sentence[^1];
+
+            return punctuation.Contains(c);
         }
 
         public string Clean(string content)

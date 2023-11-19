@@ -116,7 +116,6 @@ namespace Llama.Native
                 }
 
                 decoded += thisBatchSize;
-
             } while (batchItems.Count > 0);
 
             return 0;
@@ -563,7 +562,7 @@ namespace Llama.Native
                     thisSize++;
                 }
 
-                if(overrun)
+                if (overrun)
                 {
                     break;
                 }

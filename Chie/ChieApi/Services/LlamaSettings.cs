@@ -22,9 +22,8 @@ namespace ChieApi.Services
                 }
             }
         }
-		public int TopK { get; set; }
 
-		public string? AssistantBlock { get; set; }
+        public string? AssistantBlock { get; set; }
 
         public uint BatchSize { get; set; } = 512;
 
@@ -34,9 +33,9 @@ namespace ChieApi.Services
 
         public int GpuLayers { get; set; } = 0;
 
-		public float LearningRate { get; set; }
+        public string? InstructionBlock { get; set; }
 
-		public string? InstructionBlock { get; set; }
+        public float LearningRate { get; set; }
 
         public Dictionary<int, string> LogitBias { get; set; } = new Dictionary<int, string>();
 
@@ -64,6 +63,8 @@ namespace ChieApi.Services
 
         public float RopeScale { get; set; } = 1.0f;
 
+        public LlamaRopeScalingType RopeScalingType { get; set; } = LlamaRopeScalingType.Linear;
+
         public string? Start { get; set; }
 
         public float Temperature { get; set; } = 0.80f;
@@ -71,6 +72,8 @@ namespace ChieApi.Services
         public uint? Threads { get; set; }
 
         public int Timeout { get; set; } = 600_000;
+
+        public int TopK { get; set; }
 
         public float TopP { get; set; } = 0.95f;
 
@@ -80,15 +83,13 @@ namespace ChieApi.Services
 
         public bool VerbosePrompt { get; set; }
 
-        public LlamaRopeScalingType RopeScalingType { get; set; } = LlamaRopeScalingType.Linear;
-
-        public float YarnExtFactor { get; set; } = -1.0f;
-
         public float YarnAttnFactor { get; set; } = 1.0f;
 
         public float YarnBetaFast { get; set; } = 32.0f;
 
         public float YarnBetaSlow { get; set; } = 1.0f;
+
+        public float YarnExtFactor { get; set; } = -1.0f;
 
         public uint YarnOrigCtx { get; set; } = 0;
     }

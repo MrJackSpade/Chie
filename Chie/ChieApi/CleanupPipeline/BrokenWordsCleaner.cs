@@ -1,11 +1,12 @@
 ﻿using ChieApi.Shared.Services;
 using LlamaApi.Shared.Interfaces;
-using System.Text.RegularExpressions;
 
 namespace ChieApi.CleanupPipeline
 {
     public class BrokenWordsCleaner : ITextCleaner
     {
+        private const string WORD_PUNCTUATION = ".'-";
+
         private readonly DictionaryRepository _dictionaryService;
 
         private readonly int _distance;
@@ -15,6 +16,13 @@ namespace ChieApi.CleanupPipeline
             _distance = distance;
 
             _dictionaryService = dictionaryService;
+        }
+
+        public string Clean(string sentence)
+        {
+            string result = this.MergeWords(sentence);
+
+            return result;
         }
 
         /// <summary>
@@ -148,6 +156,17 @@ namespace ChieApi.CleanupPipeline
             return -1;
         }
 
+        public string GetRange(string sentence, List<FoundWord> foundWords)
+        {
+            int start = foundWords.Min(f => f.Index);
+
+            int end = foundWords.Max(f => f.Index + f.Length);
+
+            int length = end - start;
+
+            return sentence.Substring(start, length);
+        }
+
         public IEnumerable<string> GetWordVariations(string word)
         {
             yield return word;
@@ -203,8 +222,6 @@ namespace ChieApi.CleanupPipeline
 
             return false;
         }
-
-        private const string WORD_PUNCTUATION = ".'-";
 
         public bool IsValidWordCharacter(char c)
         {
@@ -290,17 +307,6 @@ namespace ChieApi.CleanupPipeline
             return toReturn;
         }
 
-        public string GetRange(string sentence, List<FoundWord> foundWords)
-        {
-            int start = foundWords.Min(f => f.Index);
-
-            int end = foundWords.Max(f => f.Index + f.Length);
-
-            int length = end - start;
-
-            return sentence.Substring(start, length);
-        }
-
         private List<FoundWord>? FindFunctionalGroupings(string sentence, List<List<FoundWord>> mergeCandidates)
         {
             foreach (List<FoundWord> candidate in mergeCandidates.OrderByDescending(l => l.Count))
@@ -337,13 +343,6 @@ namespace ChieApi.CleanupPipeline
             public int Index { get; set; }
 
             public int Length { get; set; }
-        }
-
-        public string Clean(string sentence)
-        {
-            string result = this.MergeWords(sentence);
-
-            return result;
         }
     }
 }

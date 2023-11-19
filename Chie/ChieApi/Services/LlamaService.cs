@@ -25,9 +25,17 @@ namespace ChieApi.Services
 {
     public partial class LlamaService
     {
+        public const int MAX_RESPONSE = 500;
+
+        public const int MIN_RESPONSE = 150;
+
+        public const float RESPONSE_LENGTH_ADJ = 0.1f;
+
         public const int SUMMARY_TARGET = 0;
 
-        private const int SUMMARY_CHUNKS = 14;
+        public const float TRIM_FROM = 0.95f;
+
+        public const float TRIM_TO = 0.85f;
 
         private readonly AutoResetEvent _acceptingInput = new(false);
 
@@ -53,8 +61,6 @@ namespace ChieApi.Services
 
         private readonly List<ISimpleSampler> _simpleSamplers;
 
-        private readonly SummarizationService _summarizationService;
-
         private readonly LlamaTokenCache _tokenCache;
 
         private readonly List<ITokenTransformer> _transformers;
@@ -65,12 +71,13 @@ namespace ChieApi.Services
 
         private LlamaContextModel _contextModel;
 
-        private Task<SummaryResponse>? _summaryTask;
+        private float _responseLengthBias = 0f;
 
-        public LlamaService(UserDataRepository userDataService, SummarizationService summarizationService, DictionaryRepository dictionaryService, CharacterConfiguration characterConfiguration, LlamaClient client, LlamaContextModel contextModel, LlamaTokenCache llamaTokenCache, ILogger logger, ChatRepository chatService, LogitService logitService)
+        private ResponseLengthManager _responseLengthManager;
+
+        public LlamaService(UserDataRepository userDataService, DictionaryRepository dictionaryService, CharacterConfiguration characterConfiguration, LlamaClient client, LlamaContextModel contextModel, LlamaTokenCache llamaTokenCache, ILogger logger, ChatRepository chatService, LogitService logitService)
         {
             _userDataService = userDataService;
-            _summarizationService = summarizationService;
             _client = client;
             _logitService = logitService;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -89,14 +96,13 @@ namespace ChieApi.Services
                 new RepetitionBlockingSampler(3)
             };
 
-            TextTruncationTransformer textTruncation = new(1000, 500, 150, 0, ".!?…*", dictionaryService);
+            _responseLengthManager = new(1000, MAX_RESPONSE, MIN_RESPONSE, 0, ".!?…*", dictionaryService);
 
             _transformers = new List<ITokenTransformer>()
             {
                 new SpaceStartTransformer(),
                 new NewlineTransformer(),
-                textTruncation,
-                //new TextExtensionTransformer(100, 150),
+                _responseLengthManager,
                 new RepetitionBlockingTransformer(3),
                 new InvalidCharacterBlockingTransformer()
             };
@@ -117,7 +123,7 @@ namespace ChieApi.Services
                 new SentenceLevelPunctuationCleaner(),
                 new DuplicateSentenceRemover(),
                 new AsteriskSpacingCleaner(),
-                textTruncation
+                _responseLengthManager
             };
 
             _postAccept = new List<IPostAccept>()
@@ -330,6 +336,32 @@ namespace ChieApi.Services
             return false;
         }
 
+        private void AdjustResponseBias(IReadOnlyLlamaTokenCollection enumerated)
+        {
+            IReadOnlyLlamaTokenCollection response = enumerated.TrimWhiteSpace();
+
+            string responseStr = response.ToString();
+
+            if (responseStr.Length < MIN_RESPONSE)
+            {
+                //Lower bias adj to increase length
+                this._responseLengthBias -= RESPONSE_LENGTH_ADJ;
+            }
+            else if (responseStr.Length > MAX_RESPONSE)
+            {
+                this._responseLengthBias = 0;
+            }
+            else if (_responseLengthBias < 0)
+            {
+                //If we fall within the expected range, we should be training
+                //the model so we gradually back off
+                this._responseLengthBias += RESPONSE_LENGTH_ADJ;
+            }
+
+            //Not currently accounting for values over zero (would cause truncation)
+            this._responseLengthBias = Math.Min(this._responseLengthBias, 0f);
+        }
+
         private async Task CleanLastResponse()
         {
             TryGetLastBotMessage r = await TryGetLastMessageIsBot();
@@ -380,6 +412,8 @@ namespace ChieApi.Services
         {
             InferenceEnumerator enumerator = _client.Infer();
 
+            bool setBias = true;
+
             enumerator.SetBias(LlamaToken.EOS.Id, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
             enumerator.SetBias(LlamaToken.NewLine.Id, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
             enumerator.SetBias(_characterConfiguration.LogitBias, LogitRuleLifetime.Inferrence, LogitBiasType.Multiplicative);
@@ -399,6 +433,7 @@ namespace ChieApi.Services
                     //context manages both
                     if (llamaToken.Id == LlamaToken.EOS.Id)
                     {
+                        AdjustResponseBias(enumerator.Enumerated);
                         return enumerator.Enumerated;
                     }
 
@@ -408,6 +443,14 @@ namespace ChieApi.Services
                     }
 
                     await enumerator.Accept(llamaToken);
+
+                    if (setBias)
+                    {
+                        //After we've gotten the first token we set the lengthening bias for the inferrence session
+                        enumerator.SetBias(LlamaToken.EOS.Id, this._responseLengthBias, LogitRuleLifetime.Inferrence, LogitBiasType.Additive);
+                        enumerator.SetBias(LlamaToken.NewLine.Id, this._responseLengthBias, LogitRuleLifetime.Inferrence, LogitBiasType.Additive);
+                        setBias = false;
+                    }
 
                     foreach (IPostAccept postAccept in _postAccept)
                     {
@@ -427,7 +470,11 @@ namespace ChieApi.Services
                 await _simpleSamplers.SampleNext(enumerator);
             }
 
-            return enumerator.Enumerated.TrimWhiteSpace();
+            IReadOnlyLlamaTokenCollection response = enumerator.Enumerated.TrimWhiteSpace();
+
+            AdjustResponseBias(response);
+
+            return response;
         }
 
         private async Task Init()
@@ -480,7 +527,7 @@ namespace ChieApi.Services
             }
 
             _context = await _contextModel.GetState();
-            
+
             await _client.Write(Context, 0);
             await _client.Eval();
 
@@ -492,7 +539,7 @@ namespace ChieApi.Services
         {
             do
             {
-                await TrySummarize();
+                await TryTrim();
 
                 ProcessInputData processingData = WaitForNext();
                 TryGetLastBotMessage r = await TryGetLastMessageIsBot();
@@ -669,117 +716,34 @@ namespace ChieApi.Services
             return true;
         }
 
-        private async Task TrySummarize()
+        private async Task TryTrim()
         {
+            uint contextGen = (await _contextModel.ToCollection()).Count;
+            uint contextLen = _characterConfiguration.ContextLength;
+
+            uint trimStart = (uint)(contextLen * TRIM_FROM);
+
+            if (contextGen < trimStart)
+            {
+                return;
+            }
+
             List<ITokenCollection> messages = _contextModel.Messages;
 
-            uint contextLen = _characterConfiguration.ContextLength;
-            uint contextGen = (await _contextModel.ToCollection()).Count;
-            bool existingSummary = (await _contextModel.Summary.ToCollection()).Count > 0;
-            bool canSummarize = _characterConfiguration.MemoryStart < DateTime.Now;
+            uint trimTarget = (uint)(contextLen * TRIM_TO);
 
-            float sumNextStart = 0.6f;
-            float sumNextLoad = 1 - (1 / (float)(SUMMARY_CHUNKS - 1));
+            int dropped = 0;
 
-            //We only want to gen/load when it makes sense, which is when we have a lot
-            //of context or when theres no existing history
-            bool shouldSumStart = contextGen > contextLen * sumNextStart || (!existingSummary && canSummarize);
-            bool shouldSumLoad = contextGen > contextLen * sumNextLoad || (!existingSummary && _summaryTask != null && _summaryTask.IsCompleted && canSummarize);
-
-            if (_summaryTask?.IsCanceled ?? false)
+            while (contextGen > trimTarget)
             {
-                _summaryTask = null;
-            }
-
-            if (_summaryTask != null && shouldSumLoad)
-            {
-                await _summaryTask;
-
-                SummaryResponse summary = await _summaryTask;
-                string strSummary = summary.Summary.Replace("\r", "\n").Replace("\n\n", "\n");
-                IReadOnlyLlamaTokenCollection tokens = await _tokenCache.Get(strSummary, false);
-
-                _contextModel.Summary = new LlamaTokenBlock(tokens, LlamaTokenType.Undefined);
-
-                int dropped = 0;
-
-                while (messages[0].Id < summary.FirstId)
-                {
-                    dropped++;
-                    messages.Dequeue();
-                }
-
-                if(dropped > 0)
-                {
-                    Debug.WriteLine($"Dropped {dropped} from history");
-                }
-
-                _summaryTask = null;
-
+                dropped++;
+                messages.Dequeue();
                 contextGen = (await _contextModel.ToCollection()).Count;
-                shouldSumStart = contextGen > contextLen * sumNextStart;
             }
 
-            if (_summaryTask is null && shouldSumStart)
+            if (dropped > 0)
             {
-                long lastMessageId = 0;
-
-                //Lets figure out what we should be targeting for removal
-                //start with the context length
-                uint targetLength = contextLen;
-
-                //We need room for our summary
-                targetLength -= SUMMARY_TARGET;
-
-                //figure out how big a single chunk is
-                //and then remove that. Thats our next block padding
-                uint chunkLen = contextLen / SUMMARY_CHUNKS;
-                targetLength -= chunkLen;
-
-                //Now we figure out how many tokens we need to
-                //remove from the current gen, to get in under the target
-                int toRemove = (int)(contextGen - targetLength);
-
-                //Figure out how many messages we have
-                int numMessages = messages.Count;
-
-                //Work up the message stack until we know how many messages we need to remove
-                //to fit in under the limit we calculated
-                for (int i = 0; i < numMessages && toRemove > 0; i++)
-                {
-                    if (messages[i].Type != LlamaTokenType.Temporary)
-                    {
-                        toRemove -= await messages[i].Count();
-
-                        //Out summarization should start (working back)
-                        //from before the first message we're going to remove.
-                        //Its in the context now but it wont be once we load
-                        //up the summary since we're going to purge it
-                        lastMessageId = Math.Max(messages[i].Id, lastMessageId);
-                        toRemove--;
-                    }
-                }
-
-                if (lastMessageId == 0)
-                {
-                    List<long> possibleTargets = messages.Select(m => m.Id).Where(x => x != 0).ToList();
-
-                    if (possibleTargets.Count > 0)
-                    {
-                        lastMessageId = possibleTargets.Min();
-                    }
-                }
-
-                if (lastMessageId == 0)
-                {
-                    //Should be first gen only, this assumes we dont need to remove anything
-                    //In that case we want to start summarizing at the end of the DB table
-                    //which is just lastmessage + 1 for all intent and purpose and should
-                    //end up removing nothing from the stack once we're done.
-                    lastMessageId = _chatService.GetLastMessage().Id + 1;
-                }
-
-                _summaryTask = _summarizationService.Summarize(lastMessageId, SUMMARY_TARGET, GetMessagesReversed(lastMessageId));
+                Debug.WriteLine($"Dropped {dropped} from history");
             }
         }
 

@@ -80,6 +80,15 @@ namespace Llama.Core.Utils
 
         public void Validate(KvCacheState<LlamaToken> kvCache)
         {
+            var evaluated = NativeApi.GetEvaluated(this._handle, this._model);
+
+            for (int i = 0; i < kvCache.Length; i++)
+            {
+                if (evaluated[i] != kvCache[(uint)i])
+                {
+                    throw new InvalidOperationException();
+                }
+            }
         }
 
         private void Log(BatchDecode<int> idBatch)
