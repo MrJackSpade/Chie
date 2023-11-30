@@ -147,7 +147,7 @@ namespace LlamaApiClient
 
             PredictResponse response;
 
-            response = await QueueAndFlush<PredictResponse>(request);
+            response = await this.QueueAndFlush<PredictResponse>(request);
 
             return response.Predicted;
         }

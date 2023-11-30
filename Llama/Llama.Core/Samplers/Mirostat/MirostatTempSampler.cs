@@ -4,51 +4,87 @@ using Llama.Data.Models;
 using Llama.Data.Native;
 using Llama.Native;
 using System.Diagnostics;
+using System.Reflection.Metadata;
 using System.Text;
 
 namespace Llama.Core.Samplers.Mirostat
 {
     public class MirostatTempSampler : ITokenSelector
     {
+        readonly Dictionary<char, float> _temperatureAdjustments = new()
+        {
+            [':'] = 3f,
+            ['.'] = 2f,
+            ['?'] = 2f,
+            ['*'] = 3f
+        };
+
         private readonly Dictionary<int, bool> _isWords = new();
 
         private readonly MirostatTempSamplerSettings _settings;
 
-        private float _mu;
-
         private float _temp;
+
+        private float LEARNING_SLOPE = 0.8f;
+
+        private float MIN_TEMP = .4f;
+
+        private float MAX_TEMP = 1.25f;
+
+        private float TARGET = 0.4f;
+
+        private int QUEUE_SIZE = 3;
+
+        private Queue<LlamaTokenData> _selectionHistory = new();
 
         public MirostatTempSampler(MirostatTempSamplerSettings settings)
         {
             this._settings = settings;
-            this._mu = settings.InitialMu;
             this._temp = settings.InitialTemperature;
         }
 
-        public static int Clamp(float k)
+        public string GetDisplayString(SampleContext ctx, int tokenId)
         {
-            if (k <= 0)
-            {
-                return 0;
-            }
-            else if (k >= int.MaxValue)
-            {
-                return int.MaxValue;
-            }
-            else
-            {
-                return (int)k;
-            }
-        }
+            LlamaTokenData tokenData = new();
 
-        public string GetDisplayString(SampleContext ctx, LlamaTokenData data)
-        {
-            LlamaToken token = this.GetToken(ctx, data.id);
+            for(int i = 0; i < ctx.OriginalCandidates.Length; i++)
+            {
+                if (ctx.OriginalCandidates[i].id == tokenId)
+                {
+                    tokenData = ctx.OriginalCandidates[i];
+                    break;
+                }
+            }
 
-            return $"{token.GetEscapedValue()} ({data.p:0.00})";
+            LlamaToken token = this.GetToken(ctx, tokenData.id);
+
+            return $"{token.GetEscapedValue()} ({tokenData.p:0.00})";
         }
 
         public LlamaToken GetToken(SampleContext ctx, int id) => new(id, NativeApi.TokenToPiece(ctx.ModelHandle, id));
+
+        private void Push(LlamaTokenData token)
+        {
+            _selectionHistory.Enqueue(token);
+
+            if(_selectionHistory.Count > QUEUE_SIZE)
+            {
+                _selectionHistory.Dequeue();
+            }
+        }
+
+        private bool TryGetQueueAverage(out float avg)
+        {
+            avg = 0f;
+            if(_selectionHistory.Count < QUEUE_SIZE)
+            {
+                return false;
+            } else
+            {
+                avg = _selectionHistory.Average(l => l.p);
+                return true;
+            }
+        }
 
         public int SampleNext(SampleContext sampleContext)
         {
@@ -56,58 +92,101 @@ namespace Llama.Core.Samplers.Mirostat
             SamplingApi.SoftMax(sampleContext.ContextHandle, sampleContext.Candidates);
             Span<LlamaTokenData> candidateSpan = sampleContext.Candidates.Data.Span;
 
+            float sampleTemp = this._temp;
+
+            if(sampleContext.ContextTokens.Count > 0)
+            {
+                LlamaToken token = sampleContext.ContextTokens.Trim().Last();
+
+                string value = NativeApi.TokenToPiece(sampleContext.ModelHandle, token.Id);
+
+                if(!string.IsNullOrEmpty(value) && _temperatureAdjustments.TryGetValue(value[^1], out float f))
+                {
+                    sampleTemp = f;
+                }
+            }
+
+            SamplingApi.Temperature(sampleContext.ContextHandle, sampleContext.Candidates, sampleTemp);
             SamplingApi.TailFree(sampleContext.ContextHandle, sampleContext.Candidates, this._settings.Tfs, 1);
-            SamplingApi.Temperature(sampleContext.ContextHandle, sampleContext.Candidates, this._temp);
             SamplingApi.SoftMax(sampleContext.ContextHandle, sampleContext.Candidates);
 
-            float tau = this._settings.Target;
-            float eta = this._settings.LearningRate;
-
             bool topOnly = false;
-            int top_x = 0;
+            int topToken = 0;
 
             if (this._settings.PreserveWords)
             {
-                top_x = sampleContext.OriginalCandidates[0].id;
-                topOnly = !this.CheckIfWord(sampleContext.ModelHandle, top_x);
+                topToken = sampleContext.OriginalCandidates[0].id;
+                topOnly = !this.CheckIfWord(sampleContext.ModelHandle, topToken);
             }
 
-            int x;
+            int selectedToken;
 
             if (topOnly)
             {
-                x = top_x;
+                selectedToken = topToken;
             }
             else
             {
                 SamplingApi.SoftMax(sampleContext.ContextHandle, sampleContext.Candidates);
-                x = SamplingApi.Token(sampleContext.ContextHandle, sampleContext.Candidates);
+                selectedToken = SamplingApi.Token(sampleContext.ContextHandle, sampleContext.Candidates);
             }
 
             // Compute error as the difference between observed surprise and target surprise value
-            int x_idx = 0;
-
-            for (int i = 0; i < (int)sampleContext.Candidates.Size; i++)
-            {
-                if (candidateSpan[i].id == x)
-                {
-                    x_idx = i;
-                    break;
-                }
-            }
 
             StringBuilder candidateBuilder = new();
 
-            float selectedP = candidateSpan[x_idx].p;
+            WriteToLog(sampleContext, candidateSpan, topOnly, selectedToken, candidateBuilder);
 
+            float average = 0f;
+
+            if ((!topOnly || this._settings.FactorPreservedWords))
+            {
+                if (TryGetQueueAverage(out average))
+                {
+                    float dif = TARGET - average;
+
+                    float adj = dif * LEARNING_SLOPE;
+
+                    this._temp -= adj;
+
+                    this._temp = Math.Max(this._temp, MIN_TEMP);
+
+                    this._temp = Math.Min(this._temp, MAX_TEMP);
+                }
+
+                Push(GetOriginalData(sampleContext, selectedToken));
+            }
+
+            Debug.WriteLine($"T: {this._temp:0.00}; Mu: {average:0.00}; {candidateBuilder}");
+
+            return selectedToken;
+        }
+
+        private LlamaTokenData GetOriginalData(SampleContext sampleContext, int tokenId)
+        {
+            LlamaTokenData[] candidates = sampleContext.OriginalCandidates;
+            
+            for (int i = 0; i < candidates.Length; i++)
+            {
+                if (candidates[i].id == tokenId)
+                {
+                    return candidates[i];
+                }
+            }
+
+            throw new ArgumentOutOfRangeException(nameof(tokenId));
+        }
+
+        private void WriteToLog(SampleContext sampleContext, Span<LlamaTokenData> candidateSpan, bool topOnly, int selectedToken, StringBuilder candidateBuilder)
+        {
             if (topOnly)
             {
-                candidateBuilder.Append(" [SINGLE] ");
-                candidateBuilder.Append(this.GetDisplayString(sampleContext, sampleContext.OriginalCandidates[0]));
+                candidateBuilder.Append(" [SINGLE] [");
+                candidateBuilder.Append(this.GetDisplayString(sampleContext, selectedToken));
             }
             else
             {
-                candidateBuilder.Append($"[{this.GetDisplayString(sampleContext, candidateSpan[x_idx])}] || ");
+                candidateBuilder.Append($"[{this.GetDisplayString(sampleContext, selectedToken)}] || ");
 
                 ulong displayCount = Math.Min(10, sampleContext.Candidates.Size);
 
@@ -123,41 +202,11 @@ namespace Llama.Core.Samplers.Mirostat
                         candidateBuilder.Append(" | ");
                     }
 
-                    candidateBuilder.Append(this.GetDisplayString(sampleContext, candidateSpan[i]));
+                    candidateBuilder.Append(this.GetDisplayString(sampleContext, candidateSpan[i].id));
                 }
             }
 
             candidateBuilder.Append(']');
-
-            //Calculate surprise based on the original P to
-            //ensure that wonky probability fuckery doesn't mess
-            //up the surprise calculations
-            float original_p = sampleContext.GetOriginalProbability(x);
-
-            string muCalc = string.Empty;
-
-            if (!topOnly || this._settings.FactorPreservedWords)
-            {
-                float observed_surprise = -(float)(Math.Log(original_p) / Math.Log(2));
-                float e = observed_surprise - tau;
-
-                // Update mu using the learning rate and error
-                float adj = eta * e;
-                float nuMu = this._mu - adj;
-                float nuTemp = this._temp - adj * this._settings.TemperatureLearningRate;
-
-                if (nuTemp > 0 && !float.IsNaN(nuTemp) && !float.IsInfinity(nuTemp) && !float.IsNaN(nuMu) && !float.IsInfinity(nuMu))
-                {
-                    this._temp = nuTemp;
-                    this._mu = nuMu;
-                }
-
-                muCalc = $"Ob: {observed_surprise:0.00}; Adj: {adj:0.00};";
-            }
-
-            Debug.WriteLine($"T: {this._temp:0.00}; Mu: {this._mu:0.00}; {muCalc} {candidateBuilder}");
-
-            return x;
         }
 
         private bool CheckIfWord(SafeLlamaModelHandle ctx, int id)
@@ -165,7 +214,7 @@ namespace Llama.Core.Samplers.Mirostat
             if (!this._isWords.TryGetValue(id, out bool word))
             {
                 string value = NativeApi.TokenToPiece(ctx, id);
-                word = !string.IsNullOrWhiteSpace(value) && !char.IsLetter(value[0]);
+                word = !string.IsNullOrWhiteSpace(value) && !(char.IsLetter(value[0]) || value[0] == '\'');
                 this._isWords.Add(id, word);
             }
 

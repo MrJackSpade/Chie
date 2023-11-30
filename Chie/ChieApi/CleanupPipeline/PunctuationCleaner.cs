@@ -1,4 +1,5 @@
 ﻿using LlamaApi.Shared.Interfaces;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace ChieApi.CleanupPipeline
@@ -17,7 +18,6 @@ namespace ChieApi.CleanupPipeline
 
             s = s.Replace(" ?", "?");
             s = s.Replace(" !", "!");
-            s = s.Replace("..?", "?");
             //s = s.Replace("...", "…");
             s = s.Replace('’', '\''); // Right single quotation mark
             s = s.Replace('‘', '\''); // Left single quotation mark
@@ -31,6 +31,7 @@ namespace ChieApi.CleanupPipeline
             s = s.Replace('‚', '\''); // Single low-9 quotation mark
             s = s.Replace('‹', '<');  // Single left-pointing angle quotation mark
             s = s.Replace('›', '>');  // Single right-pointing angle quotation mark
+            s = OrderedPunctuation(s);
 
             while (s.Contains("\"\""))
             {
@@ -71,6 +72,39 @@ namespace ChieApi.CleanupPipeline
 
             return input;
         }
+
+        public static string OrderedPunctuation(string input)
+        {
+            StringBuilder output = new();
+
+            char lastChar = '\0';
+
+            foreach (char c in input)
+            {
+                if(lastChar != '\0')
+                {
+                    if(punctuationOrdering.TryGetValue(lastChar, out char[]? valueFollows) && punctuationOrdering.TryGetValue(c, out _))
+                    {
+                        if(!valueFollows.Contains(c))
+                        {
+                            continue;
+                        }
+                    }
+                }
+
+                lastChar = c;
+                output.Append(c);
+            }
+
+            return output.ToString();
+        }
+
+        static Dictionary<char, char[]> punctuationOrdering = new()
+        {
+            ['.'] = new char[] { '.' },
+            ['!'] = new char[] { '!' },
+            ['?'] = new char[] { '?', '!' },
+        };
 
         public string Clean(string content)
         {

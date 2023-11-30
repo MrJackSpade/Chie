@@ -163,7 +163,8 @@ namespace ChieApi
                 {
                     LengthScale = 1.8f,
                     GroupScale = 1.575f,
-                    MinGroupLength = 3,
+                    //MAybe shorten this and affect group scale?
+                    MinGroupLength = 5,
                     RepeatTokenPenaltyWindow = -1
                 };
 

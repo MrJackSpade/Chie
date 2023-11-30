@@ -215,8 +215,10 @@ namespace Llama.Core
         {
             LlamaTokenCollection collection = new();
             //collection.Append(this.GetToken(13));//NL
-            collection.Append(this.GetToken(334));// *
-            collection.Append(this.GetToken(29930));//*
+            
+            //collection.Append(this.GetToken(334));// *
+            //collection.Append(this.GetToken(29930));//*
+            
             //collection.Append(this.GetToken(368));//ly
             //collection.Append(this.GetToken(297));//in
             //collection.Append(this.GetToken(591));//we

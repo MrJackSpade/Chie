@@ -414,6 +414,24 @@ namespace ChieApi.Services
 
             bool setBias = true;
 
+            LlamaToken lastToken = null;
+
+            for(int i = this._contextModel.Messages.Count - 1; i >= 0; i--)
+            {
+                ITokenCollection message = this._contextModel.Messages[i];
+
+                if(message is LlamaMessage lm && (await lm.UserName.Value) == this._characterConfiguration.CharacterName)
+                {
+                    lastToken = (await lm.Content.Tokens).First();
+                    break;
+                }
+            }
+
+            if(lastToken != null)
+            {
+                enumerator.SetBias(lastToken.Id, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
+            }
+
             enumerator.SetBias(LlamaToken.EOS.Id, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
             enumerator.SetBias(LlamaToken.NewLine.Id, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
             enumerator.SetBias(_characterConfiguration.LogitBias, LogitRuleLifetime.Inferrence, LogitBiasType.Multiplicative);
