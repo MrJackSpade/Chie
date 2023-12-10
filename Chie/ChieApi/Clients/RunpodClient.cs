@@ -75,7 +75,7 @@ namespace ChieApi.Clients
                 throw new ArgumentException($"'{nameof(url)}' cannot be null or empty.", nameof(url));
             }
 
-            ClientResponse hr = await WrapAndExecute(host, url);
+            ClientResponse hr = await this.WrapAndExecute(host, url);
 
             return hr;
         }
@@ -99,7 +99,7 @@ namespace ChieApi.Clients
 
             string str_content = await content.ReadAsStringAsync()!;
 
-            ClientResponse hr = await WrapAndExecute(url, "post", str_content);
+            ClientResponse hr = await this.WrapAndExecute(url, "post", str_content);
 
             return hr;
         }
@@ -121,7 +121,7 @@ namespace ChieApi.Clients
                 throw new ArgumentNullException(nameof(content));
             }
 
-            ClientResponse hr = await WrapAndExecute(url, "post", content);
+            ClientResponse hr = await this.WrapAndExecute(url, "post", content);
 
             return hr;
         }

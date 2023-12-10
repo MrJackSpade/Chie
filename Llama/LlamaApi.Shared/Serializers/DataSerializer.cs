@@ -624,6 +624,7 @@ namespace LlamaApi.Shared.Serializers
                 InitialTemperature = DeserializeFloat(reader),
                 LearningRate = DeserializeFloat(reader),
                 Tfs = DeserializeFloat(reader),
+                MaxTemp = DeserializeFloat(reader),
                 PreserveWords = DeserializeBool(reader),
                 Target = DeserializeFloat(reader),
                 TemperatureLearningRate = DeserializeFloat(reader)
@@ -1178,6 +1179,7 @@ namespace LlamaApi.Shared.Serializers
             Serialize(request.InitialTemperature, writer);
             Serialize(request.LearningRate, writer);
             Serialize(request.Tfs, writer);
+            Serialize(request.MaxTemp, writer);
             Serialize(request.PreserveWords, writer);
             Serialize(request.Target, writer);
             Serialize(request.TemperatureLearningRate, writer);

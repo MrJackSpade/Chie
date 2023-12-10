@@ -4,6 +4,6 @@ namespace ChieApi.Interfaces
 {
     public interface IPostAccept
     {
-        void PostAccept(InferenceEnumerator enumerator);
+        Task PostAccept(InferenceEnumerator enumerator);
     }
 }

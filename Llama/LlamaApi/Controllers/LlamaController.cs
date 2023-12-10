@@ -33,27 +33,27 @@ namespace LlamaApi.Controllers
 
         public LlamaController(IExecutionScheduler contextExecutionScheduler, LoadedModel loadedModel)
         {
-            this._contextExecutionScheduler = contextExecutionScheduler;
-            this._loadedModel = loadedModel;
+            _contextExecutionScheduler = contextExecutionScheduler;
+            _loadedModel = loadedModel;
         }
 
         [HttpPost("context")]
         public ContextResponse Context(ContextRequest request)
         {
-            this._loadedModel.Lock();
+            _loadedModel.Lock();
 
             Guid? contextId = request?.ContextId;
 
             try
             {
-                if (this._loadedModel?.Id != request.ModelId)
+                if (_loadedModel?.Id != request.ModelId)
                 {
-                    return StatusCode<ContextResponse>(LlamaStatusCodes.NoModelLoaded);
+                    return this.StatusCode<ContextResponse>(LlamaStatusCodes.NoModelLoaded);
                 }
 
-                if (contextId.HasValue && this._loadedModel.Evaluator.ContainsKey(contextId.Value))
+                if (contextId.HasValue && _loadedModel.Evaluator.ContainsKey(contextId.Value))
                 {
-                    ContextInstance contextEvaluator = this._loadedModel.GetContext(contextId.Value);
+                    ContextInstance contextEvaluator = _loadedModel.GetContext(contextId.Value);
 
                     return new ContextResponse()
                     {
@@ -67,11 +67,11 @@ namespace LlamaApi.Controllers
                     };
                 }
 
-                SafeLlamaContextHandle safeLlamaContextHandle = NativeApi.LoadContext(this._loadedModel.Instance.Handle, request.Settings);
+                SafeLlamaContextHandle safeLlamaContextHandle = NativeApi.LoadContext(_loadedModel.Instance.Handle, request.Settings);
 
-                LlamaContextWrapper wrapper = new(this._contextExecutionScheduler,
+                LlamaContextWrapper wrapper = new(_contextExecutionScheduler,
                                                    safeLlamaContextHandle,
-                                                   this._loadedModel.Instance.Handle,
+                                                   _loadedModel.Instance.Handle,
                                                    request.Settings,
                                                    this.GetSimpleSamplers(request),
                                                    this.GetFinalSampler(request)
@@ -90,7 +90,7 @@ namespace LlamaApi.Controllers
                     }
                 };
 
-                this._loadedModel.Evaluator.Add(response.State.Id, evaluator);
+                _loadedModel.Evaluator.Add(response.State.Id, evaluator);
 
                 //for (int i = 0; i < 1; i++)
                 //{
@@ -112,14 +112,14 @@ namespace LlamaApi.Controllers
             }
             finally
             {
-                this._loadedModel.Unlock();
+                _loadedModel.Unlock();
             }
         }
 
         [HttpPost("context/dispose")]
         public IActionResult ContextDispose(ContextDisposeRequest request)
         {
-            ContextInstance context = this._loadedModel.GetContext(request.ContextId);
+            ContextInstance context = _loadedModel.GetContext(request.ContextId);
 
             context.Dispose();
 
@@ -129,7 +129,7 @@ namespace LlamaApi.Controllers
         [HttpPost("eval")]
         public EvaluationResponse Eval(EvaluateRequest request)
         {
-            if (!TryLoadContext(request.ContextId, out ContextInstance context, out EvaluationResponse response))
+            if (!this.TryLoadContext(request.ContextId, out ContextInstance context, out EvaluationResponse response))
             {
                 return response;
             }
@@ -148,7 +148,7 @@ namespace LlamaApi.Controllers
         [HttpPost("evaluated")]
         public ContextSnapshotResponse Evaluated(ContextSnapshotRequest request)
         {
-            if (!TryLoadContext(request.ContextId, out ContextInstance context, out ContextSnapshotResponse response))
+            if (!this.TryLoadContext(request.ContextId, out ContextInstance context, out ContextSnapshotResponse response))
             {
                 return response;
             }
@@ -162,7 +162,7 @@ namespace LlamaApi.Controllers
         [HttpPost("getlogits")]
         public GetLogitsResponse GetLogits(GetLogitsRequest request)
         {
-            if (!TryLoadContext(request.ContextId, out ContextInstance context, out GetLogitsResponse response))
+            if (!this.TryLoadContext(request.ContextId, out ContextInstance context, out GetLogitsResponse response))
             {
                 return response;
             }
@@ -179,44 +179,44 @@ namespace LlamaApi.Controllers
         [HttpPost("model")]
         public ModelResponse Model(ModelRequest request)
         {
-            this._loadedModel.Lock();
+            _loadedModel.Lock();
 
             try
             {
-                if (this._loadedModel.Instance != null)
+                if (_loadedModel.Instance != null)
                 {
-                    if (this._loadedModel.Settings.Model == request.Settings.Model)
+                    if (_loadedModel.Settings.Model == request.Settings.Model)
                     {
                         return new ModelResponse()
                         {
-                            Id = this._loadedModel.Id
+                            Id = _loadedModel.Id
                         };
                     }
 
                     throw new DuplicateModelLoadException();
                 }
 
-                this._loadedModel.Instance = NativeApi.LoadModel(request.Settings);
+                _loadedModel.Instance = NativeApi.LoadModel(request.Settings);
 
-                this._loadedModel.Settings = request.Settings;
+                _loadedModel.Settings = request.Settings;
 
-                this._loadedModel.Id = request.ModelId;
+                _loadedModel.Id = request.ModelId;
 
                 return new ModelResponse()
                 {
-                    Id = this._loadedModel.Id
+                    Id = _loadedModel.Id
                 };
             }
             finally
             {
-                this._loadedModel.Unlock();
+                _loadedModel.Unlock();
             }
         }
 
         [HttpPost("predict")]
         public PredictResponse Predict(PredictRequest request)
         {
-            if (!TryLoadContext(request.ContextId, out ContextInstance context, out PredictResponse response))
+            if (!this.TryLoadContext(request.ContextId, out ContextInstance context, out PredictResponse response))
             {
                 return response;
             }
@@ -256,7 +256,7 @@ namespace LlamaApi.Controllers
 
                     if (o is ContextRequest cr)
                     {
-                        r = Context(cr);
+                        r = this.Context(cr);
                         found = true;
                     }
 
@@ -314,23 +314,26 @@ namespace LlamaApi.Controllers
 
                 string responseStr = Convert.ToBase64String(responseData);
 
-                return Content(responseStr);
+                return this.Content(responseStr);
             }
             catch (FormatException ex)
             {
                 // Handle the exception if the string is not a valid base64 string
-                return BadRequest("Invalid Base64 string.");
+                return this.BadRequest("Invalid Base64 string.");
             }
         }
 
         [HttpGet("/")]
-        public IActionResult State() => this.Content("OK");
+        public IActionResult State()
+        {
+            return this.Content("OK");
+        }
 
         public T StatusCode<T>(LlamaStatusCodes status)
         {
             T result = default;
 
-            this.HttpContext.Response.StatusCode = (int)status;
+            HttpContext.Response.StatusCode = (int)status;
 
             return result;
         }
@@ -338,23 +341,18 @@ namespace LlamaApi.Controllers
         [HttpPost("tokenize")]
         public TokenizeResponse Tokenize(TokenizeRequest request)
         {
-            if (this._loadedModel?.Instance is null)
+            if (_loadedModel?.Instance is null)
             {
-                return StatusCode<TokenizeResponse>(LlamaStatusCodes.NoModelLoaded);
+                return this.StatusCode<TokenizeResponse>(LlamaStatusCodes.NoModelLoaded);
             }
 
-            List<int> tokens = NativeApi.LlamaTokenize(this._loadedModel.Instance.Handle, request.Content!, false);
+            List<int> tokens = NativeApi.LlamaTokenize(_loadedModel.Instance.Handle, request.Content!, false);
 
             List<LlamaToken> toReturn = new();
 
             foreach (int token in tokens)
             {
-                if (token == 0)
-                {
-                    throw new InvalidOperationException("Null token detected in tokenize response");
-                }
-
-                toReturn.Add(new LlamaToken(token, NativeApi.TokenToPiece(this._loadedModel.Instance.Handle, token)));
+                toReturn.Add(new LlamaToken(token, NativeApi.TokenToPiece(_loadedModel.Instance.Handle, token)));
             }
 
             return new TokenizeResponse()
@@ -369,15 +367,15 @@ namespace LlamaApi.Controllers
 
             bool success = true;
 
-            if (this._loadedModel?.Instance is null)
+            if (_loadedModel?.Instance is null)
             {
-                response = StatusCode<T>(LlamaStatusCodes.NoModelLoaded);
+                response = this.StatusCode<T>(LlamaStatusCodes.NoModelLoaded);
                 success = false;
             }
 
-            if (!this._loadedModel.TryGetContext(guid, out context))
+            if (!_loadedModel.TryGetContext(guid, out context))
             {
-                response = StatusCode<T>(LlamaStatusCodes.NoContextLoaded);
+                response = this.StatusCode<T>(LlamaStatusCodes.NoContextLoaded);
                 success = false;
             }
 
@@ -392,7 +390,7 @@ namespace LlamaApi.Controllers
                 throw new NotImplementedException();
             }
 
-            if (!TryLoadContext(request.ContextId, out ContextInstance context, out WriteTokenResponse response))
+            if (!this.TryLoadContext(request.ContextId, out ContextInstance context, out WriteTokenResponse response))
             {
                 return response;
             }
@@ -401,7 +399,7 @@ namespace LlamaApi.Controllers
 
             foreach (RequestLlamaToken token in request.Tokens)
             {
-                string value = NativeApi.TokenToPiece(this._loadedModel.Instance.Handle, token.TokenId);
+                string value = NativeApi.TokenToPiece(_loadedModel.Instance.Handle, token.TokenId);
                 toWrite.Append(new LlamaToken(token.TokenId, value));
             }
 

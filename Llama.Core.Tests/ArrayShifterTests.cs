@@ -67,14 +67,14 @@ namespace Llama.Core.Tests
         [TestMethod]
         public void TestLoadedData()
         {
-            LlamaToken[] evaluated = LoadArray("kvCache", 8192, 0).ToArray();
-            PointerArray<LlamaToken> buffer = LoadArray("buffer_5616", 8192, 5616);
+            LlamaToken[] evaluated = this.LoadArray("kvCache", 8192, 0).ToArray();
+            PointerArray<LlamaToken> buffer = this.LoadArray("buffer_5616", 8192, 5616);
 
             DummyShifter shifter = new();
 
-            PointerArraySynchronizer<LlamaToken> syncer = new(shifter, LlamaToken.Null);
+            PointerArraySynchronizer<LlamaToken> syncer = new(shifter, new LlamaToken(-1, null));
 
-            KvCacheState<LlamaToken> cacheState = new(evaluated, LlamaToken.Null);
+            KvCacheState<LlamaToken> cacheState = new(evaluated, new LlamaToken(-1, null));
 
             syncer.TranformCache(cacheState, buffer);
         }
@@ -242,8 +242,10 @@ namespace Llama.Core.Tests
 
         private PointerArray<LlamaToken> LoadArray(string fileName, uint size, uint pointer)
         {
-            PointerArray<LlamaToken> toReturn = new(size);
-            toReturn.Pointer = pointer;
+            PointerArray<LlamaToken> toReturn = new(size)
+            {
+                Pointer = pointer
+            };
             uint i = 0;
             foreach (string line in File.ReadAllLines(fileName))
             {
@@ -257,7 +259,7 @@ namespace Llama.Core.Tests
 
                 if (id == 0)
                 {
-                    toReturn[i++] = LlamaToken.Null;
+                    toReturn[i++] = new LlamaToken(-1, null);
                 }
                 else if (id == 13)
                 {

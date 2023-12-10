@@ -32,7 +32,7 @@ namespace LlamaApiClient
 
         private readonly LlamaClientSettings _settings;
 
-        private List<object> _queuedRequests;
+        private readonly List<object> _queuedRequests;
 
         public LlamaClient(LlamaClientSettings settings, LlamaContextSettings contextSettings, LlamaModelSettings modelSettings, ContextRequestSettings contextRequestSettings)
         {
@@ -59,17 +59,17 @@ namespace LlamaApiClient
 
         public async Task DisposeContext()
         {
-            await Post("/Llama/context/dispose", new ContextDisposeRequest()
+            await this.Post("/Llama/context/dispose", new ContextDisposeRequest()
             {
-                ContextId = this._settings.LlamaContextId
+                ContextId = _settings.LlamaContextId
             });
         }
 
         public async Task Eval()
         {
-            EvaluationResponse response = await QueueAndFlush<EvaluationResponse>(new EvaluateRequest()
+            EvaluationResponse response = await this.QueueAndFlush<EvaluationResponse>(new EvaluateRequest()
             {
-                ContextId = this._settings.LlamaContextId
+                ContextId = _settings.LlamaContextId
             });
 
             Debug.WriteLine("Evaluated: " + response.Evaluated);
@@ -90,10 +90,10 @@ namespace LlamaApiClient
         {
             GetLogitsRequest request = new()
             {
-                ContextId = this._settings.LlamaContextId
+                ContextId = _settings.LlamaContextId
             };
 
-            GetLogitsResponse response = await QueueAndFlush<GetLogitsResponse>(request);
+            GetLogitsResponse response = await this.QueueAndFlush<GetLogitsResponse>(request);
 
             return response.GetValue().ToArray();
         }
@@ -101,12 +101,13 @@ namespace LlamaApiClient
         public InferenceEnumerator Infer()
         {
             InferenceEnumerator toReturn = new(
-                Predict,
-                (t) => Write(t),
-                this._logitRules
+                this._modelSettings.SpecialTokens,
+                this.Predict,
+                (t) => this.Write(t),
+                _logitRules
             );
 
-            this._logitRules.Remove(LogitRuleLifetime.Inferrence);
+            _logitRules.Remove(LogitRuleLifetime.Inferrence);
 
             return toReturn;
         }
@@ -137,7 +138,7 @@ namespace LlamaApiClient
         {
             PredictRequest request = new()
             {
-                ContextId = this._settings.LlamaContextId
+                ContextId = _settings.LlamaContextId
             };
 
             if (ruleCollection != null)
@@ -159,10 +160,10 @@ namespace LlamaApiClient
                 return new LlamaTokenCollection();
             }
 
-            TokenizeResponse response = await QueueAndFlush<TokenizeResponse>(new TokenizeRequest()
+            TokenizeResponse response = await this.QueueAndFlush<TokenizeResponse>(new TokenizeRequest()
             {
                 Content = s,
-                ContextId = this._settings.LlamaContextId
+                ContextId = _settings.LlamaContextId
             });
 
             return new LlamaTokenCollection(response.Tokens.Select(lt => new LlamaToken(lt.Id, lt.Value)));
@@ -175,53 +176,53 @@ namespace LlamaApiClient
                 requestLlamaToken
             };
 
-            await Write(tokens, startIndex);
+            await this.Write(tokens, startIndex);
         }
 
         public async Task Write(IEnumerable<RequestLlamaToken> requestLlamaTokens, int startIndex = -1)
         {
             WriteTokenRequest request = new()
             {
-                ContextId = this._settings.LlamaContextId,
+                ContextId = _settings.LlamaContextId,
                 Tokens = requestLlamaTokens.ToList(),
                 StartIndex = startIndex
             };
 
             if (startIndex != -1)
             {
-                await QueueAndFlush<WriteTokenResponse>(request);
+                await this.QueueAndFlush<WriteTokenResponse>(request);
             }
             else
             {
-                this._queuedRequests.Add(request);
+                _queuedRequests.Add(request);
             }
         }
 
         public async Task Write(string s, int startIndex = -1)
         {
-            IReadOnlyLlamaTokenCollection tokens = await Tokenize(s);
+            IReadOnlyLlamaTokenCollection tokens = await this.Tokenize(s);
 
-            await Write(tokens.Select(r => new RequestLlamaToken() { TokenId = r.Id }), startIndex);
+            await this.Write(tokens.Select(r => new RequestLlamaToken() { TokenId = r.Id }), startIndex);
         }
 
         protected virtual async Task<ContextState> LoadContext(LlamaContextSettings settings)
         {
             ContextRequest cr = new()
             {
-                ContextId = this._settings.LlamaContextId,
+                ContextId = _settings.LlamaContextId,
                 Settings = settings,
                 ModelId = _modelGuid,
                 ContextRequestSettings = _contextRequestSettings
             };
 
-            ContextResponse loadResponse = await QueueAndFlush<ContextResponse>(cr);
+            ContextResponse loadResponse = await this.QueueAndFlush<ContextResponse>(cr);
 
             return loadResponse.State;
         }
 
         protected async Task<ModelResponse> LoadModel(LlamaModelSettings settings)
         {
-            return await QueueAndFlush<ModelResponse>(new ModelRequest()
+            return await this.QueueAndFlush<ModelResponse>(new ModelRequest()
             {
                 Settings = settings,
                 ModelId = _modelGuid
@@ -232,18 +233,18 @@ namespace LlamaApiClient
         {
             RequestCollection requestCollection = new();
 
-            foreach (var data in this._queuedRequests)
+            foreach (object data in _queuedRequests)
             {
                 requestCollection.Requests.Add(data);
             }
 
-            this._queuedRequests.Clear();
+            _queuedRequests.Clear();
 
             byte[] bytes = DataSerializer.Serialize(requestCollection);
 
             string b64 = Convert.ToBase64String(bytes);
 
-            string responseStr = await Request(() => PostAsync(_settings.Host, "/Llama/Request", b64));
+            string responseStr = await this.Request(() => this.PostAsync(_settings.Host, "/Llama/Request", b64));
 
             byte[] r_bytes = Convert.FromBase64String(responseStr);
 
@@ -254,13 +255,13 @@ namespace LlamaApiClient
 
         private async Task Post(string url, object data)
         {
-            await Request(() => PostAsync(_settings.Host, url, JsonContent.Create(data, options: _serializerOptions)));
+            await this.Request(() => this.PostAsync(_settings.Host, url, JsonContent.Create(data, options: _serializerOptions)));
         }
 
         private async Task<TValue> QueueAndFlush<TValue>(object request)
         {
-            this._queuedRequests.Add(request);
-            return await FlushQueue<TValue>();
+            _queuedRequests.Add(request);
+            return await this.FlushQueue<TValue>();
         }
 
         private async Task<string> Request(Func<Task<ClientResponse>> toInvoke)
@@ -273,13 +274,13 @@ namespace LlamaApiClient
 
                 if (r.Status == (int)LlamaStatusCodes.NoModelLoaded)
                 {
-                    await LoadModel(_modelSettings);
+                    await this.LoadModel(_modelSettings);
                     continue;
                 }
 
                 if (r.Status == (int)LlamaStatusCodes.NoContextLoaded)
                 {
-                    await LoadContext(_contextSettings);
+                    await this.LoadContext(_contextSettings);
                     continue;
                 }
 

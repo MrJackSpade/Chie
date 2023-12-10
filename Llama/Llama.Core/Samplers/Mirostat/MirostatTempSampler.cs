@@ -1,10 +1,8 @@
-﻿using Llama.Core.Extensions;
-using Llama.Data.Interfaces;
+﻿using Llama.Data.Interfaces;
 using Llama.Data.Models;
 using Llama.Data.Native;
 using Llama.Native;
 using System.Diagnostics;
-using System.Reflection.Metadata;
 using System.Text;
 
 namespace Llama.Core.Samplers.Mirostat
@@ -25,29 +23,27 @@ namespace Llama.Core.Samplers.Mirostat
 
         private float _temp;
 
-        private float LEARNING_SLOPE = 0.8f;
+        private readonly float LEARNING_SLOPE = 0.8f;
 
-        private float MIN_TEMP = .4f;
+        private readonly float MIN_TEMP = .4f;
 
-        private float MAX_TEMP = 1.25f;
+        private readonly float TARGET = 0.4f;
 
-        private float TARGET = 0.4f;
+        private readonly int QUEUE_SIZE = 3;
 
-        private int QUEUE_SIZE = 3;
-
-        private Queue<LlamaTokenData> _selectionHistory = new();
+        private readonly Queue<LlamaTokenData> _selectionHistory = new();
 
         public MirostatTempSampler(MirostatTempSamplerSettings settings)
         {
-            this._settings = settings;
-            this._temp = settings.InitialTemperature;
+            _settings = settings;
+            _temp = settings.InitialTemperature;
         }
 
         public string GetDisplayString(SampleContext ctx, int tokenId)
         {
             LlamaTokenData tokenData = new();
 
-            for(int i = 0; i < ctx.OriginalCandidates.Length; i++)
+            for (int i = 0; i < ctx.OriginalCandidates.Length; i++)
             {
                 if (ctx.OriginalCandidates[i].id == tokenId)
                 {
@@ -61,13 +57,16 @@ namespace Llama.Core.Samplers.Mirostat
             return $"{token.GetEscapedValue()} ({tokenData.p:0.00})";
         }
 
-        public LlamaToken GetToken(SampleContext ctx, int id) => new(id, NativeApi.TokenToPiece(ctx.ModelHandle, id));
+        public LlamaToken GetToken(SampleContext ctx, int id)
+        {
+            return new(id, NativeApi.TokenToPiece(ctx.ModelHandle, id));
+        }
 
         private void Push(LlamaTokenData token)
         {
             _selectionHistory.Enqueue(token);
 
-            if(_selectionHistory.Count > QUEUE_SIZE)
+            if (_selectionHistory.Count > QUEUE_SIZE)
             {
                 _selectionHistory.Dequeue();
             }
@@ -76,10 +75,11 @@ namespace Llama.Core.Samplers.Mirostat
         private bool TryGetQueueAverage(out float avg)
         {
             avg = 0f;
-            if(_selectionHistory.Count < QUEUE_SIZE)
+            if (_selectionHistory.Count < QUEUE_SIZE)
             {
                 return false;
-            } else
+            }
+            else
             {
                 avg = _selectionHistory.Average(l => l.p);
                 return true;
@@ -92,28 +92,28 @@ namespace Llama.Core.Samplers.Mirostat
             SamplingApi.SoftMax(sampleContext.ContextHandle, sampleContext.Candidates);
             Span<LlamaTokenData> candidateSpan = sampleContext.Candidates.Data.Span;
 
-            float sampleTemp = this._temp;
+            float sampleTemp = _temp;
 
-            if(sampleContext.ContextTokens.Count > 0)
+            if (sampleContext.ContextTokens.Count > 0)
             {
                 LlamaToken token = sampleContext.ContextTokens.Trim().Last();
 
                 string value = NativeApi.TokenToPiece(sampleContext.ModelHandle, token.Id);
 
-                if(!string.IsNullOrEmpty(value) && _temperatureAdjustments.TryGetValue(value[^1], out float f))
+                if (!string.IsNullOrEmpty(value) && _temperatureAdjustments.TryGetValue(value[^1], out float f))
                 {
                     sampleTemp = f;
                 }
             }
 
             SamplingApi.Temperature(sampleContext.ContextHandle, sampleContext.Candidates, sampleTemp);
-            SamplingApi.TailFree(sampleContext.ContextHandle, sampleContext.Candidates, this._settings.Tfs, 1);
+            SamplingApi.TailFree(sampleContext.ContextHandle, sampleContext.Candidates, _settings.Tfs, 1);
             SamplingApi.SoftMax(sampleContext.ContextHandle, sampleContext.Candidates);
 
             bool topOnly = false;
             int topToken = 0;
 
-            if (this._settings.PreserveWords)
+            if (_settings.PreserveWords)
             {
                 topToken = sampleContext.OriginalCandidates[0].id;
                 topOnly = !this.CheckIfWord(sampleContext.ModelHandle, topToken);
@@ -135,29 +135,29 @@ namespace Llama.Core.Samplers.Mirostat
 
             StringBuilder candidateBuilder = new();
 
-            WriteToLog(sampleContext, candidateSpan, topOnly, selectedToken, candidateBuilder);
+            this.WriteToLog(sampleContext, candidateSpan, topOnly, selectedToken, candidateBuilder);
 
             float average = 0f;
 
-            if ((!topOnly || this._settings.FactorPreservedWords))
+            if ((!topOnly || _settings.FactorPreservedWords))
             {
-                if (TryGetQueueAverage(out average))
+                if (this.TryGetQueueAverage(out average))
                 {
                     float dif = TARGET - average;
 
                     float adj = dif * LEARNING_SLOPE;
 
-                    this._temp -= adj;
+                    _temp -= adj;
 
-                    this._temp = Math.Max(this._temp, MIN_TEMP);
+                    _temp = Math.Max(_temp, MIN_TEMP);
 
-                    this._temp = Math.Min(this._temp, MAX_TEMP);
+                    _temp = Math.Min(_temp, this._settings.MaxTemp);
                 }
 
-                Push(GetOriginalData(sampleContext, selectedToken));
+                this.Push(this.GetOriginalData(sampleContext, selectedToken));
             }
 
-            Debug.WriteLine($"T: {this._temp:0.00}; Mu: {average:0.00}; {candidateBuilder}");
+            Debug.WriteLine($"T: {_temp:0.00}; Mu: {average:0.00}; {candidateBuilder}");
 
             return selectedToken;
         }
@@ -165,7 +165,7 @@ namespace Llama.Core.Samplers.Mirostat
         private LlamaTokenData GetOriginalData(SampleContext sampleContext, int tokenId)
         {
             LlamaTokenData[] candidates = sampleContext.OriginalCandidates;
-            
+
             for (int i = 0; i < candidates.Length; i++)
             {
                 if (candidates[i].id == tokenId)
@@ -211,11 +211,11 @@ namespace Llama.Core.Samplers.Mirostat
 
         private bool CheckIfWord(SafeLlamaModelHandle ctx, int id)
         {
-            if (!this._isWords.TryGetValue(id, out bool word))
+            if (!_isWords.TryGetValue(id, out bool word))
             {
                 string value = NativeApi.TokenToPiece(ctx, id);
-                word = !string.IsNullOrWhiteSpace(value) && !(char.IsLetter(value[0]) || value[0] == '\'');
-                this._isWords.Add(id, word);
+                word = string.IsNullOrWhiteSpace(value) || value[0]  == ' ';
+                _isWords[id] = word;
             }
 
             return word;

@@ -10,20 +10,24 @@ namespace ChieApi.Samplers
     {
         private readonly LlamaTokenCache _tokenCache;
 
-        public NewlineEnsureSampler(LlamaTokenCache cache)
+        private readonly SpecialTokens _specialTokens;
+
+        public NewlineEnsureSampler(LlamaTokenCache cache, SpecialTokens specialTokens)
         {
             this._tokenCache = cache;
+            this._specialTokens = specialTokens;
         }
 
         public async Task SampleNext(InferenceEnumerator enumerator)
         {
+
             enumerator.SetBias(30004, float.NegativeInfinity, LogitRuleLifetime.Inferrence, LogitBiasType.Additive);
 
             LlamaToken? lastToken = enumerator.Enumerated.LastOrDefault();
 
-            if (lastToken is not null && lastToken.Id == 13)
+            if (lastToken is not null && lastToken.Id == _specialTokens.NewLine)
             {
-                enumerator.SetBias(13, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
+                enumerator.SetBias(_specialTokens.NewLine, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
             }
 
             LlamaToken[] banTokens = new LlamaToken[]

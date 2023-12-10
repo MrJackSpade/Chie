@@ -17,7 +17,7 @@ namespace ChieApi.TokenTransformers
             this._minCount = minCount;
         }
 
-        public void PostAccept(InferenceEnumerator enumerator)
+        public async Task PostAccept(InferenceEnumerator enumerator)
         {
             Dictionary<int, float> tokens = new();
 

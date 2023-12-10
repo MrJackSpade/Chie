@@ -14,7 +14,7 @@ namespace ChieApi.TokenTransformers
             this._penalty = penalty;
         }
 
-        public void PostAccept(InferenceEnumerator enumerator)
+        public async Task PostAccept(InferenceEnumerator enumerator)
         {
             foreach (LlamaToken token in enumerator.Enumerated)
             {

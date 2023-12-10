@@ -1,4 +1,5 @@
 ﻿using Llama.Data.Interfaces;
+using Llama.Data.Models;
 using System.Collections.Concurrent;
 
 namespace ChieApi.Models

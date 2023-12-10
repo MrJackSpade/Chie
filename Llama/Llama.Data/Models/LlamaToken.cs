@@ -12,14 +12,6 @@ namespace Llama.Data.Models
             this.Value = value;
         }
 
-        public static LlamaToken BOS => new(1, null);
-
-        public static LlamaToken EOS => new(2, null);
-
-        public static LlamaToken NewLine => new(13, null);
-
-        public static LlamaToken Null => new(0, "█");
-
         public int Id { get; private set; }
 
         public string? Value { get; private set; }

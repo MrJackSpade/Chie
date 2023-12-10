@@ -48,5 +48,10 @@
         /// Default 0.95
         /// </summary>
         public float Tfs { get; set; } = 0.95f;
+
+        /// <summary>
+        /// Max Temp
+        /// </summary>
+        public float MaxTemp { get; set; } = 1.25f;
     }
 }

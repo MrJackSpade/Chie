@@ -1,4 +1,5 @@
 ﻿using Llama.Data.Enums;
+using Llama.Data.Models;
 using LlamaApi.Shared.Models.Response;
 
 namespace ChieApi.Services
@@ -22,6 +23,8 @@ namespace ChieApi.Services
                 }
             }
         }
+
+        public SpecialTokens SpecialTokens { get; set; } = new SpecialTokens();
 
         public string? AssistantBlock { get; set; }
 

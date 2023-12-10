@@ -10,7 +10,7 @@
 
         public float[] Embeddings { get; set; }
 
-        public IReadOnlyList<BatchItem<T>> Items => this._items;
+        public IReadOnlyList<BatchItem<T>> Items => _items;
 
         public byte[] Logits { get; set; }
 
@@ -31,13 +31,13 @@
                 IncludeLogits = includeLogits
             };
 
-            AddItem(item);
+            this.AddItem(item);
         }
 
         public void AddItem(BatchItem<T> item)
         {
-            this._items.Add(item);
-            this._items = this._items.OrderBy(i => i.Position).ToList();
+            _items.Add(item);
+            _items = _items.OrderBy(i => i.Position).ToList();
         }
 
         public void Clear()
@@ -49,11 +49,11 @@
         {
             BatchDecode<T> result = new()
             {
-                Embeddings = this.Embeddings,
-                Logits = this.Logits
+                Embeddings = Embeddings,
+                Logits = Logits
             };
 
-            foreach (var item in this.Items.Where(predicate))
+            foreach (BatchItem<T>? item in Items.Where(predicate))
             {
                 result.AddItem(item);
             }

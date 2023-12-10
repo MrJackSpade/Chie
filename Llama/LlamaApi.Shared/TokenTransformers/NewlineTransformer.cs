@@ -1,4 +1,5 @@
 ﻿using Ai.Utils.Extensions;
+using ChieApi.Models;
 using Llama.Data.Models;
 using LlamaApi.Shared.Interfaces;
 using LlamaApiClient;
@@ -12,8 +13,13 @@ namespace ChieApi.TokenTransformers
 
         private const string VALID_ENDS = ":,";
 
-        public NewlineTransformer()
+        private readonly LlamaTokenCache _tokenCache;
+
+        private readonly SpecialTokens _specialTokens;
+
+        public NewlineTransformer(SpecialTokens specialTokens)
         {
+            this._specialTokens = specialTokens;
         }
 
         public bool IsListItem(string lastLine) => Regex.IsMatch(lastLine, LIST_REGEX);
@@ -22,6 +28,7 @@ namespace ChieApi.TokenTransformers
 
         public async IAsyncEnumerable<LlamaToken?> TransformToken(InferenceEnumerator enumerator, IAsyncEnumerable<LlamaToken> selectedTokens)
         {
+
             string writtenTrimmed = enumerator.Enumerated.ToString()?.Trim();
 
             if (string.IsNullOrWhiteSpace(writtenTrimmed))
@@ -43,7 +50,7 @@ namespace ChieApi.TokenTransformers
 
             await foreach (LlamaToken tVal in selectedTokens)
             {
-                if (tVal.Id == LlamaToken.NewLine.Id)
+                if (tVal.Id == this._specialTokens.NewLine)
                 {
                     if (isValidEnd || isListItem)
                     {
@@ -51,7 +58,7 @@ namespace ChieApi.TokenTransformers
                     }
                     else
                     {
-                        yield return LlamaToken.EOS;
+                        yield return new LlamaToken(this._specialTokens.EOS, null);
                     }
                 }
                 else

@@ -36,6 +36,11 @@ namespace Llama.Data.Native
         public IntPtr ProgressCallbackUserData;
 
         /// <summary>
+        /// override key-value pairs of the model meta data
+        /// </summary>
+        public IntPtr KvOverrides;
+
+        /// <summary>
         /// Only load the vocabulary, no weights.
         /// </summary>
         [MarshalAs(UnmanagedType.I1)]

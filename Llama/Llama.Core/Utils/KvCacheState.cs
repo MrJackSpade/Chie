@@ -81,12 +81,12 @@ namespace Llama.Core.Utils
 
         public void Move(uint oldIndex, uint newIndex)
         {
-            if (IsSet(newIndex))
+            if (this.IsSet(newIndex))
             {
                 throw new Exception("New location already has token set");
             }
 
-            if (IsMoved(oldIndex))
+            if (this.IsMoved(oldIndex))
             {
                 throw new Exception("Old location has already been moved");
             }
@@ -97,12 +97,12 @@ namespace Llama.Core.Utils
 
         public void Pin(uint index)
         {
-            if (IsSet(index))
+            if (this.IsSet(index))
             {
                 throw new Exception("New location already has token set");
             }
 
-            if (IsMoved(index))
+            if (this.IsMoved(index))
             {
                 throw new Exception("Old location has already been moved");
             }

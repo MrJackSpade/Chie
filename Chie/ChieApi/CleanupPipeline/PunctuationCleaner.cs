@@ -45,6 +45,10 @@ namespace ChieApi.CleanupPipeline
 
             s = RemoveTrailingAsterisk(s);
 
+            s = s.TrimStart('?');
+            s = s.TrimStart('!');
+            s = s.TrimStart('.');
+
             return s;
         }
 
@@ -99,7 +103,7 @@ namespace ChieApi.CleanupPipeline
             return output.ToString();
         }
 
-        static Dictionary<char, char[]> punctuationOrdering = new()
+        static readonly Dictionary<char, char[]> punctuationOrdering = new()
         {
             ['.'] = new char[] { '.' },
             ['!'] = new char[] { '!' },

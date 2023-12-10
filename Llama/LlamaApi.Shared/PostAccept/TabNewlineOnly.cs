@@ -11,7 +11,7 @@ namespace ChieApi.TokenTransformers
         {
         }
 
-        public void PostAccept(InferenceEnumerator enumerator)
+        public async Task PostAccept(InferenceEnumerator enumerator)
         {
             if (enumerator.Enumerated.Count == 0)
             {

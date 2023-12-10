@@ -30,7 +30,7 @@ namespace Llama.Core
 
         private readonly ITokenSelector _tokenSelector;
 
-        private PointerArraySynchronizer<LlamaToken> _synchronizer;
+        private readonly PointerArraySynchronizer<LlamaToken> _synchronizer;
 
         public LlamaContextWrapper(IExecutionScheduler executionScheduler, SafeLlamaContextHandle handle, SafeLlamaModelHandle modelHandle, LlamaContextSettings settings, IEnumerable<ISimpleSampler> simpleSamplers, ITokenSelector tokenSelector)
         {
@@ -53,7 +53,7 @@ namespace Llama.Core
 
             for (int x = 0; x < settings.ContextSize; x++)
             {
-                for (int y = 0; y < settings.ContextSize; y++)
+                for (int y = 0; y < 8192; y++)
                 {
                     this._embeddingStack[x, y] = float.NaN;
                 }
@@ -61,7 +61,7 @@ namespace Llama.Core
 
             _synchronizer = new PointerArraySynchronizer<LlamaToken>(
                 new KvCacheShifter(settings.EvalThreadCount, settings.BatchSize, handle, modelHandle),
-                LlamaToken.Null
+                new LlamaToken(-1, null)
                 );
 
             this._executionScheduler = executionScheduler;
@@ -72,9 +72,9 @@ namespace Llama.Core
             this.Size = this._settings.ContextSize;
 
             this._buffer = new PointerArray<LlamaToken>(this.Size);
-            this._buffer.Fill(LlamaToken.Null);
+            this._buffer.Fill(new LlamaToken(-1, null));
 
-            this._kvCache = new KvCacheState<LlamaToken>(this.Size, LlamaToken.Null);
+            this._kvCache = new KvCacheState<LlamaToken>(this.Size, new LlamaToken(-1, null));
 
             this.ModelHandle = modelHandle ?? throw new ArgumentNullException();
 

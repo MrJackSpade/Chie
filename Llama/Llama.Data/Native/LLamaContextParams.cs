@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using Llama.Data.Enums;
+using System.Runtime.InteropServices;
 
 namespace Llama.Data.Native
 {
@@ -74,16 +75,20 @@ namespace Llama.Data.Native
         public uint YarnOrigCtx;
 
         /// <summary>
+        /// 
+        /// </summary>
+        public GgmlType TypeK; 
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        public GgmlType TypeV;
+
+        /// <summary>
         /// If true, use experimental mul_mat_q kernels (DEPRECATED - always true).
         /// </summary>
         [MarshalAs(UnmanagedType.I1)]
         public bool MulMatQ;
-
-        /// <summary>
-        /// Use fp16 for KV cache, fp32 otherwise.
-        /// </summary>
-        [MarshalAs(UnmanagedType.I1)]
-        public bool F16Kv;
 
         /// <summary>
         /// The llama_eval() call computes all logits, not just the last one.
@@ -96,5 +101,11 @@ namespace Llama.Data.Native
         /// </summary>
         [MarshalAs(UnmanagedType.I1)]
         public bool Embedding;
+
+        /// <summary>
+        /// Embedding mode only.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I1)]
+        public bool OffloadKQV;
     }
 }

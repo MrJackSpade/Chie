@@ -1,4 +1,5 @@
 ﻿using ChieApi.Interfaces;
+using ChieApi.Models;
 using Llama.Data.Extensions;
 using Llama.Data.Models;
 using LlamaApi.Shared.Interfaces;
@@ -9,41 +10,52 @@ namespace ChieApi.TokenTransformers
 {
     public class RoleplayEnforcingTransformer : IPostAccept, ITokenTransformer
     {
-        private const int END_ASTERISK = 29930;
-
-        private const int START_ASTERISK = 334;
-
         private readonly float _enforceSlope;
 
         private readonly float _lengthenOffset;
 
         private readonly float _lengthenSlope;
 
-        public RoleplayEnforcingTransformer(float enforceSlope, float lengthenSlope, float lengthenOffset)
+        private readonly LlamaTokenCache _tokenCache;
+
+        private int _comma = 29892;
+
+        private int _endAsterisk = 29930;
+
+        private bool _initialized;
+
+        private int _period;
+
+        private int _startAsterisk = 334;
+
+        public RoleplayEnforcingTransformer(float enforceSlope, float lengthenSlope, float lengthenOffset, LlamaTokenCache cache)
         {
             _enforceSlope = enforceSlope;
             _lengthenSlope = lengthenSlope;
             _lengthenOffset = lengthenOffset;
+            _tokenCache = cache;
         }
 
         public int GetNextAsterisk(string writtenTrimmed)
         {
             int asteriskCount = writtenTrimmed.Count(c => c == '*');
-            return asteriskCount % 2 == 0 ? START_ASTERISK : END_ASTERISK;
+            return asteriskCount % 2 == 0 ? _startAsterisk : _endAsterisk;
         }
 
         public int GetNotNextAsterisk(string writtenTrimmed)
         {
             int asteriskCount = writtenTrimmed.Count(c => c == '*');
-            return asteriskCount % 2 == 1 ? START_ASTERISK : END_ASTERISK;
+            return asteriskCount % 2 == 1 ? _startAsterisk : _endAsterisk;
         }
 
-        public void PostAccept(InferenceEnumerator enumerator)
+        public async Task PostAccept(InferenceEnumerator enumerator)
         {
+            await this.TryInititalize();
+
             string writtenTrimmed = enumerator.Enumerated.ToString()?.Trim() ?? string.Empty;
 
-            int next = GetNextAsterisk(writtenTrimmed);
-            int not = GetNotNextAsterisk(writtenTrimmed);
+            int next = this.GetNextAsterisk(writtenTrimmed);
+            int not = this.GetNotNextAsterisk(writtenTrimmed);
 
             int asteriskCount = writtenTrimmed.Count(c => c == '*');
             bool endsWith = writtenTrimmed.EndsWith("*");
@@ -52,14 +64,14 @@ namespace ChieApi.TokenTransformers
             if (asteriskCount == 0)
             {
                 float mod = 1 + (writtenTrimmed.Length * _enforceSlope);
-                enumerator.SetBias(START_ASTERISK, mod, LogitRuleLifetime.Token, LogitBiasType.Multiplicative);
-                enumerator.SetBias(END_ASTERISK, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
+                enumerator.SetBias(_startAsterisk, mod, LogitRuleLifetime.Token, LogitBiasType.Multiplicative);
+                enumerator.SetBias(_endAsterisk, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
             }
             //If we have too many asterisks, or we've just placed one, block all asterisks
             else if ((asteriskCount >= 4 && asteriskCount % 2 == 0) || endsWith)
             {
-                enumerator.SetBias(START_ASTERISK, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
-                enumerator.SetBias(END_ASTERISK, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
+                enumerator.SetBias(_startAsterisk, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
+                enumerator.SetBias(_endAsterisk, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
             }
             //If we're on odd, try and stretch it out for at least a few words
             else if (asteriskCount % 2 == 1)
@@ -75,10 +87,11 @@ namespace ChieApi.TokenTransformers
 
                 if (bias < 0)
                 {
-                    enumerator.SetBias(END_ASTERISK, bias, LogitRuleLifetime.Token, LogitBiasType.Additive);
+                    enumerator.SetBias(_endAsterisk, bias, LogitRuleLifetime.Token, LogitBiasType.Additive);
                 }
 
-                enumerator.SetBias(29892, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
+                enumerator.SetBias(_comma, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
+                enumerator.SetBias(_period, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
             }
             //Otherwise just make sure we block the "wrong" one
             else
@@ -117,6 +130,24 @@ namespace ChieApi.TokenTransformers
                 {
                     yield return token;
                 }
+            }
+        }
+
+        private async Task<int> GetToken(string text)
+        {
+            return (await this._tokenCache.Get(text)).Single().Id;
+        }
+
+        private async Task TryInititalize()
+        {
+            if (!this._initialized)
+            {
+                this._initialized = true;
+
+                this._startAsterisk = await this.GetToken(" *");
+                this._endAsterisk = await this.GetToken("*");
+                this._comma = await this.GetToken(",");
+                this._period = await this.GetToken(".");
             }
         }
     }

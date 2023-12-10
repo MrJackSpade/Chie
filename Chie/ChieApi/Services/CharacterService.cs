@@ -20,7 +20,21 @@ namespace ChieApi.Services
             this._settings = settings;
         }
 
-        public IEnumerable<string> Characters => Directory.EnumerateDirectories(ROOT_PATH).Select(d => new DirectoryInfo(d).Name);
+        public IEnumerable<string> Characters
+        {
+            get
+            {
+                foreach(string directory in Directory.GetDirectories(ROOT_PATH, "*", SearchOption.AllDirectories))
+                {
+                    int subdirs = Directory.GetDirectories(directory).Length;
+
+                    if(subdirs == 0)
+                    {
+                        yield return new DirectoryInfo(directory).Name;
+                    }
+                }
+            }
+        }
 
         private JsonSerializerOptions Options
         {
@@ -101,9 +115,22 @@ namespace ChieApi.Services
             }
         }
 
+        public string Find(string configurationName)
+        {
+            foreach(string directory in Directory.EnumerateDirectories(Path.Combine(AppContext.BaseDirectory, ROOT_PATH), "*", SearchOption.AllDirectories))
+            {
+                if(new DirectoryInfo(directory).Name == configurationName)
+                {
+                    return directory;
+                }
+            }
+
+            throw new DirectoryNotFoundException();
+        }
+
         public CharacterConfiguration Load(string configurationName)
         {
-            string characterDirectory = Path.Combine(AppContext.BaseDirectory, ROOT_PATH, configurationName);
+            string characterDirectory = this.Find(configurationName);
 
             CharacterConfiguration characterConfiguration = this.BuildJson(characterDirectory);
             characterConfiguration.InstructionBlock = this.FindFiles(characterDirectory, "Instruction.txt").First();

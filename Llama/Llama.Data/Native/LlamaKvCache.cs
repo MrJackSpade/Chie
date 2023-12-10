@@ -11,6 +11,8 @@ namespace Llama.Data.Native
 
         public uint size;
 
+        public uint used;
+
         public uint n;
 
         // This is where it gets tricky. We'll use a pointer for direct memory access:

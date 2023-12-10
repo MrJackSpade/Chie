@@ -40,17 +40,17 @@ namespace Llama.Core.Utils
                 idBatch.AddItem(oldItem.Token.Id, oldItem.Position, oldItem.SequenceIds, oldItem.IncludeLogits);
             }
 
-            NativeApi.Decode(this._handle, idBatch, _batchSize);
+            NativeApi.Decode(_handle, idBatch, _batchSize);
         }
 
         public void Evaluate(LlamaToken[] tokens, uint pos)
         {
-            if (this._threadCount == 0)
+            if (_threadCount == 0)
             {
                 throw new LlamaCppRuntimeError("Evaluation thread count can not be zero");
             }
 
-            if (NativeApi.Eval(this._handle, tokens.Select(l => l.Id).ToArray(), tokens.Length, pos, (int)this._threadCount) != 0)
+            if (NativeApi.Eval(_handle, tokens.Select(l => l.Id).ToArray(), tokens.Length, pos, (int)_threadCount) != 0)
             {
                 throw new LlamaCppRuntimeError("Failed to eval.");
             }
@@ -67,20 +67,28 @@ namespace Llama.Core.Utils
         }
 
         public void RemoveCacheToken(uint index)
-            => RemoveCacheTokens(index, index + 1);
+        {
+            this.RemoveCacheTokens(index, index + 1);
+        }
 
         public void RemoveCacheTokens(uint startPos, uint endPos)
-            => NativeApi.RemoveCacheTokens(this._handle, startPos, endPos);
+        {
+            NativeApi.RemoveCacheTokens(_handle, startPos, endPos);
+        }
 
         public void ShiftCacheToken(uint sequenceId, uint index, int delta)
-            => NativeApi.ShiftCacheTokens(this._handle, sequenceId, index, index + 1, delta);
+        {
+            NativeApi.ShiftCacheTokens(_handle, sequenceId, index, index + 1, delta);
+        }
 
         public void ShiftCacheTokens(uint sequenceId, uint startPos, uint endPos, int delta)
-            => NativeApi.ShiftCacheTokens(_handle, sequenceId, startPos, endPos, delta);
+        {
+            NativeApi.ShiftCacheTokens(_handle, sequenceId, startPos, endPos, delta);
+        }
 
         public void Validate(KvCacheState<LlamaToken> kvCache)
         {
-            var evaluated = NativeApi.GetEvaluated(this._handle, this._model);
+            LlamaToken[] evaluated = NativeApi.GetEvaluated(_handle, _model);
 
             for (int i = 0; i < kvCache.Length; i++)
             {

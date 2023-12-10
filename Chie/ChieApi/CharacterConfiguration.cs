@@ -8,6 +8,8 @@ namespace ChieApi
 
         public string CharacterName { get; set; }
 
+        public float MaxTemp { get; set; }
+
         public DateTime MemoryStart { get; set; }
 
         public bool StartVisible { get; set; }

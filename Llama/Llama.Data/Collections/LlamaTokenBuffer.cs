@@ -38,7 +38,7 @@ namespace Llama.Data.Collections
         {
             while (this._tokens.Count < this.FixedSize)
             {
-                this._tokens.Add(LlamaToken.Null);
+                this._tokens.Add(new LlamaToken(-1, null));
             }
         }
     }

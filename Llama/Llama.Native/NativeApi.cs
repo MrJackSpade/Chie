@@ -1,4 +1,5 @@
 ﻿using Llama.Data;
+using Llama.Data.Enums;
 using Llama.Data.Exceptions;
 using Llama.Data.Models;
 using Llama.Data.Native;
@@ -201,9 +202,9 @@ namespace Llama.Native
                     continue;
                 }
 
-                if (cell.value == 0)
+                if (cell.value == -1)
                 {
-                    token = LlamaToken.Null;
+                    token = new LlamaToken(-1, null);
                 }
                 else
                 {
@@ -224,7 +225,7 @@ namespace Llama.Native
             {
                 if (evaluated[i] == null)
                 {
-                    evaluated[i] = LlamaToken.Null;
+                    evaluated[i] = new LlamaToken(-1, null);
                 }
             }
 
@@ -263,11 +264,6 @@ namespace Llama.Native
 
         public static List<int> LlamaTokenize(SafeLlamaModelHandle ctx, string text, bool add_bos, bool useLegacy = true)
         {
-            if (text == "\n")
-            {
-                return new List<int>() { 13 };
-            }
-
             int cnt = System.Text.Encoding.Unicode.GetByteCount(text + 1);
 
             int[] res = new int[cnt + (add_bos ? 1 : 0)];
@@ -296,7 +292,8 @@ namespace Llama.Native
             lparams.NCtx = contextSettings.ContextSize;
             lparams.NBatch = contextSettings.BatchSize;
             lparams.Seed = contextSettings.Seed;
-            lparams.F16Kv = contextSettings.MemoryMode == Llama.Data.Enums.MemoryMode.Float16;
+            lparams.TypeV = contextSettings.MemoryMode == Llama.Data.Enums.MemoryMode.Float16 ? GgmlType.GGML_TYPE_F16 : GgmlType.GGML_TYPE_F32;
+            lparams.TypeK = contextSettings.MemoryMode == Llama.Data.Enums.MemoryMode.Float16 ? GgmlType.GGML_TYPE_F16 : GgmlType.GGML_TYPE_F32;
             lparams.LogitsAll = contextSettings.Perplexity;
             lparams.Embedding = contextSettings.GenerateEmbedding;
             lparams.RopeFreqBase = contextSettings.RopeFrequencyBase;
@@ -309,6 +306,7 @@ namespace Llama.Native
             lparams.YarnBetaFast = contextSettings.YarnBetaFast;
             lparams.YarnAttnFactor = contextSettings.YarnAttnFactor;
             lparams.YarnExtFactor = contextSettings.YarnExtFactor;
+            lparams.OffloadKQV = false;
 
             if (contextSettings.YarnOrigCtx == 0)
             {

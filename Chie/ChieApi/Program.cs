@@ -112,7 +112,8 @@ namespace ChieApi
                     GpuLayerCount = _characterConfiguration.GpuLayers,
                     Model = _characterConfiguration.ModelPath,
                     UseMemoryMap = !_characterConfiguration.NoMemoryMap,
-                    UseMemoryLock = true
+                    UseMemoryLock = true,
+                    SpecialTokens = _characterConfiguration.SpecialTokens,
                 };
             });
 
@@ -131,7 +132,8 @@ namespace ChieApi
                             Target = _characterConfiguration.MiroStatEntropy,
                             LearningRate = _characterConfiguration.LearningRate,
                             InitialTemperature = _characterConfiguration.Temperature,
-                            Tfs = _characterConfiguration.Tfs
+                            Tfs = _characterConfiguration.Tfs,
+                            MaxTemp = _characterConfiguration.MaxTemp
                         };
                     }
                     else

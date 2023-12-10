@@ -22,6 +22,8 @@ namespace ChieApi.TokenTransformers
 
         private readonly Random _random = new();
 
+        private readonly SpecialTokens _specialTokens;
+
         /// <summary>
         ///
         /// </summary>
@@ -31,7 +33,7 @@ namespace ChieApi.TokenTransformers
         /// <param name="b">The point used as the base for determining the truncation percentage</param>
         /// <param name="endChars">Characters that are safe to truncate after</param>
         /// <param name="dictionaryService"></param>
-        public ResponseLengthManager(int hardmax, int max, int min, int b, string endChars, IDictionaryService dictionaryService)
+        public ResponseLengthManager(int hardmax, int max, int min, int b, string endChars, IDictionaryService dictionaryService, SpecialTokens specialTokens)
         {
             _min = min;
             _max = max;
@@ -39,6 +41,7 @@ namespace ChieApi.TokenTransformers
             _endChars = endChars;
             _dictionaryService = dictionaryService;
             _base = b;
+            _specialTokens = specialTokens;
         }
 
         public string Clean(string content)
@@ -52,7 +55,7 @@ namespace ChieApi.TokenTransformers
 
             for (int i = 0; i < content.Length; i++)
             {
-                if (GoodEndPos(i, content))
+                if (this.GoodEndPos(i, content))
                 {
                     lastGoodEnd = i;
                 }
@@ -72,7 +75,7 @@ namespace ChieApi.TokenTransformers
 
             if (written.Length > _hardmax)
             {
-                yield return LlamaToken.EOS;
+                yield return new LlamaToken(_specialTokens.EOS, null);
                 yield break;
             }
 
@@ -101,7 +104,7 @@ namespace ChieApi.TokenTransformers
 
             bool truncate = _random.NextDouble() < chance;
 
-            if (!truncate || !GoodEndChar(written) || !nextT.StartsWith(" ") || EndsWithWord(written))
+            if (!truncate || !this.GoodEndChar(written) || !nextT.StartsWith(" ") || this.EndsWithWord(written))
             {
                 await foreach (LlamaToken token in selectedTokens)
                 {
@@ -111,7 +114,7 @@ namespace ChieApi.TokenTransformers
                 yield break;
             }
 
-            yield return LlamaToken.EOS;
+            yield return new LlamaToken(_specialTokens.EOS, null);
         }
 
         private bool EndsWithWord(string toTest)
@@ -139,7 +142,7 @@ namespace ChieApi.TokenTransformers
 
             char c = t[^1];
 
-            return GoodEndChar(c);
+            return this.GoodEndChar(c);
         }
 
         private bool GoodEndChar(char toTest)
@@ -157,7 +160,7 @@ namespace ChieApi.TokenTransformers
 
         private bool GoodEndPos(int index, string toTest)
         {
-            return GoodEndChar(toTest[index]) && (toTest.Length == index + 1 || toTest[index + 1] == ' ');
+            return this.GoodEndChar(toTest[index]) && (toTest.Length == index + 1 || toTest[index + 1] == ' ');
         }
     }
 }

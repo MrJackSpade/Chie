@@ -18,8 +18,8 @@ namespace Llama.Core.Utils
 
         public void Sync(KvCacheState<T> kvCache, PointerArray<T> buffer)
         {
-            TranformCache(kvCache, buffer);
-            DecodeNew(kvCache, buffer);
+            this.TranformCache(kvCache, buffer);
+            this.DecodeNew(kvCache, buffer);
         }
 
         public void TranformCache(KvCacheState<T> kvCache, PointerArray<T> buffer)
@@ -54,12 +54,12 @@ namespace Llama.Core.Utils
 
             if (shiftAmount > 0)
             {
-                ShiftCacheTokens(kvCache, (int)bestShiftStart, (int)bestShiftCount, (int)(0 - shiftAmount));
+                this.ShiftCacheTokens(kvCache, (int)bestShiftStart, (int)bestShiftCount, (int)(0 - shiftAmount));
             }
 
             uint clearStart = matchCount + bestShiftCount;
 
-            RemoveCacheTokens(kvCache, clearStart, kvCache.Length);
+            this.RemoveCacheTokens(kvCache, clearStart, kvCache.Length);
         }
 
         private void Decode(KvCacheState<T> kvCache, BatchDecode<T> llamaBatch)
@@ -83,7 +83,7 @@ namespace Llama.Core.Utils
 
             for (uint i = 0; i < buffer.Pointer; i++)
             {
-                if (IsDefault(buffer[i]))
+                if (this.IsDefault(buffer[i]))
                 {
                     throw new Exception("Default token found in buffer");
                 }
@@ -94,7 +94,7 @@ namespace Llama.Core.Utils
                 }
             }
 
-            Decode(kvCache, llamaBatch);
+            this.Decode(kvCache, llamaBatch);
         }
 
         private bool IsDefault(T toTest)
@@ -106,12 +106,12 @@ namespace Llama.Core.Utils
         {
             for (uint i = clearStart; i < clearEnd; i++)
             {
-                kvCache[i] = this._defaultToken;
+                kvCache[i] = _defaultToken;
             }
 
             _arrayShifter.RemoveCacheTokens(clearStart, clearEnd);
 
-            this._arrayShifter.Validate(kvCache);
+            _arrayShifter.Validate(kvCache);
         }
 
         private void ShiftCacheTokens(KvCacheState<T> kvCache, int start, int count, int amount)
@@ -121,7 +121,7 @@ namespace Llama.Core.Utils
                 throw new NotImplementedException();
             }
 
-            RemoveCacheTokens(kvCache, (uint)(start + amount), (uint)start);
+            this.RemoveCacheTokens(kvCache, (uint)(start + amount), (uint)start);
 
             for (int shift = 0; shift < count; shift++)
             {
@@ -134,7 +134,7 @@ namespace Llama.Core.Utils
 
             _arrayShifter.ShiftCacheTokens(0, (uint)start, (uint)(start + count), amount);
 
-            this._arrayShifter.Validate(kvCache);
+            _arrayShifter.Validate(kvCache);
         }
     }
 }

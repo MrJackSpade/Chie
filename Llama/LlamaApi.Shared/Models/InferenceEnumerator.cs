@@ -18,10 +18,13 @@ namespace LlamaApiClient
 
         private int _moveBack = 0;
 
-        public InferenceEnumerator(Func<LogitRuleCollection, Task<ResponseLlamaToken>> moveNext, Func<RequestLlamaToken, Task> accept, LogitRuleCollection ruleCollection)
+        private readonly SpecialTokens _specialTokens;
+
+        public InferenceEnumerator(SpecialTokens specialTokens, Func<LogitRuleCollection, Task<ResponseLlamaToken>> moveNext, Func<RequestLlamaToken, Task> accept, LogitRuleCollection ruleCollection)
         {
             this._moveNext = moveNext;
             this._accept = accept;
+            this._specialTokens = specialTokens;
 
             foreach (LogitRule rule in ruleCollection)
             {
@@ -67,10 +70,10 @@ namespace LlamaApiClient
                     });
 
                     this._enumerated.Append(new LlamaToken(this.Current.Id, this.Current.Value));
-                }
 
-                //Clear out any temp bias from the last run if we didn't move back
-                this._logitRuleCollection.Remove(LogitRuleLifetime.Token);
+                    //Clear out any temp bias from the last run if we didn't move back
+                    this._logitRuleCollection.Remove(LogitRuleLifetime.Token);
+                }
             }
         }
 
@@ -119,7 +122,7 @@ namespace LlamaApiClient
             //apply the lastTemporaryBias and invoke
             this.Current = await this._moveNext.Invoke(this._logitRuleCollection);
 
-            return this.Current.Id > 2;
+            return this.Current.Id != _specialTokens.EOS;
         }
     }
 }

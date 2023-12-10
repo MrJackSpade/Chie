@@ -93,10 +93,14 @@ namespace Llama.Core.Tests.TestObjects
         }
 
         public void RemoveCacheToken(uint index)
-            => RemoveCacheTokens(index, index + 1);
+        {
+            this.RemoveCacheTokens(index, index + 1);
+        }
 
         public void RemoveCacheTokens(uint start, uint end)
-            => RemoveCacheTokens(0, start, end);
+        {
+            this.RemoveCacheTokens(0, start, end);
+        }
 
         public void RemoveCacheTokens(uint sequenceId, uint startPos, uint endPos)
         {
@@ -112,7 +116,9 @@ namespace Llama.Core.Tests.TestObjects
         }
 
         public void ShiftCacheToken(uint sequenceId, uint index, int delta)
-            => ShiftCacheTokens(sequenceId, index, index, delta);
+        {
+            this.ShiftCacheTokens(sequenceId, index, index, delta);
+        }
 
         public void ShiftCacheTokens(uint sequenceId, uint startPos, uint endPos, int delta)
         {
