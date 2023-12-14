@@ -16,6 +16,8 @@ namespace Llama.Data.Collections
             }
         }
 
+        public int Count => (int)this.Pointer;
+
         public uint Length => (uint)_backingData.Length;
 
         public uint Pointer { get; set; }
@@ -52,6 +54,32 @@ namespace Llama.Data.Collections
         public Span<T> Slice(int startIndex, int length)
         {
             return _backingData.AsSpan().Slice(startIndex, length);
+        }
+
+        public void Slide(uint v)
+        {
+            for (uint i = v; i < _backingData.Length - v; i++)
+            {
+                _backingData[i - v] = _backingData[i];
+            }
+
+            this.Pointer -= v;
+        }
+
+        public void Slide(uint start, uint count)
+        {
+            for (uint i = start; i < _backingData.Length - count; i++)
+            {
+                _backingData[i - count] = _backingData[i];
+            }
+
+            this.Pointer -= count;
+        }
+
+        public void Write(T element)
+        {
+            this[this.Pointer] = element;
+            this.Pointer++;
         }
     }
 }

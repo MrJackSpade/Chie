@@ -11,6 +11,11 @@ namespace Llama.Native
 {
     public static class NativeApi
     {
+        static NativeApi()
+        {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        }
+
         public static int Decode(SafeLlamaContextHandle handle, BatchDecode<int> batch, uint maxBatchSize)
         {
             //for logging
@@ -292,8 +297,8 @@ namespace Llama.Native
             lparams.NCtx = contextSettings.ContextSize;
             lparams.NBatch = contextSettings.BatchSize;
             lparams.Seed = contextSettings.Seed;
-            lparams.TypeV = contextSettings.MemoryMode == Llama.Data.Enums.MemoryMode.Float16 ? GgmlType.GGML_TYPE_F16 : GgmlType.GGML_TYPE_F32;
-            lparams.TypeK = contextSettings.MemoryMode == Llama.Data.Enums.MemoryMode.Float16 ? GgmlType.GGML_TYPE_F16 : GgmlType.GGML_TYPE_F32;
+            lparams.TypeV = GgmlType.GGML_TYPE_F16;
+            lparams.TypeK = contextSettings.TypeK;
             lparams.LogitsAll = contextSettings.Perplexity;
             lparams.Embedding = contextSettings.GenerateEmbedding;
             lparams.RopeFreqBase = contextSettings.RopeFrequencyBase;
@@ -306,7 +311,7 @@ namespace Llama.Native
             lparams.YarnBetaFast = contextSettings.YarnBetaFast;
             lparams.YarnAttnFactor = contextSettings.YarnAttnFactor;
             lparams.YarnExtFactor = contextSettings.YarnExtFactor;
-            lparams.OffloadKQV = false;
+            lparams.OffloadKQV = true;
 
             if (contextSettings.YarnOrigCtx == 0)
             {
@@ -385,6 +390,7 @@ namespace Llama.Native
 
         public static void Test()
         {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             LlamaCppApi.EmptyCall();
         }
 

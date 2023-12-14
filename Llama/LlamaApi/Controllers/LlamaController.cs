@@ -431,6 +431,11 @@ namespace LlamaApi.Controllers
                 return new MirostatTempSampler(request.MirostatTempSamplerSettings);
             }
 
+            if (request.DynamicTempSamplerSettings != null)
+            {
+                return new DynamicTempSampler(request.DynamicTempSamplerSettings);
+            }
+
             if (request.MirostatSamplerSettings != null)
             {
                 return request.MirostatSamplerSettings.MirostatType switch

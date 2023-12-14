@@ -350,10 +350,6 @@ namespace ChieApi.Services
                 //Lower bias adj to increase length
                 _responseLengthBias -= RESPONSE_LENGTH_ADJ;
             }
-            else if (responseStr.Length > MAX_RESPONSE)
-            {
-                _responseLengthBias = 0;
-            }
             else if (_responseLengthBias < 0)
             {
                 //If we fall within the expected range, we should be training

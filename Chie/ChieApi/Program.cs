@@ -125,7 +125,19 @@ namespace ChieApi
 
                 if (_characterConfiguration.MiroStat != MirostatType.None)
                 {
-                    if (_characterConfiguration.MiroStat == MirostatType.Three)
+                    if (_characterConfiguration.MiroStat == MirostatType.Four)
+                    {
+                        c.DynamicTempSamplerSettings = new DynamicTempSamplerSettings()
+                        {
+                            LearningRate = _characterConfiguration.LearningRate,
+                            Tfs = _characterConfiguration.Tfs,
+                            Temperature = _characterConfiguration.Temperature,
+                            MinTarget = _characterConfiguration.MinTarget,
+                            MaxTarget = _characterConfiguration.MaxTarget,
+                            Scale = _characterConfiguration.Scale
+                        };
+
+                    } else if (_characterConfiguration.MiroStat == MirostatType.Three)
                     {
                         c.MirostatTempSamplerSettings = new MirostatTempSamplerSettings()
                         {
@@ -182,7 +194,7 @@ namespace ChieApi
                     BatchSize = _characterConfiguration.BatchSize,
                     ContextSize = _characterConfiguration.ContextLength,
                     EvalThreadCount = _characterConfiguration.Threads ?? (uint)(System.Environment.ProcessorCount / 2),
-                    MemoryMode = _characterConfiguration.MemoryMode,
+                    TypeK = _characterConfiguration.TypeK,
                     ThreadCount = _characterConfiguration.Threads ?? (uint)(Environment.ProcessorCount / 2),
                     RopeFrequencyScaling = 1 / _characterConfiguration.RopeScale,
                     RopeFrequencyBase = _characterConfiguration.RopeBase,

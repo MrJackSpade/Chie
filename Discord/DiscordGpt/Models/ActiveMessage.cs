@@ -18,10 +18,11 @@ namespace DiscordGpt.Models
 
         private bool _disposing = false;
 
-        public ActiveMessage(RestUserMessage restUserMessage, long isReplyTo)
+        public ActiveMessage(RestUserMessage restUserMessage, long isReplyTo, bool existingMessage = false)
         {
             this.RestUserMessage = restUserMessage;
             this.IsReplyTo = isReplyTo;
+            this._contentProvided = existingMessage;
             this._syncedContent = new(async s => await this.RestUserMessage.ModifyAsync(x => x.Content = s));
         }
 

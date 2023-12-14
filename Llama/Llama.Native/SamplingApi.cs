@@ -25,6 +25,38 @@ namespace Llama.Native
             LlamaCppApi.ComplexPresencePenalty(ctx, new IntPtr(&st), check_tokens, (ulong)check_tokens.Length, minGroupLength, scalePerGroup, scalePerLength);
         }
 
+        public static bool ContainsNonEnglishCharacters(string input)
+        {
+            // Iterate through each character in the string
+            foreach (char c in input)
+            {
+                // Check if the character is outside the basic Latin and Latin-1 Supplement range
+                if (c is (< '\u0000' or > '\u007F') and (< '\u00A0' or > '\u00FF'))
+                {
+                    // If the character is outside these ranges, it's a non-English character
+                    return true;
+                }
+            }
+
+            // If no non-English characters were found, return false
+            return false;
+        }
+
+        public static void MinP(LlamaTokenDataArray candidates, float min)
+        {
+            for (int i = 0; i < candidates.Data.Length; i++)
+            {
+                float v = candidates.Data.Span[i].p;
+
+                if (v < min)
+                {
+                    candidates.Data.Span[i].logit = float.NegativeInfinity;
+                }
+            }
+
+            candidates.Sorted = false;
+        }
+
         /// <summary>
         /// Frequency and presence penalties described in OpenAI API https://platform.openai.com/docs/api-reference/parameter-details.
         /// </summary>
@@ -87,21 +119,102 @@ namespace Llama.Native
         /// </summary>
         /// <param name="ctx"></param>
         /// <param name="candidates">Pointer to LlamaTokenDataArray</param>
-        public static void SoftMax(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates)
+        public static void SoftMax(LlamaTokenDataArray candidates)
         {
-            System.Buffers.MemoryHandle handle = candidates.Data.Pin();
-
-            LlamaTokenDataArrayNative st = new()
+            if (candidates.Size <= 0)
             {
-                data = new IntPtr(handle.Pointer),
-                size = candidates.Size,
-                sorted = candidates.Sorted
-            };
+                throw new InvalidOperationException("Candidates array cannot be empty.");
+            }
 
-            LlamaCppApi.SampleSoftmax(ctx, new IntPtr(&st));
+            var candidateSpan = candidates.Data.Span;
 
-            candidates.Size = st.size;
-            candidates.Sorted = st.sorted;
+            // Sort the logits in descending order
+            if (!candidates.Sorted)
+            {
+                // Using LINQ to sort, then copy back to the MemorySpan
+                var sortedData = candidates.Data.ToArray();
+
+                Array.Sort(sortedData, (a, b) => b.logit.CompareTo(a.logit));
+
+                for (int i = 0; i < sortedData.Length; i++)
+                {
+                    candidateSpan[i] = sortedData[i];
+                }
+
+                candidates.Sorted = true;
+            }
+
+            float maxLogit = candidateSpan[0].logit;
+
+            float cumSum = 0.0f;
+
+            // Compute exponential values and cumulate sum
+            for (int i = 0; i < candidateSpan.Length; i++)
+            {
+                float expValue = (float)Math.Exp(candidateSpan[i].logit - maxLogit);
+
+                candidateSpan[i].p = expValue;
+
+                if (float.IsNaN(expValue))
+                {
+                    throw new ArgumentOutOfRangeException();
+                }
+
+                cumSum += expValue;
+
+                if (float.IsNaN(cumSum))
+                {
+                    throw new ArgumentOutOfRangeException();
+                }
+            }
+
+            int index = 0;
+            // Normalize probabilities
+            for (int i = 0; i < candidateSpan.Length; i++)
+            {
+                candidateSpan[i].p /= cumSum;
+
+                if (float.IsNaN(candidateSpan[i].p))
+                {
+                    throw new ArgumentOutOfRangeException();
+                }
+
+                index++;
+            }
+        }
+
+        public static void SurpressNewline(SafeLlamaModelHandle handle, LlamaTokenDataArray candidates)
+        {
+            for (int i = 0; i < candidates.Data.Length; i++)
+            {
+                LlamaTokenData token = candidates.Data.Span[i];
+
+                string value = NativeApi.TokenToPiece(handle, token.id);
+
+                if (value.Contains('\n') && value != "\n")
+                {
+                    candidates.Data.Span[i].logit = float.NegativeInfinity;
+                }
+            }
+
+            candidates.Sorted = false;
+        }
+
+        public static void SurpressNonEnglish(SafeLlamaModelHandle handle, LlamaTokenDataArray candidates)
+        {
+            for (int i = 0; i < candidates.Data.Length; i++)
+            {
+                LlamaTokenData token = candidates.Data.Span[i];
+
+                string value = NativeApi.TokenToPiece(handle, token.id);
+
+                if (ContainsNonEnglishCharacters(value))
+                {
+                    candidates.Data.Span[i].logit = float.NegativeInfinity;
+                }
+            }
+
+            candidates.Sorted = false;
         }
 
         /// <summary>
@@ -111,36 +224,71 @@ namespace Llama.Native
         /// <param name="candidates">Pointer to LlamaTokenDataArray</param>
         /// <param name="z"></param>
         /// <param name="min_keep"></param>
-        public static void TailFree(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, float z, ulong min_keep)
+        public static void TailFree(LlamaTokenDataArray candidates, float z, int minKeep)
         {
-            System.Buffers.MemoryHandle handle = candidates.Data.Pin();
-            LlamaTokenDataArrayNative st = new()
+            if (z >= 1.0f || candidates.Size <= 2)
             {
-                data = new IntPtr(handle.Pointer),
-                size = candidates.Size,
-                sorted = candidates.Sorted
-            };
+                return;
+            }
 
-            LlamaCppApi.SampleTailFree(ctx, new IntPtr(&st), z, min_keep);
+            SoftMax(candidates); // Assuming LlamaSampleSoftmax is defined elsewhere
 
-            candidates.Size = st.size;
-            candidates.Sorted = st.sorted;
+            var firstDerivatives = new List<float>();
+            for (int i = 0; i < (int)(candidates.Size - 1); i++)
+            {
+                firstDerivatives.Add(candidates.Data.Span[i].p - candidates.Data.Span[i + 1].p);
+            }
+
+            var secondDerivatives = new List<float>();
+            for (int i = 0; i < firstDerivatives.Count - 1; i++)
+            {
+                secondDerivatives.Add(firstDerivatives[i] - firstDerivatives[i + 1]);
+            }
+
+            for (int i = 0; i < secondDerivatives.Count; i++)
+            {
+                secondDerivatives[i] = Math.Abs(secondDerivatives[i]);
+            }
+
+            NormalizeSecondDerivatives(secondDerivatives);
+
+            float cumSum = 0.0f;
+            int lastIdx = (int)candidates.Size;
+            for (int i = 0; i < secondDerivatives.Count; i++)
+            {
+                cumSum += secondDerivatives[i];
+                if (cumSum > z && i >= minKeep)
+                {
+                    lastIdx = i + 1; // Adjusted to C# indexing
+                    break;
+                }
+            }
+
+            candidates.Size = (ulong)lastIdx;
+
+            for (int i = lastIdx + 1; i < candidates.Data.Span.Length; i++)
+            {
+                candidates.Data.Span[i].logit = 0;
+            }
+
+            candidates.Sorted = false;
         }
 
-        public static void Temperature(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, float temp)
+        public static void Temperature(LlamaTokenDataArray candidates, float temp)
         {
-            System.Buffers.MemoryHandle handle = candidates.Data.Pin();
-            LlamaTokenDataArrayNative st = new()
+            for (int i = 0; i < candidates.Data.Length; i++)
             {
-                data = new IntPtr(handle.Pointer),
-                size = candidates.Size,
-                sorted = candidates.Sorted
-            };
+                candidates.Data.Span[i].logit = candidates.Data.Span[i].logit / temp;
+            }
 
-            LlamaCppApi.SampleTemperature(ctx, new IntPtr(&st), temp);
+            candidates.Sorted = false;
+        }
 
-            candidates.Size = st.size;
-            candidates.Sorted = st.sorted;
+        public static void Temperature(LlamaTokenDataArray candidates, int index, float temp)
+        {
+            candidates.Data.Span[index].logit = candidates.Data.Span[index].logit / temp;
+
+            candidates.Sorted = false;
         }
 
         /// <summary>
@@ -168,17 +316,10 @@ namespace Llama.Native
         /// <param name="ctx"></param>
         /// <param name="candidates">Pointer to LlamaTokenDataArray</param>
         /// <returns></returns>
-        public static int TokenGreedy(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates)
+        public static int TokenGreedy(LlamaTokenDataArray candidates)
         {
-            System.Buffers.MemoryHandle handle = candidates.Data.Pin();
-            LlamaTokenDataArrayNative st = new()
-            {
-                data = new IntPtr(handle.Pointer),
-                size = candidates.Size,
-                sorted = candidates.Sorted
-            };
-
-            return LlamaCppApi.SampleTokenGreedy(ctx, new IntPtr(&st));
+            SoftMax(candidates);
+            return candidates.Data.Span[0].id;
         }
 
         /// <summary>
@@ -243,20 +384,16 @@ namespace Llama.Native
         /// <param name="candidates">Pointer to LlamaTokenDataArray</param>
         /// <param name="k"></param>
         /// <param name="min_keep"></param>
-        public static void TopK(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, int k, ulong min_keep)
+        public static void TopK(LlamaTokenDataArray candidates, int k, int min_keep)
         {
-            System.Buffers.MemoryHandle handle = candidates.Data.Pin();
-            LlamaTokenDataArrayNative st = new()
+            SoftMax(candidates);
+
+            for (int i = Math.Max(k, min_keep); i < candidates.Data.Span.Length; i++)
             {
-                data = new IntPtr(handle.Pointer),
-                size = candidates.Size,
-                sorted = candidates.Sorted
-            };
+                candidates.Data.Span[i].logit = float.NegativeInfinity;
+            }
 
-            LlamaCppApi.SampleTopK(ctx, new IntPtr(&st), k, min_keep);
-
-            candidates.Size = st.size;
-            candidates.Sorted = st.sorted;
+            candidates.Size = (ulong)Math.Max(k, min_keep);
         }
 
         /// <summary>
@@ -327,6 +464,26 @@ namespace Llama.Native
                 float adjustedPenalty = ((1 - normalizedIndex) * slope * (1 - penaltyRepeat)) + penaltyRepeat;
 
                 return adjustedPenalty;
+            }
+        }
+
+        private static void NormalizeSecondDerivatives(List<float> secondDerivatives)
+        {
+            float sum = secondDerivatives.Sum();
+            if (sum > 1e-6f)
+            {
+                for (int i = 0; i < secondDerivatives.Count; i++)
+                {
+                    secondDerivatives[i] /= sum;
+                }
+            }
+            else
+            {
+                float equalValue = 1.0f / secondDerivatives.Count;
+                for (int i = 0; i < secondDerivatives.Count; i++)
+                {
+                    secondDerivatives[i] = equalValue;
+                }
             }
         }
 

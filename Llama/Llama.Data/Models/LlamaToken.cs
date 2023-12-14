@@ -36,12 +36,12 @@ namespace Llama.Data.Models
                     break;
             }
 
-            return this.Value switch
-            {
-                "\r" => "\\r",
-                "\n" => "\\n",
-                _ => this.Value,
-            };
+            string toReturn = Value;
+
+            toReturn = toReturn.Replace("\r", "\\r");
+            toReturn = toReturn.Replace("\n", "\\n");
+
+            return toReturn;
         }
 
         public override int GetHashCode() => this.Id;

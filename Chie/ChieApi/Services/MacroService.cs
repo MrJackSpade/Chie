@@ -50,7 +50,10 @@ namespace ChieApi.Services
             return string.Join(Environment.NewLine, outputLines.ToArray());
         }
 
-        public static string TransformFile(string filePath) => Transform(File.ReadAllText(filePath));
+        public static string TransformFile(string filePath)
+        {
+            return Transform(File.ReadAllText(filePath));
+        }
 
         private static object GetMemberValue(object source, string memberName, Queue<string> commands)
         {

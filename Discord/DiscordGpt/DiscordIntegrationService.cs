@@ -330,13 +330,25 @@ namespace DiscordGpt
 
         private async Task OnReactionAdded(Cacheable<IUserMessage, ulong> cachedMessage, Cacheable<IMessageChannel, ulong> cachedChannel, SocketReaction reaction)
         {
-            ReactionData data = await ReactionDataParser.GetDataAsync(cachedMessage, cachedChannel, reaction);
+            ReactionData? data = await ReactionDataParser.GetDataAsync(cachedMessage, cachedChannel, reaction);
+
+            if (data is null)
+            {
+                return;
+            }
+
             await this._reactionActionCollection.AddReaction(data.Name, data.RemainingCount, data.ReactedUser, data.ReactedMessage);
         }
 
         private async Task OnReactionRemoved(Cacheable<IUserMessage, ulong> cachedMessage, Cacheable<IMessageChannel, ulong> cachedChannel, SocketReaction reaction)
         {
-            ReactionData data = await ReactionDataParser.GetDataAsync(cachedMessage, cachedChannel, reaction);
+            ReactionData? data = await ReactionDataParser.GetDataAsync(cachedMessage, cachedChannel, reaction);
+
+            if (data is null)
+            {
+                return;
+            }
+
             await this._reactionActionCollection.RemoveReaction(data.Name, data.RemainingCount, data.ReactedUser, data.ReactedMessage);
         }
 

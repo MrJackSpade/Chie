@@ -89,6 +89,20 @@ namespace Llama.Core.Extensions
             };
         }
 
+        public static void SetLogit(this SampleContext context, int tokenId, float logit)
+        {
+            Span<LlamaTokenData> span = context.Candidates.Data.Span;
+            int index = GetTokenIndex(context, tokenId);
+
+            LlamaTokenData existing = span[index];
+            span[index] = new LlamaTokenData()
+            {
+                id = existing.id,
+                logit = logit,
+                p = logit
+            };
+        }
+
         public static void Update(this SampleContext context, IEnumerable<KeyValuePair<LlamaToken, float>> list)
         {
             foreach (KeyValuePair<LlamaToken, float> llamaToken in list)

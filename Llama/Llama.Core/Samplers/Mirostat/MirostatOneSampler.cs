@@ -40,7 +40,7 @@ namespace Llama.Core.Samplers.Mirostat
         {
             Span<LlamaTokenData> candidateSpan = sampleContext.Candidates.Data.Span;
 
-            SamplingApi.Temperature(sampleContext.ContextHandle, sampleContext.Candidates, this._settings.Temperature);
+            SamplingApi.Temperature(sampleContext.Candidates, this._settings.Temperature);
 
             float tau = this._settings.Tau;
             float eta = this._settings.Eta;
@@ -48,7 +48,7 @@ namespace Llama.Core.Samplers.Mirostat
 
             float n = sampleContext.Candidates.Data.Length;
 
-            SamplingApi.SoftMax(sampleContext.ContextHandle, sampleContext.Candidates);
+            SamplingApi.SoftMax(sampleContext.Candidates);
 
             float sum_ti_bi = 0.0f;
             float sum_ti_sq = 0.0f;

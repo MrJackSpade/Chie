@@ -108,6 +108,7 @@ namespace ChieApi.CleanupPipeline
             ['.'] = new char[] { '.' },
             ['!'] = new char[] { '!' },
             ['?'] = new char[] { '?', '!' },
+            [','] = Array.Empty<char>()
         };
 
         public string Clean(string content)

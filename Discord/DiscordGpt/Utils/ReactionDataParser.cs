@@ -13,9 +13,15 @@ namespace DiscordGpt.Utils
 
 	public static class ReactionDataParser
 	{
-		public static async Task<ReactionData> GetDataAsync(Cacheable<IUserMessage, ulong> cachedMessage, Cacheable<IMessageChannel, ulong> cachedChannel, SocketReaction reaction)
+		public static async Task<ReactionData?> GetDataAsync(Cacheable<IUserMessage, ulong> cachedMessage, Cacheable<IMessageChannel, ulong> cachedChannel, SocketReaction reaction)
 		{
 			IUserMessage reactedMessage = await cachedMessage.DownloadAsync();
+
+			if(reactedMessage is null)
+			{
+				return null;
+			} 
+
 			IUser user = null;
 
 			if (reaction.User.IsSpecified)

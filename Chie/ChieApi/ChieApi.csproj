@@ -29,12 +29,12 @@
     <PackageReference Include="Loxifi.JsonClient" Version="0.8.1" />
     <PackageReference Include="Loxifi.StringConvert" Version="0.8.0" />
     <PackageReference Include="Loxifi.StringParsing" Version="0.2.1" />
-    <PackageReference Include="Loxifi.TypeFactory" Version="0.9.16" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.5" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\Penguin\Repositories\Loxifi\Loxifi.TypeFactory\Loxifi.TypeFactory.csproj" />
     <ProjectReference Include="..\..\Blip\Blip.Shared\Blip.Shared.csproj" />
     <ProjectReference Include="..\..\Blip\BlipApiClient\BlipApiClient.csproj" />
     <ProjectReference Include="..\..\Llama\LlamaApiClient\LlamaApiClient.csproj" />

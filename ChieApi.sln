@@ -45,7 +45,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SummaryApi.Shared", "Summar
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Loxifi.Database", "Y:\Git\Loxifi.Database\Loxifi.Database.csproj", "{2896C33B-5C7B-46F7-904E-BE3506690684}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ContextStateBrowser", "ContextStateBrowser\ContextStateBrowser.csproj", "{8BDC2F57-0041-4423-AE53-E7E701D13438}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ContextStateBrowser", "ContextStateBrowser\ContextStateBrowser.csproj", "{8BDC2F57-0041-4423-AE53-E7E701D13438}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Loxifi.TypeFactory", "..\..\Penguin\Repositories\Loxifi\Loxifi.TypeFactory\Loxifi.TypeFactory.csproj", "{46C07DC3-31DB-4E26-9CBC-88A88E8F4555}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -261,6 +263,18 @@ Global
 		{8BDC2F57-0041-4423-AE53-E7E701D13438}.Release|Any CPU.Build.0 = Release|Any CPU
 		{8BDC2F57-0041-4423-AE53-E7E701D13438}.Release|x64.ActiveCfg = Release|Any CPU
 		{8BDC2F57-0041-4423-AE53-E7E701D13438}.Release|x64.Build.0 = Release|Any CPU
+		{46C07DC3-31DB-4E26-9CBC-88A88E8F4555}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{46C07DC3-31DB-4E26-9CBC-88A88E8F4555}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{46C07DC3-31DB-4E26-9CBC-88A88E8F4555}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{46C07DC3-31DB-4E26-9CBC-88A88E8F4555}.Debug|x64.Build.0 = Debug|Any CPU
+		{46C07DC3-31DB-4E26-9CBC-88A88E8F4555}.GPU|Any CPU.ActiveCfg = Debug|Any CPU
+		{46C07DC3-31DB-4E26-9CBC-88A88E8F4555}.GPU|Any CPU.Build.0 = Debug|Any CPU
+		{46C07DC3-31DB-4E26-9CBC-88A88E8F4555}.GPU|x64.ActiveCfg = Debug|Any CPU
+		{46C07DC3-31DB-4E26-9CBC-88A88E8F4555}.GPU|x64.Build.0 = Debug|Any CPU
+		{46C07DC3-31DB-4E26-9CBC-88A88E8F4555}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{46C07DC3-31DB-4E26-9CBC-88A88E8F4555}.Release|Any CPU.Build.0 = Release|Any CPU
+		{46C07DC3-31DB-4E26-9CBC-88A88E8F4555}.Release|x64.ActiveCfg = Release|Any CPU
+		{46C07DC3-31DB-4E26-9CBC-88A88E8F4555}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -279,6 +293,7 @@ Global
 		{8E059D05-C09D-45AB-AC22-8E37AF386713} = {25776C1D-7FF3-41AF-AEFC-55C53CE63E81}
 		{0E19F87C-E560-45AC-A532-92C9538D1B41} = {25776C1D-7FF3-41AF-AEFC-55C53CE63E81}
 		{2896C33B-5C7B-46F7-904E-BE3506690684} = {026C64E5-BB88-4CBB-92B0-D01E10F08A1E}
+		{46C07DC3-31DB-4E26-9CBC-88A88E8F4555} = {026C64E5-BB88-4CBB-92B0-D01E10F08A1E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6DDEBBAD-C00A-4E03-96BC-F303ACD9A4DC}

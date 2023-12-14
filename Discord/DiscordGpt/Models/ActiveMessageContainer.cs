@@ -24,7 +24,7 @@ namespace DiscordGpt.Models
                 await this._lastActiveMessage.RemoveReact();
             }
 
-            RestUserMessage message = null;
+            RestUserMessage message;
 
             if (!startVisible)
             {
@@ -65,6 +65,24 @@ namespace DiscordGpt.Models
             }
 
             this.Value = null;
+        }
+
+        public async Task Open(ISocketMessageChannel channel, long chieMessageId, ulong discordMessageId, bool startVisible)
+        {
+            if (this._lastActiveMessage != null)
+            {
+                await this._lastActiveMessage.RemoveReact();
+            }
+
+            RestUserMessage message = await channel.GetMessageAsync(discordMessageId) as RestUserMessage;
+
+            this.Clear();
+
+            ActiveMessage newActiveMessage = new(message, chieMessageId, true);
+
+            this.Value = newActiveMessage;
+
+            await newActiveMessage.SetUp(startVisible);
         }
 
         public void SetValue(ActiveMessage value) => this.Value = value;

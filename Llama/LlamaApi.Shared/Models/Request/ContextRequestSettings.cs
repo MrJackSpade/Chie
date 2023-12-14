@@ -12,6 +12,8 @@ namespace LlamaApi.Shared.Models.Request
 
         public MirostatTempSamplerSettings? MirostatTempSamplerSettings { get; set; }
 
+        public DynamicTempSamplerSettings? DynamicTempSamplerSettings { get; set; }
+
         public RepetitionSamplerSettings RepetitionSamplerSettings { get; set; } = new();
 
         public TemperatureSamplerSettings? TemperatureSamplerSettings { get; set; }

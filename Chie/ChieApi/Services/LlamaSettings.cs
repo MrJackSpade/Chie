@@ -24,8 +24,6 @@ namespace ChieApi.Services
             }
         }
 
-        public SpecialTokens SpecialTokens { get; set; } = new SpecialTokens();
-
         public string? AssistantBlock { get; set; }
 
         public uint BatchSize { get; set; } = 512;
@@ -42,7 +40,11 @@ namespace ChieApi.Services
 
         public Dictionary<int, string> LogitBias { get; set; } = new Dictionary<int, string>();
 
-        public MemoryMode MemoryMode { get; set; }
+        public float MaxTarget { get; set; } = 1f;
+
+        public float MinTarget { get; set; } = 0f;
+
+        public float Scale { get; set; } = 1f;
 
         public MirostatType MiroStat { get; set; }
 
@@ -68,6 +70,8 @@ namespace ChieApi.Services
 
         public LlamaRopeScalingType RopeScalingType { get; set; } = LlamaRopeScalingType.Linear;
 
+        public SpecialTokens SpecialTokens { get; set; } = new SpecialTokens();
+
         public string? Start { get; set; }
 
         public float Temperature { get; set; } = 0.80f;
@@ -79,6 +83,8 @@ namespace ChieApi.Services
         public int TopK { get; set; }
 
         public float TopP { get; set; } = 0.95f;
+
+        public GgmlType TypeK { get; set; } = GgmlType.GGML_TYPE_F16;
 
         public bool UseGqa { get; set; }
 

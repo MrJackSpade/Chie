@@ -13,7 +13,6 @@ namespace Llama.Core.Utils
 
         private readonly SafeLlamaContextHandle _handle;
 
-        [SuppressMessage("CodeQuality", "IDE0052:Remove unread private members", Justification = "<Pending>")]
         private readonly SafeLlamaModelHandle _model;
 
         private readonly uint _threadCount;

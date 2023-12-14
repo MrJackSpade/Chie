@@ -137,6 +137,11 @@ namespace Llama.Core
 
             LlamaTokenDataArray candidates = new(logits);
 
+            //Move these somewhere else later.
+            SamplingApi.SurpressNewline(this.ModelHandle, candidates);
+            SamplingApi.SurpressNonEnglish(this.ModelHandle, candidates);
+            SamplingApi.SoftMax(candidates);
+
             Dictionary<LlamaToken, float> no_penalize = logits.Extract(this.NoPenalize());
 
             SampleContext sampleContext = new()
@@ -148,7 +153,7 @@ namespace Llama.Core
                 OriginalCandidates = new LlamaTokenData[candidates.Size]
             };
 
-            SamplingApi.SoftMax(this.Handle, sampleContext.Candidates);
+            SamplingApi.SoftMax(sampleContext.Candidates);
             Span<LlamaTokenData> target = new(sampleContext.OriginalCandidates, 0, sampleContext.OriginalCandidates.Length);
             sampleContext.Candidates.Data.Span.CopyTo(target);
 

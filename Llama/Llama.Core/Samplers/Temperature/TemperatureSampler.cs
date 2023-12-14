@@ -23,7 +23,7 @@ namespace Llama.Core.Samplers.Temperature
             SamplingApi.TailFree(sampleContext.ContextHandle, sampleContext.Candidates, this._settings.TfsZ, 1);
             SamplingApi.Typical(sampleContext.ContextHandle, sampleContext.Candidates, this._settings.TypicalP, 1);
             SamplingApi.TopP(sampleContext.ContextHandle, sampleContext.Candidates, this._settings.TopP, 1);
-            SamplingApi.Temperature(sampleContext.ContextHandle, sampleContext.Candidates, this._settings.Temperature);
+            SamplingApi.Temperature(sampleContext.Candidates, this._settings.Temperature);
             return SamplingApi.Token(sampleContext.ContextHandle, sampleContext.Candidates);
         }
     }

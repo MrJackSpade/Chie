@@ -5,11 +5,20 @@ namespace Llama.Data
 {
     public record LlamaContextSettings
     {
+        /// <summary>
+        /// Default CPU Count - 2
+        /// </summary>
         public uint EvalThreadCount { get; set; } = (uint)(Environment.ProcessorCount / 2);
 
+        /// <summary>
+        /// Default 512
+        /// </summary>
         public uint BatchSize { get; set; } = 512;
 
-        public uint ContextSize { get; set; }
+        /// <summary>
+        /// Default 4096
+        /// </summary>
+        public uint ContextSize { get; set; } = 4096;
 
         public LogitRuleCollection LogitRules { get; set; } = new();
 
@@ -17,16 +26,25 @@ namespace Llama.Data
 
         public string LoraBase { get; set; } = string.Empty;
 
-        public MemoryMode MemoryMode { get; set; } = MemoryMode.Float16;
+        public GgmlType TypeK { get; set; } = GgmlType.GGML_TYPE_F16;
 
         public bool Perplexity { get; set; }
 
+        /// <summary>
+        /// Default 10_000
+        /// </summary>
         public float RopeFrequencyBase { get; set; } = 10_000;
 
+        /// <summary>
+        /// Default 1.o
+        /// </summary>
         public float RopeFrequencyScaling { get; set; } = 1.0f;
 
         public uint Seed { get; set; } = (uint)new Random().Next();
 
+        /// <summary>
+        /// Default CPU Count - 2
+        /// </summary>
         public uint ThreadCount { get; set; } = (uint)Math.Max(Environment.ProcessorCount / 2, 1);
 
         public bool GenerateEmbedding { get; set; }

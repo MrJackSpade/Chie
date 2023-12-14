@@ -82,6 +82,11 @@ namespace LlamaApi.Shared.Serializers
                 return (T)(object)DeserializeMemoryMode(reader);
             }
 
+            if (typeof(T) == typeof(GgmlType))
+            {
+                return (T)(object)DeserializeGgmlType(reader);
+            }
+
             if (typeof(T) == typeof(ContextDisposeRequest))
             {
                 return (T)(object)DeserializeContextDisposeRequest(reader);
@@ -100,6 +105,11 @@ namespace LlamaApi.Shared.Serializers
             if (typeof(T) == typeof(MirostatTempSamplerSettings))
             {
                 return (T)(object)DeserializeMirostatTempSamplerSettings(reader);
+            }
+
+            if (typeof(T) == typeof(DynamicTempSamplerSettings))
+            {
+                return (T)(object)DeserializeDynamicTempSamplerSettings(reader);
             }
 
             if (typeof(T) == typeof(ComplexPresencePenaltySettings))
@@ -370,6 +380,11 @@ namespace LlamaApi.Shared.Serializers
                 settings.MirostatTempSamplerSettings = DeserializeMirostatTempSamplerSettings(reader);
             }
 
+            if (mirostatType == MirostatType.Four)
+            {
+                settings.DynamicTempSamplerSettings = DeserializeDynamicTempSamplerSettings(reader);
+            }
+
             return settings;
         }
 
@@ -406,6 +421,22 @@ namespace LlamaApi.Shared.Serializers
                 Id = DeserializeGuid(reader),
                 IsLoaded = DeserializeBool(reader),
                 Size = DeserializeUint(reader)
+            };
+        }
+
+        public static DynamicTempSamplerSettings DeserializeDynamicTempSamplerSettings(BinaryReader reader)
+        {
+            return new DynamicTempSamplerSettings()
+            {
+                FactorPreservedWords = DeserializeBool(reader),
+                Temperature = DeserializeFloat(reader),
+                LearningRate = DeserializeFloat(reader),
+                MinTarget = DeserializeFloat(reader),
+                MaxTarget = DeserializeFloat(reader),
+                PreserveWords = DeserializeBool(reader),
+                Scale = DeserializeFloat(reader),
+                Penalty = DeserializeFloat(reader),
+                Tfs = DeserializeFloat(reader),
             };
         }
 
@@ -456,6 +487,11 @@ namespace LlamaApi.Shared.Serializers
             };
         }
 
+        public static GgmlType DeserializeGgmlType(BinaryReader reader)
+        {
+            return (GgmlType)reader.ReadByte();
+        }
+
         public static Guid DeserializeGuid(BinaryReader reader)
         {
             return new(reader.ReadBytes(16));
@@ -490,7 +526,7 @@ namespace LlamaApi.Shared.Serializers
                 LogitRules = DeserializeLogitRuleCollection(reader),
                 LoraAdapter = DeserializeString(reader),
                 LoraBase = DeserializeString(reader),
-                MemoryMode = DeserializeMemoryMode(reader),
+                TypeK = DeserializeGgmlType(reader),
                 Perplexity = DeserializeBool(reader),
                 RopeFrequencyBase = DeserializeFloat(reader),
                 RopeFrequencyScaling = DeserializeFloat(reader),
@@ -1185,7 +1221,25 @@ namespace LlamaApi.Shared.Serializers
             Serialize(request.TemperatureLearningRate, writer);
         }
 
+        public static void Serialize(DynamicTempSamplerSettings request, BinaryWriter writer)
+        {
+            Serialize(request.FactorPreservedWords, writer);
+            Serialize(request.Temperature, writer);
+            Serialize(request.LearningRate, writer);
+            Serialize(request.MinTarget, writer);
+            Serialize(request.MaxTarget, writer);
+            Serialize(request.PreserveWords, writer);
+            Serialize(request.Scale, writer);
+            Serialize(request.Penalty, writer);
+            Serialize(request.Tfs, writer);
+        }
+
         public static void Serialize(MemoryMode request, BinaryWriter writer)
+        {
+            writer.Write((byte)request);
+        }
+
+        public static void Serialize(GgmlType request, BinaryWriter writer)
         {
             writer.Write((byte)request);
         }
@@ -1365,6 +1419,11 @@ namespace LlamaApi.Shared.Serializers
                 type = MirostatType.Three;
             }
 
+            if (request.DynamicTempSamplerSettings != null)
+            {
+                type = MirostatType.Four;
+            }
+
             Serialize(type, writer);
             Serialize(request.ComplexPresencePenaltySettings, writer);
             Serialize(request.RepetitionSamplerSettings, writer);
@@ -1382,6 +1441,10 @@ namespace LlamaApi.Shared.Serializers
 
                 case MirostatType.Three:
                     Serialize(request.MirostatTempSamplerSettings!, writer);
+                    break;
+
+                case MirostatType.Four:
+                    Serialize(request.DynamicTempSamplerSettings!, writer);
                     break;
 
                 default:
@@ -1412,7 +1475,7 @@ namespace LlamaApi.Shared.Serializers
             Serialize(request.LogitRules, writer);
             Serialize(request.LoraAdapter, writer);
             Serialize(request.LoraBase, writer);
-            Serialize(request.MemoryMode, writer);
+            Serialize(request.TypeK, writer);
             Serialize(request.Perplexity, writer);
             Serialize(request.RopeFrequencyBase, writer);
             Serialize(request.RopeFrequencyScaling, writer);
