@@ -98,7 +98,7 @@ namespace Llama.Core.Samplers.Mirostat
                 SamplingApi.Temperature(sampleContext.Candidates, sampleTemp);
             }
 
-            SamplingApi.TailFree(sampleContext.ContextHandle, sampleContext.Candidates, _settings.Tfs, 1);
+            SamplingApi.TailFree(sampleContext.Candidates, _settings.Tfs, 1);
 
             int selectedToken = this.SelectToken(sampleContext, _settings.PreserveWords, out bool topOnly);
 

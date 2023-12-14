@@ -76,7 +76,7 @@ namespace Llama.Core.Samplers.Mirostat
 
             if (this._settings.PreserveWords)
             {
-                top_x = SamplingApi.TokenGreedy(sampleContext.ContextHandle, sampleContext.Candidates);
+                top_x = SamplingApi.TokenGreedy(sampleContext.Candidates);
                 topOnly = !this.CheckIfWord(sampleContext.ModelHandle, top_x);
             }
 
@@ -90,7 +90,7 @@ namespace Llama.Core.Samplers.Mirostat
             {
                 int ki = Clamp(k);
                 // Sample the next word X using top-k sampling
-                SamplingApi.TopK(sampleContext.ContextHandle, sampleContext.Candidates, ki, 1);
+                SamplingApi.TopK(sampleContext.Candidates, ki, 1);
                 x = SamplingApi.Token(sampleContext.ContextHandle, sampleContext.Candidates);
             }
 
