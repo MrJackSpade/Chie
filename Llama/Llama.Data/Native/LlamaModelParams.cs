@@ -38,7 +38,7 @@ namespace Llama.Data.Native
         /// <summary>
         /// override key-value pairs of the model meta data
         /// </summary>
-        public IntPtr KvOverrides;
+        public LlamaModelKvOverride KvOverrides;
 
         /// <summary>
         /// Only load the vocabulary, no weights.

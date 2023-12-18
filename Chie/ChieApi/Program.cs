@@ -70,7 +70,7 @@ namespace ChieApi
             _ = builder.Services.AddTransient<IRequestPipeline, NameCleaningPipeline>();
             _ = builder.Services.AddTransient<IRequestPipeline, ContentSplittingPipeline>();
             _ = builder.Services.AddTransient<IRequestPipeline, TimePassagePipeline>();
-            _ = builder.Services.AddTransient<IRequestPipeline, BoredomTask>();
+            //_ = builder.Services.AddTransient<IRequestPipeline, BoredomTask>();
             _ = builder.Services.AddSingleton<IRequestPipeline, MoodPipeline>();
             _ = builder.Services.AddSingleton<IRequestPipeline, BootUpPipeline>();
             _ = builder.Services.AddScoped<IRequestPipeline, UserDataPipeline>();

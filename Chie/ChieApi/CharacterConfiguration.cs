@@ -12,6 +12,8 @@ namespace ChieApi
 
         public DateTime MemoryStart { get; set; }
 
+        public bool ReloadPrompt { get; set; }
+
         public bool StartVisible { get; set; }
 
         public float Tfs { get; set; }

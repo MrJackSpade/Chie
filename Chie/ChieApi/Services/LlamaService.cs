@@ -511,7 +511,10 @@ namespace ChieApi.Services
                 _ = this.SetState(AiState.Idle);
             }
 
-            if (!this.TryLoad())
+            bool newData = !this.TryLoad();
+            bool loadPrompt = newData || _characterConfiguration.ReloadPrompt;
+
+            if (newData)
             {
                 Console.WriteLine("No state found... Prompting...");
 
@@ -523,7 +526,14 @@ namespace ChieApi.Services
                     LlamaMessage message = new(displayName, content, LlamaTokenType.Input, _tokenCache);
                     _contextModel.Messages.Add(message);
                 }
+            }
+            else
+            {
+                await this.ValidateUserSummaries();
+            }
 
+            if (loadPrompt)
+            {
                 if (!string.IsNullOrWhiteSpace(_characterConfiguration.InstructionBlock))
                 {
                     string prompt = FileService.GetStringOrContent(_characterConfiguration.InstructionBlock);
@@ -537,10 +547,6 @@ namespace ChieApi.Services
                     prompt = prompt.Replace("\r", "");
                     _contextModel.AssistantBlock = new LlamaTokenBlock(prompt, LlamaTokenType.Prompt, _tokenCache);
                 }
-            }
-            else
-            {
-                await this.ValidateUserSummaries();
             }
 
             _context = await _contextModel.GetState();
