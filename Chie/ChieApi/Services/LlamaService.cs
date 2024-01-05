@@ -61,7 +61,7 @@ namespace ChieApi.Services
 
         private readonly List<ITextCleaner> _responseCleaners;
 
-        private readonly List<ISimpleSampler> _simpleSamplers;
+        private readonly List<IBiasAdjustor> _biasAdjustors;
 
         private readonly LlamaTokenCache _tokenCache;
 
@@ -93,7 +93,7 @@ namespace ChieApi.Services
 
             _ = this.SetState(AiState.Initializing);
 
-            _simpleSamplers = new List<ISimpleSampler>()
+            _biasAdjustors = new List<IBiasAdjustor>()
             {
                 new NewlineEnsureSampler(llamaTokenCache, _specialTokens),
                 new RepetitionBlockingSampler(3)
@@ -104,7 +104,7 @@ namespace ChieApi.Services
             _transformers = new List<ITokenTransformer>()
             {
                 new SpaceStartTransformer(),
-                new NewlineTransformer(_specialTokens),
+                new NewlineTransformer(_specialTokens, _tokenCache),
                 _responseLengthManager,
                 new RepetitionBlockingTransformer(3),
                 new InvalidCharacterBlockingTransformer()
@@ -484,7 +484,7 @@ namespace ChieApi.Services
                     enumerator.MoveBack();
                 }
 
-                await _simpleSamplers.SampleNext(enumerator);
+                await _biasAdjustors.AdjustNext(enumerator);
             }
 
             IReadOnlyLlamaTokenCollection response = enumerator.Enumerated.TrimWhiteSpace();
@@ -613,6 +613,7 @@ namespace ChieApi.Services
                 thisInference = collection;
                 _contextModel.Messages.Remove(shouldAppend.Message);
                 existingId = shouldAppend.Message.Id;
+                this.CurrentResponse = thisInference!.ToString();
             }
 
             await this.ReceiveResponse(thisInference, existingId);

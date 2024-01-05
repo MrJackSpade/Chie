@@ -9,7 +9,7 @@ using LlamaApi.Models.Response;
 using LlamaApi.Shared.Models.Request;
 using LlamaApi.Shared.Models.Response;
 using System.Text;
-using MirostatSamplerSettings = LlamaApi.Models.Request.MirostatSamplerSettings;
+using System.Text.Json.Nodes;
 
 namespace LlamaApi.Shared.Serializers
 {
@@ -92,26 +92,6 @@ namespace LlamaApi.Shared.Serializers
                 return (T)(object)DeserializeContextDisposeRequest(reader);
             }
 
-            if (typeof(T) == typeof(TemperatureSamplerSettings))
-            {
-                return (T)(object)DeserializeTemperatureSamplerSettings(reader);
-            }
-
-            if (typeof(T) == typeof(RepetitionSamplerSettings))
-            {
-                return (T)(object)DeserializeRepetitionSamplerSettings(reader);
-            }
-
-            if (typeof(T) == typeof(MirostatTempSamplerSettings))
-            {
-                return (T)(object)DeserializeMirostatTempSamplerSettings(reader);
-            }
-
-            if (typeof(T) == typeof(DynamicTempSamplerSettings))
-            {
-                return (T)(object)DeserializeDynamicTempSamplerSettings(reader);
-            }
-
             if (typeof(T) == typeof(ComplexPresencePenaltySettings))
             {
                 return (T)(object)DeserializeComplexPresencePenaltySettings(reader);
@@ -130,11 +110,6 @@ namespace LlamaApi.Shared.Serializers
             if (typeof(T) == typeof(GetLogitsRequest))
             {
                 return (T)(object)DeserializeGetLogitsRequest(reader);
-            }
-
-            if (typeof(T) == typeof(MirostatSamplerSettings))
-            {
-                return (T)(object)DeserializeMirostatSamplerSettings(reader);
             }
 
             if (typeof(T) == typeof(ModelRequest))
@@ -207,11 +182,6 @@ namespace LlamaApi.Shared.Serializers
                 return (T)(object)DeserializeByteArray(reader);
             }
 
-            if (typeof(T) == typeof(MirostatType))
-            {
-                return (T)(object)DeserializeMirostatType(reader);
-            }
-
             if (typeof(T) == typeof(ModelResponse))
             {
                 return (T)(object)DeserializeModelResponse(reader);
@@ -237,9 +207,14 @@ namespace LlamaApi.Shared.Serializers
                 return (T)(object)DeserializeWriteTokenResponse(reader);
             }
 
-            if (typeof(T) == typeof(ContextRequestSettings))
+            if (typeof(T) == typeof(SamplerSetting[]))
             {
-                return (T)(object)DeserializeContextRequestSettings(reader);
+                return (T)(object)DeserializeSamplerSettingArray(reader);
+            }
+
+            if (typeof(T) == typeof(SamplerSetting))
+            {
+                return (T)(object)DeserializeSamplerSetting(reader);
             }
 
             if (typeof(T) == typeof(ContextRequest))
@@ -348,44 +323,11 @@ namespace LlamaApi.Shared.Serializers
             return new ContextRequest()
             {
                 ContextId = DeserializeGuid(reader),
-                ContextRequestSettings = DeserializeContextRequestSettings(reader),
+                SamplerSettings = DeserializeSamplerSettingArray(reader),
                 ModelId = DeserializeGuid(reader),
                 Priority = DeserializeExecutionPriority(reader),
                 Settings = DeserializeLlamaContextSettings(reader)
             };
-        }
-
-        public static ContextRequestSettings DeserializeContextRequestSettings(BinaryReader reader)
-        {
-            MirostatType mirostatType = DeserializeMirostatType(reader);
-
-            ContextRequestSettings settings = new()
-            {
-                ComplexPresencePenaltySettings = DeserializeComplexPresencePenaltySettings(reader),
-                RepetitionSamplerSettings = DeserializeRepetitionSamplerSettings(reader),
-            };
-
-            if (mirostatType == MirostatType.None)
-            {
-                settings.TemperatureSamplerSettings = DeserializeTemperatureSamplerSettings(reader);
-            }
-
-            if (mirostatType is MirostatType.One or MirostatType.Two)
-            {
-                settings.MirostatSamplerSettings = DeserializeMirostatSamplerSettings(reader);
-            }
-
-            if (mirostatType == MirostatType.Three)
-            {
-                settings.MirostatTempSamplerSettings = DeserializeMirostatTempSamplerSettings(reader);
-            }
-
-            if (mirostatType == MirostatType.Four)
-            {
-                settings.DynamicTempSamplerSettings = DeserializeDynamicTempSamplerSettings(reader);
-            }
-
-            return settings;
         }
 
         public static ContextResponse DeserializeContextResponse(BinaryReader reader)
@@ -421,22 +363,6 @@ namespace LlamaApi.Shared.Serializers
                 Id = DeserializeGuid(reader),
                 IsLoaded = DeserializeBool(reader),
                 Size = DeserializeUint(reader)
-            };
-        }
-
-        public static DynamicTempSamplerSettings DeserializeDynamicTempSamplerSettings(BinaryReader reader)
-        {
-            return new DynamicTempSamplerSettings()
-            {
-                FactorPreservedWords = DeserializeBool(reader),
-                Temperature = DeserializeFloat(reader),
-                LearningRate = DeserializeFloat(reader),
-                MinTarget = DeserializeFloat(reader),
-                MaxTarget = DeserializeFloat(reader),
-                PreserveWords = DeserializeBool(reader),
-                Scale = DeserializeFloat(reader),
-                Penalty = DeserializeFloat(reader),
-                Tfs = DeserializeFloat(reader),
             };
         }
 
@@ -500,6 +426,28 @@ namespace LlamaApi.Shared.Serializers
         public static int DeserializeInt(BinaryReader reader)
         {
             return reader.ReadInt32();
+        }
+
+        public static Dictionary<int, float> DeserializeIntFloatDict(BinaryReader reader)
+        {
+            int len = reader.ReadInt32();
+            Dictionary<int, float> tokens = new(len);
+
+            for (int i = 0; i < len; i++)
+            {
+                int key = DeserializeInt(reader);
+                float value = DeserializeFloat(reader);
+                tokens.Add(key, value);
+            }
+
+            return tokens;
+        }
+
+        public static JsonObject DeserializeJsonObject(BinaryReader reader)
+        {
+            string v = DeserializeString(reader);
+
+            return (JsonNode.Parse(v) as JsonObject)!;
         }
 
         public static List<RequestLlamaToken> DeserializeListRequestLlamaToken(BinaryReader reader)
@@ -640,38 +588,6 @@ namespace LlamaApi.Shared.Serializers
             return (MemoryMode)reader.ReadByte();
         }
 
-        public static MirostatSamplerSettings DeserializeMirostatSamplerSettings(BinaryReader reader)
-        {
-            return new MirostatSamplerSettings()
-            {
-                Eta = DeserializeFloat(reader),
-                MirostatType = DeserializeMirostatType(reader),
-                PreserveWords = DeserializeBool(reader),
-                Tau = DeserializeFloat(reader),
-                Temperature = DeserializeFloat(reader)
-            };
-        }
-
-        public static MirostatTempSamplerSettings DeserializeMirostatTempSamplerSettings(BinaryReader reader)
-        {
-            return new MirostatTempSamplerSettings()
-            {
-                FactorPreservedWords = DeserializeBool(reader),
-                InitialTemperature = DeserializeFloat(reader),
-                LearningRate = DeserializeFloat(reader),
-                Tfs = DeserializeFloat(reader),
-                MaxTemp = DeserializeFloat(reader),
-                PreserveWords = DeserializeBool(reader),
-                Target = DeserializeFloat(reader),
-                TemperatureLearningRate = DeserializeFloat(reader)
-            };
-        }
-
-        public static MirostatType DeserializeMirostatType(BinaryReader reader)
-        {
-            return (MirostatType)reader.ReadByte();
-        }
-
         public static ModelRequest DeserializeModelRequest(BinaryReader reader)
         {
             return new ModelRequest()
@@ -705,17 +621,6 @@ namespace LlamaApi.Shared.Serializers
             return new PredictResponse()
             {
                 Predicted = DeserializeResponseLlamaToken(reader),
-            };
-        }
-
-        public static RepetitionSamplerSettings DeserializeRepetitionSamplerSettings(BinaryReader reader)
-        {
-            return new RepetitionSamplerSettings()
-            {
-                FrequencyPenalty = DeserializeFloat(reader),
-                PresencePenalty = DeserializeFloat(reader),
-                RepeatPenalty = DeserializeFloat(reader),
-                RepeatTokenPenaltyWindow = DeserializeInt(reader)
             };
         }
 
@@ -876,6 +781,29 @@ namespace LlamaApi.Shared.Serializers
             return (ResponseType)reader.ReadByte();
         }
 
+        public static SamplerSetting DeserializeSamplerSetting(BinaryReader reader)
+        {
+            return new SamplerSetting()
+            {
+                Type = DeserializeString(reader),
+                Settings = DeserializeJsonObject(reader)
+            };
+        }
+
+        public static SamplerSetting[] DeserializeSamplerSettingArray(BinaryReader reader)
+        {
+            int length = reader.ReadInt32();
+
+            SamplerSetting[] samplerSettings = new SamplerSetting[length];
+
+            for (int i = 0; i < length; i++)
+            {
+                samplerSettings[i] = DeserializeSamplerSetting(reader);
+            }
+
+            return samplerSettings;
+        }
+
         public static string DeserializeString(BinaryReader reader)
         {
             StringBuilder sb = new();
@@ -887,18 +815,6 @@ namespace LlamaApi.Shared.Serializers
             }
 
             return sb.ToString();
-        }
-
-        public static TemperatureSamplerSettings DeserializeTemperatureSamplerSettings(BinaryReader reader)
-        {
-            return new TemperatureSamplerSettings()
-            {
-                Temperature = DeserializeFloat(reader),
-                TfsZ = DeserializeFloat(reader),
-                TopK = DeserializeInt(reader),
-                TopP = DeserializeFloat(reader),
-                TypicalP = DeserializeFloat(reader)
-            };
         }
 
         public static TokenizeRequest DeserializeTokenizeRequest(BinaryReader reader)
@@ -1192,48 +1108,6 @@ namespace LlamaApi.Shared.Serializers
             Serialize(request.ContextId, writer);
         }
 
-        public static void Serialize(TemperatureSamplerSettings request, BinaryWriter writer)
-        {
-            Serialize(request.Temperature, writer);
-            Serialize(request.TfsZ, writer);
-            Serialize(request.TopK, writer);
-            Serialize(request.TopP, writer);
-            Serialize(request.TypicalP, writer);
-        }
-
-        public static void Serialize(RepetitionSamplerSettings request, BinaryWriter writer)
-        {
-            Serialize(request.FrequencyPenalty, writer);
-            Serialize(request.PresencePenalty, writer);
-            Serialize(request.RepeatPenalty, writer);
-            Serialize(request.RepeatTokenPenaltyWindow, writer);
-        }
-
-        public static void Serialize(MirostatTempSamplerSettings request, BinaryWriter writer)
-        {
-            Serialize(request.FactorPreservedWords, writer);
-            Serialize(request.InitialTemperature, writer);
-            Serialize(request.LearningRate, writer);
-            Serialize(request.Tfs, writer);
-            Serialize(request.MaxTemp, writer);
-            Serialize(request.PreserveWords, writer);
-            Serialize(request.Target, writer);
-            Serialize(request.TemperatureLearningRate, writer);
-        }
-
-        public static void Serialize(DynamicTempSamplerSettings request, BinaryWriter writer)
-        {
-            Serialize(request.FactorPreservedWords, writer);
-            Serialize(request.Temperature, writer);
-            Serialize(request.LearningRate, writer);
-            Serialize(request.MinTarget, writer);
-            Serialize(request.MaxTarget, writer);
-            Serialize(request.PreserveWords, writer);
-            Serialize(request.Scale, writer);
-            Serialize(request.Penalty, writer);
-            Serialize(request.Tfs, writer);
-        }
-
         public static void Serialize(MemoryMode request, BinaryWriter writer)
         {
             writer.Write((byte)request);
@@ -1268,15 +1142,6 @@ namespace LlamaApi.Shared.Serializers
         {
             Serialize(request.ContextId, writer);
             Serialize(request.Priority, writer);
-        }
-
-        public static void Serialize(MirostatSamplerSettings request, BinaryWriter writer)
-        {
-            Serialize(request.Eta, writer);
-            Serialize(request.MirostatType, writer);
-            Serialize(request.PreserveWords, writer);
-            Serialize(request.Tau, writer);
-            Serialize(request.Temperature, writer);
         }
 
         public static void Serialize(ModelRequest request, BinaryWriter writer)
@@ -1374,11 +1239,6 @@ namespace LlamaApi.Shared.Serializers
             writer.Write(request);
         }
 
-        public static void Serialize(MirostatType request, BinaryWriter writer)
-        {
-            writer.Write((byte)request);
-        }
-
         public static void Serialize(ModelResponse request, BinaryWriter writer)
         {
             Serialize(request.Id, writer);
@@ -1405,57 +1265,26 @@ namespace LlamaApi.Shared.Serializers
             Serialize(request.State, writer);
         }
 
-        public static void Serialize(ContextRequestSettings request, BinaryWriter writer)
+        public static void Serialize(SamplerSetting request, BinaryWriter writer)
         {
-            MirostatType type = MirostatType.None;
+            Serialize(request.Type, writer);
+            Serialize(request.Settings, writer);
+        }
 
-            if (request.MirostatSamplerSettings != null)
+        public static void Serialize(SamplerSetting[] request, BinaryWriter writer)
+        {
+            Serialize(request.Length, writer);
+
+            foreach (SamplerSetting samplerSetting in request)
             {
-                type = request.MirostatSamplerSettings.MirostatType;
-            }
-
-            if (request.MirostatTempSamplerSettings != null)
-            {
-                type = MirostatType.Three;
-            }
-
-            if (request.DynamicTempSamplerSettings != null)
-            {
-                type = MirostatType.Four;
-            }
-
-            Serialize(type, writer);
-            Serialize(request.ComplexPresencePenaltySettings, writer);
-            Serialize(request.RepetitionSamplerSettings, writer);
-
-            switch (type)
-            {
-                case MirostatType.None:
-                    Serialize(request.TemperatureSamplerSettings, writer);
-                    break;
-
-                case MirostatType.One:
-                case MirostatType.Two:
-                    Serialize(request.MirostatSamplerSettings!, writer);
-                    break;
-
-                case MirostatType.Three:
-                    Serialize(request.MirostatTempSamplerSettings!, writer);
-                    break;
-
-                case MirostatType.Four:
-                    Serialize(request.DynamicTempSamplerSettings!, writer);
-                    break;
-
-                default:
-                    throw new NotImplementedException();
+                Serialize(samplerSetting, writer);
             }
         }
 
         public static void Serialize(ContextRequest request, BinaryWriter writer)
         {
             Serialize(request.ContextId, writer);
-            Serialize(request.ContextRequestSettings, writer);
+            Serialize(request.SamplerSettings, writer);
             Serialize(request.ModelId, writer);
             Serialize(request.Priority, writer);
             Serialize(request.Settings, writer);
@@ -1529,6 +1358,11 @@ namespace LlamaApi.Shared.Serializers
             writer.Write(i);
         }
 
+        public static void Serialize(JsonObject? s, BinaryWriter writer)
+        {
+            Serialize(s.ToJsonString(), writer);
+        }
+
         public static void Serialize(string? s, BinaryWriter writer)
         {
             if (s is not null)
@@ -1540,6 +1374,17 @@ namespace LlamaApi.Shared.Serializers
             }
 
             writer.Write('\0');
+        }
+
+        public static void Serialize(Dictionary<int, float> dict, BinaryWriter writer)
+        {
+            Serialize(dict.Count, writer);
+
+            foreach (KeyValuePair<int, float> kvp in dict)
+            {
+                Serialize(kvp.Key, writer);
+                Serialize(kvp.Value, writer);
+            }
         }
 
         public static void Serialize(float f, BinaryWriter writer)

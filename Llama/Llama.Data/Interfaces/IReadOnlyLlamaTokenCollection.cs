@@ -13,6 +13,6 @@ namespace Llama.Data.Interfaces
 
         LlamaToken this[int index] { get; }
 
-        LlamaTokenCollection Trim(int id = 0);
+        LlamaTokenCollection Trim(int id = -1);
     }
 }

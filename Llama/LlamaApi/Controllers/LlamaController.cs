@@ -12,6 +12,7 @@ using Llama.Data.Scheduler;
 using Llama.Extensions;
 using Llama.Native;
 using LlamaApi.Exceptions;
+using LlamaApi.Extensions;
 using LlamaApi.Models;
 using LlamaApi.Models.Request;
 using LlamaApi.Models.Response;
@@ -424,55 +425,18 @@ namespace LlamaApi.Controllers
 
         private ITokenSelector GetFinalSampler(ContextRequest contextRequest)
         {
-            ContextRequestSettings request = contextRequest.ContextRequestSettings;
+            SamplerSetting samplerSetting = contextRequest.SamplerSettings.Last();
 
-            if (request.MirostatTempSamplerSettings != null)
-            {
-                return new MirostatTempSampler(request.MirostatTempSamplerSettings);
-            }
-
-            if (request.DynamicTempSamplerSettings != null)
-            {
-                return new DynamicTempSampler(request.DynamicTempSamplerSettings);
-            }
-
-            if (request.MirostatSamplerSettings != null)
-            {
-                return request.MirostatSamplerSettings.MirostatType switch
-                {
-                    MirostatType.One => new MirostatOneSampler(request.MirostatSamplerSettings),
-                    MirostatType.Two => new MirostatTwoSampler(request.MirostatSamplerSettings),
-                    _ => throw new NotImplementedException(),
-                };
-            }
-
-            if (request.TemperatureSamplerSettings != null)
-            {
-                if (request.TemperatureSamplerSettings.Temperature < 0)
-                {
-                    return new GreedySampler();
-                }
-                else
-                {
-                    return new TemperatureSampler(request.TemperatureSamplerSettings);
-                }
-            }
-
-            throw new NotImplementedException();
+            return samplerSetting.InstantiateSelector();
         }
 
         private IEnumerable<ISimpleSampler> GetSimpleSamplers(ContextRequest contextRequest)
         {
-            ContextRequestSettings request = contextRequest.ContextRequestSettings;
-
-            if (request.RepetitionSamplerSettings != null)
+            for(int i = 0; i < contextRequest.SamplerSettings.Length - 1; i++)
             {
-                yield return new RepetitionSampler(request.RepetitionSamplerSettings);
-            }
+                SamplerSetting settings = contextRequest.SamplerSettings[i];
 
-            if (request.ComplexPresencePenaltySettings != null)
-            {
-                yield return new ComplexPresenceSampler(request.ComplexPresencePenaltySettings);
+                yield return settings.InstantiateSimple();
             }
         }
     }

@@ -8,7 +8,7 @@ namespace LlamaApi.Models.Request
     {
         public Guid ContextId { get; set; }
 
-        public ContextRequestSettings ContextRequestSettings { get; set; } = new();
+        public SamplerSetting[] SamplerSettings { get; set; } = Array.Empty<SamplerSetting>();
 
         public Guid ModelId { get; set; }
 

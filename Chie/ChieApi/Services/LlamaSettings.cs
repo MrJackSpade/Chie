@@ -1,6 +1,6 @@
 ﻿using Llama.Data.Enums;
 using Llama.Data.Models;
-using LlamaApi.Shared.Models.Response;
+using LlamaApi.Shared.Models.Request;
 
 namespace ChieApi.Services
 {
@@ -36,19 +36,9 @@ namespace ChieApi.Services
 
         public string? InstructionBlock { get; set; }
 
-        public float LearningRate { get; set; }
-
         public Dictionary<int, string> LogitBias { get; set; } = new Dictionary<int, string>();
 
         public float MaxTarget { get; set; } = 1f;
-
-        public float MinTarget { get; set; } = 0f;
-
-        public float Scale { get; set; } = 1f;
-
-        public MirostatType MiroStat { get; set; }
-
-        public float MiroStatEntropy { get; set; } = 5;
 
         public string ModelPath { get; set; }
 
@@ -58,10 +48,6 @@ namespace ChieApi.Services
 
         public string? PrimaryReversePrompt { get; set; }
 
-        public float RepeatPenalty { get; set; } = 1.1f;
-
-        public int RepeatPenaltyWindow { get; set; } = 64;
-
         public bool ReturnOnNewLine { get; set; }
 
         public float RopeBase { get; set; } = 10_000;
@@ -70,19 +56,15 @@ namespace ChieApi.Services
 
         public LlamaRopeScalingType RopeScalingType { get; set; } = LlamaRopeScalingType.Linear;
 
+        public SamplerSetting[] SamplerSettings { get; set; } = Array.Empty<SamplerSetting>();
+
         public SpecialTokens SpecialTokens { get; set; } = new SpecialTokens();
 
         public string? Start { get; set; }
 
-        public float Temperature { get; set; } = 0.80f;
-
         public uint? Threads { get; set; }
 
         public int Timeout { get; set; } = 600_000;
-
-        public int TopK { get; set; }
-
-        public float TopP { get; set; } = 0.95f;
 
         public GgmlType TypeK { get; set; } = GgmlType.GGML_TYPE_F16;
 

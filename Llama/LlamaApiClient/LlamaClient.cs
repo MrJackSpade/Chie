@@ -18,7 +18,7 @@ namespace LlamaApiClient
 {
     public class LlamaClient
     {
-        private readonly ContextRequestSettings _contextRequestSettings;
+        private readonly SamplerSetting[] _samplerSettings;
 
         private readonly LlamaContextSettings _contextSettings;
 
@@ -34,7 +34,7 @@ namespace LlamaApiClient
 
         private readonly List<object> _queuedRequests;
 
-        public LlamaClient(LlamaClientSettings settings, LlamaContextSettings contextSettings, LlamaModelSettings modelSettings, ContextRequestSettings contextRequestSettings)
+        public LlamaClient(LlamaClientSettings settings, LlamaContextSettings contextSettings, LlamaModelSettings modelSettings, SamplerSetting[] samplerSettings)
         {
             _settings = settings;
 
@@ -51,7 +51,7 @@ namespace LlamaApiClient
             _serializerOptions.Converters.Add(new LogitRuleConverter());
             _contextSettings = contextSettings;
             _modelSettings = modelSettings;
-            _contextRequestSettings = contextRequestSettings;
+            _samplerSettings = samplerSettings;
             _queuedRequests = new List<object>();
         }
 
@@ -212,7 +212,7 @@ namespace LlamaApiClient
                 ContextId = _settings.LlamaContextId,
                 Settings = settings,
                 ModelId = _modelGuid,
-                ContextRequestSettings = _contextRequestSettings
+                SamplerSettings = _samplerSettings
             };
 
             ContextResponse loadResponse = await this.QueueAndFlush<ContextResponse>(cr);

@@ -13,7 +13,10 @@ namespace ChieApi.Client
 
         public ChieClient()
         {
-            this._client = new HttpClient();
+            this._client = new HttpClient()
+            {
+                Timeout = TimeSpan.FromDays(1)
+            };
         }
 
         public async Task<ContinueRequestResponse> ContinueRequest(string channelName) => await this._client.GetJsonAsync<ContinueRequestResponse>($"http://127.0.0.1:{PORT}/Chie/ContinueRequest/{channelName}");

@@ -14,7 +14,7 @@ namespace Llama.Core.Extensions
     {
         public LastTokens(IReadOnlyLlamaTokenCollection collection, int tryTake)
         {
-            int[] available = collection.Ids.ToArray();
+            int[] available = collection.Trim().Ids.ToArray();
 
             if (tryTake == -1)
             {

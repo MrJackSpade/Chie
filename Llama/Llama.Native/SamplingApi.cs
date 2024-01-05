@@ -4,27 +4,6 @@ namespace Llama.Native
 {
     public unsafe class SamplingApi
     {
-        /// <summary>
-        /// Repetition penalty described in CTRL academic paper https://arxiv.org/abs/1909.05858, with negative logit fix.
-        /// </summary>
-        /// <param name="ctx"></param>
-        /// <param name="candidates">Pointer to LlamaTokenDataArray</param>
-        /// <param name="last_tokens"></param>
-        /// <param name="last_tokens_size"></param>
-        /// <param name="penalty"></param>
-        public static void ComplexPresencePenalty(SafeLlamaContextHandle ctx, LlamaTokenDataArray candidates, int[] check_tokens, int minGroupLength, float scalePerGroup, float scalePerLength)
-        {
-            System.Buffers.MemoryHandle handle = candidates.Data.Pin();
-            LlamaTokenDataArrayNative st = new()
-            {
-                data = new IntPtr(handle.Pointer),
-                size = candidates.Size,
-                sorted = candidates.Sorted
-            };
-
-            LlamaCppApi.ComplexPresencePenalty(ctx, new IntPtr(&st), check_tokens, (ulong)check_tokens.Length, minGroupLength, scalePerGroup, scalePerLength);
-        }
-
         public static bool ContainsNonEnglishCharacters(string input)
         {
             // Iterate through each character in the string
@@ -46,15 +25,34 @@ namespace Llama.Native
         {
             for (int i = 0; i < candidates.Data.Length; i++)
             {
-                float v = candidates.Data.Span[i].p;
+                LlamaTokenData data = candidates.Data.Span[i];
 
-                if (v < min)
+                if (data.p < min)
                 {
                     candidates.Data.Span[i].logit = float.NegativeInfinity;
                 }
             }
 
             candidates.Sorted = false;
+        }
+
+        public static void MinP(LlamaTokenDataArray candidates, int tokenId, float min)
+        {
+            for (int i = 0; i < candidates.Data.Length; i++)
+            {
+                LlamaTokenData data = candidates.Data.Span[i];
+
+                if (data.id == tokenId)
+                {
+                    if (data.p < min)
+                    {
+                        candidates.Data.Span[i].logit = float.NegativeInfinity;
+                        candidates.Sorted = false;
+                    }
+
+                    return;
+                }
+            }
         }
 
         /// <summary>
@@ -96,16 +94,19 @@ namespace Llama.Native
                     continue;
                 }
 
-                float adjPenalty = CalculateAdjustedPenalty(penaltyRepeat, slopeRepeat, ftd.LastIndex, lastTokens.Length);
+                if (penaltyRepeat > 0)
+                {
+                    float adjPenalty = CalculateAdjustedPenalty(penaltyRepeat, slopeRepeat, ftd.LastIndex, lastTokens.Length);
 
-                // Applying penalties
-                if (candidates.Data.Span[i].logit <= 0)
-                {
-                    candidates.Data.Span[i].logit *= adjPenalty;
-                }
-                else
-                {
-                    candidates.Data.Span[i].logit /= adjPenalty;
+                    // Applying penalties
+                    if (candidates.Data.Span[i].logit <= 0)
+                    {
+                        candidates.Data.Span[i].logit *= adjPenalty;
+                    }
+                    else
+                    {
+                        candidates.Data.Span[i].logit /= adjPenalty;
+                    }
                 }
 
                 candidates.Data.Span[i].logit -= ftd.Count * penaltyFreq + (ftd.Count > 0 ? 1f : 0f) * penaltyPresent;
@@ -172,6 +173,8 @@ namespace Llama.Native
             // Normalize probabilities
             for (int i = 0; i < candidateSpan.Length; i++)
             {
+                LlamaTokenData data = candidateSpan[i];
+
                 candidateSpan[i].p /= cumSum;
 
                 if (float.IsNaN(candidateSpan[i].p))
@@ -268,7 +271,7 @@ namespace Llama.Native
 
             for (int i = lastIdx + 1; i < candidates.Data.Span.Length; i++)
             {
-                candidates.Data.Span[i].logit = 0;
+                candidates.Data.Span[i].logit = float.NegativeInfinity;
             }
 
             candidates.Sorted = false;

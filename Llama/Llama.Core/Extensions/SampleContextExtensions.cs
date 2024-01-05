@@ -18,18 +18,19 @@ namespace Llama.Core.Extensions
             throw new InvalidDataException();
         }
 
-        public static float GetProbability(this SampleContext context, int tokenId)
+        public static float GetProbability(this LlamaTokenDataArray tokens, int tokenId)
         {
-            Span<LlamaTokenData> span = context.Candidates.Data.Span;
-            int index = GetTokenIndex(context, tokenId);
+            Span<LlamaTokenData> span = tokens.Data.Span;
+            int index = GetTokenIndex(tokens, tokenId);
             LlamaTokenData existing = span[index];
             return existing.logit;
         }
 
-        public static void SetBias(this SampleContext context, int tokenId, float probability, LogitBiasType logitBiasType)
+        public static void SetBias(this LlamaTokenDataArray tokens, int tokenId, float probability, LogitBiasType logitBiasType)
         {
-            Span<LlamaTokenData> span = context.Candidates.Data.Span;
-            int index = GetTokenIndex(context, tokenId);
+            Span<LlamaTokenData> span = tokens.Data.Span;
+
+            int index = GetTokenIndex(tokens, tokenId);
 
             LlamaTokenData existing = span[index];
 
@@ -53,10 +54,36 @@ namespace Llama.Core.Extensions
             };
         }
 
-        public static void SetPenalty(this SampleContext context, int tokenId, float probability)
+        public static void SetLogit(this LlamaTokenDataArray tokens, int tokenId, float logit)
         {
-            Span<LlamaTokenData> span = context.Candidates.Data.Span;
-            int index = GetTokenIndex(context, tokenId);
+            Span<LlamaTokenData> span = tokens.Data.Span;
+            int index = GetTokenIndex(tokens, tokenId);
+
+            LlamaTokenData existing = span[index];
+            span[index] = new LlamaTokenData()
+            {
+                id = existing.id,
+                logit = logit,
+                p = logit
+            };
+        }
+
+        public static void SetLogitAtIndex(this LlamaTokenDataArray tokens, int index, float logit)
+        {
+            Span<LlamaTokenData> span = tokens.Data.Span;
+            LlamaTokenData existing = span[index];
+            span[index] = new LlamaTokenData()
+            {
+                id = existing.id,
+                logit = logit,
+                p = logit
+            };
+        }
+
+        public static void SetPenalty(this LlamaTokenDataArray tokens, int tokenId, float probability)
+        {
+            Span<LlamaTokenData> span = tokens.Data.Span;
+            int index = GetTokenIndex(tokens, tokenId);
 
             LlamaTokenData existing = span[index];
 
@@ -75,10 +102,10 @@ namespace Llama.Core.Extensions
             };
         }
 
-        public static void SetProbability(this SampleContext context, int tokenId, float probability)
+        public static void SetProbability(this LlamaTokenDataArray tokens, int tokenId, float probability)
         {
-            Span<LlamaTokenData> span = context.Candidates.Data.Span;
-            int index = GetTokenIndex(context, tokenId);
+            Span<LlamaTokenData> span = tokens.Data.Span;
+            int index = GetTokenIndex(tokens, tokenId);
 
             LlamaTokenData existing = span[index];
             span[index] = new LlamaTokenData()
@@ -89,33 +116,19 @@ namespace Llama.Core.Extensions
             };
         }
 
-        public static void SetLogit(this SampleContext context, int tokenId, float logit)
-        {
-            Span<LlamaTokenData> span = context.Candidates.Data.Span;
-            int index = GetTokenIndex(context, tokenId);
-
-            LlamaTokenData existing = span[index];
-            span[index] = new LlamaTokenData()
-            {
-                id = existing.id,
-                logit = logit,
-                p = logit
-            };
-        }
-
-        public static void Update(this SampleContext context, IEnumerable<KeyValuePair<LlamaToken, float>> list)
+        public static void Update(this LlamaTokenDataArray tokens, IEnumerable<KeyValuePair<LlamaToken, float>> list)
         {
             foreach (KeyValuePair<LlamaToken, float> llamaToken in list)
             {
-                context.SetProbability(llamaToken.Key.Id, llamaToken.Value);
+                tokens.SetProbability(llamaToken.Key.Id, llamaToken.Value);
             }
         }
 
-        private static int GetTokenIndex(this SampleContext context, int tokenId)
+        private static int GetTokenIndex(this LlamaTokenDataArray tokens, int tokenId)
         {
-            for (int i = 0; i < context.Candidates.Data.Span.Length; i++)
+            for (int i = 0; i < tokens.Data.Span.Length; i++)
             {
-                if (context.Candidates.Data.Span[i].id == tokenId)
+                if (tokens.Data.Span[i].id == tokenId)
                 {
                     return i;
                 }

@@ -5,7 +5,7 @@ using LlamaApiClient;
 
 namespace ChieApi.Samplers
 {
-    public class RepetitionBlockingSampler : ISimpleSampler
+    public class RepetitionBlockingSampler : IBiasAdjustor
     {
         private readonly uint _max;
 
@@ -14,7 +14,7 @@ namespace ChieApi.Samplers
             this._max = max;
         }
 
-        public Task SampleNext(InferenceEnumerator enumerator)
+        public Task AdjustNext(InferenceEnumerator enumerator)
         {
             uint ilen = enumerator.Enumerated.Count;
 

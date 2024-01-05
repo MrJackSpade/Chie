@@ -17,7 +17,7 @@ namespace ChieApi.Clients
 
         private const string STATUS = "https://api.runpod.ai/v2/5mnz7udeuuxn1t/status";
 
-        public RunpodClient(LlamaClientSettings settings, LlamaContextSettings contextSettings, LlamaModelSettings modelSettings, ContextRequestSettings contextRequestSettings) : base(settings, contextSettings, modelSettings, contextRequestSettings)
+        public RunpodClient(LlamaClientSettings settings, LlamaContextSettings contextSettings, LlamaModelSettings modelSettings, SamplerSetting[] contextRequestSettings) : base(settings, contextSettings, modelSettings, contextRequestSettings)
         {
             HttpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {API_KEY}");
         }

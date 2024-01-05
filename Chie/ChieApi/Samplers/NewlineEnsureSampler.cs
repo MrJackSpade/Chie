@@ -6,7 +6,7 @@ using LlamaApiClient;
 
 namespace ChieApi.Samplers
 {
-    public class NewlineEnsureSampler : ISimpleSampler
+    public class NewlineEnsureSampler : IBiasAdjustor
     {
         private readonly LlamaTokenCache _tokenCache;
 
@@ -14,11 +14,11 @@ namespace ChieApi.Samplers
 
         public NewlineEnsureSampler(LlamaTokenCache cache, SpecialTokens specialTokens)
         {
-            this._tokenCache = cache;
-            this._specialTokens = specialTokens;
+            _tokenCache = cache;
+            _specialTokens = specialTokens;
         }
 
-        public async Task SampleNext(InferenceEnumerator enumerator)
+        public async Task AdjustNext(InferenceEnumerator enumerator)
         {
 
             enumerator.SetBias(30004, float.NegativeInfinity, LogitRuleLifetime.Inferrence, LogitBiasType.Additive);
@@ -32,8 +32,8 @@ namespace ChieApi.Samplers
 
             LlamaToken[] banTokens = new LlamaToken[]
             {
-                (await this._tokenCache.Get("|")).Single(),
-                (await this._tokenCache.Get(" |")).Single(),
+                (await _tokenCache.Get("|")).Single(),
+                (await _tokenCache.Get(" |")).Single(),
             };
 
             foreach (LlamaToken t in banTokens)

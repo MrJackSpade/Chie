@@ -13,13 +13,13 @@
         public float PresencePenalty { get; set; } = 0.00f;
 
         /// <summary>
-        /// Default 1.1
+        /// Default 0
         /// </summary>
-        public float RepeatPenalty { get; set; } = 1.10f;
+        public float RepeatPenalty { get; set; } = 0.00f;
 
         /// <summary>
         /// Default 64
         /// </summary>
-        public int RepeatTokenPenaltyWindow { get; set; } = 64;
+        public int RepeatPenaltyWindow { get; set; } = 64;
     }
 }

@@ -27,6 +27,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{79CA583E
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Llama.Core.Tests", "Llama.Core.Tests\Llama.Core.Tests.csproj", "{D782909D-D810-4677-A47D-B4A1834367D3}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Loxifi.AsyncExtensions", "Utils\Loxifi.AsyncExtensions\Loxifi.AsyncExtensions.csproj", "{8D97CAAD-4325-4085-B93C-C607CBF72DDC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,6 +71,10 @@ Global
 		{D782909D-D810-4677-A47D-B4A1834367D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D782909D-D810-4677-A47D-B4A1834367D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D782909D-D810-4677-A47D-B4A1834367D3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D97CAAD-4325-4085-B93C-C607CBF72DDC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D97CAAD-4325-4085-B93C-C607CBF72DDC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D97CAAD-4325-4085-B93C-C607CBF72DDC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D97CAAD-4325-4085-B93C-C607CBF72DDC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -76,6 +82,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{0C9B3103-FF87-4E27-96B0-CEA77915DB4B} = {0D3192B4-D435-4196-B1F8-784957364E3D}
 		{D782909D-D810-4677-A47D-B4A1834367D3} = {79CA583E-07BE-4A0C-8F71-76BDAE6B7E1C}
+		{8D97CAAD-4325-4085-B93C-C607CBF72DDC} = {0D3192B4-D435-4196-B1F8-784957364E3D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5CD54321-0BE1-49B0-9A4F-EFE31405ED39}

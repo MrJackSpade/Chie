@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Utils\Ai.Utils\Ai.Utils.csproj" />
     <ProjectReference Include="..\..\Utils\Loxifi.AsyncExtensions\Loxifi.AsyncExtensions.csproj" />
+    <ProjectReference Include="..\Llama.Core\Llama.Core.csproj" />
     <ProjectReference Include="..\Llama.Data\Llama.Data.csproj" />
   </ItemGroup>
 

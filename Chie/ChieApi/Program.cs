@@ -8,11 +8,8 @@ using ChieApi.Pipelines.MoodPipeline;
 using ChieApi.Services;
 using ChieApi.Shared.Services;
 using ChieApi.Tasks.Boredom;
-using Llama.Core.Samplers.Mirostat;
 using Llama.Data;
-using Llama.Data.Models.Settings;
 using LlamaApi.Shared.Models.Request;
-using LlamaApi.Shared.Models.Response;
 using LlamaApiClient;
 using Logging;
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +18,6 @@ using Summary;
 using Summary.Interfaces;
 using System.Diagnostics;
 using System.Text.Json.Serialization;
-using MirostatSamplerSettings = LlamaApi.Models.Request.MirostatSamplerSettings;
 
 namespace ChieApi
 {
@@ -93,15 +89,15 @@ namespace ChieApi
                 LlamaClientSettings settings = s.GetRequiredService<LlamaClientSettings>();
                 LlamaContextSettings contextSettings = s.GetRequiredService<LlamaContextSettings>();
                 LlamaModelSettings llamaModelSettings = s.GetRequiredService<LlamaModelSettings>();
-                ContextRequestSettings contextRequestSettings = s.GetRequiredService<ContextRequestSettings>();
+                SamplerSetting[] samplerSettings = s.GetRequiredService<SamplerSetting[]>();
 
                 if (settings.Host.Contains("api.runpod.ai", StringComparison.OrdinalIgnoreCase))
                 {
-                    return new RunpodClient(settings, contextSettings, llamaModelSettings, contextRequestSettings);
+                    return new RunpodClient(settings, contextSettings, llamaModelSettings, samplerSettings);
                 }
                 else
                 {
-                    return new LlamaClient(settings, contextSettings, llamaModelSettings, contextRequestSettings);
+                    return new LlamaClient(settings, contextSettings, llamaModelSettings, samplerSettings);
                 }
             });
             _ = builder.Services.AddSingleton((s) =>
@@ -121,68 +117,7 @@ namespace ChieApi
             {
                 CharacterConfiguration _characterConfiguration = s.GetRequiredService<CharacterConfiguration>();
 
-                ContextRequestSettings c = new();
-
-                if (_characterConfiguration.MiroStat != MirostatType.None)
-                {
-                    if (_characterConfiguration.MiroStat == MirostatType.Four)
-                    {
-                        c.DynamicTempSamplerSettings = new DynamicTempSamplerSettings()
-                        {
-                            LearningRate = _characterConfiguration.LearningRate,
-                            Tfs = _characterConfiguration.Tfs,
-                            Temperature = _characterConfiguration.Temperature,
-                            MinTarget = _characterConfiguration.MinTarget,
-                            MaxTarget = _characterConfiguration.MaxTarget,
-                            Scale = _characterConfiguration.Scale
-                        };
-
-                    } else if (_characterConfiguration.MiroStat == MirostatType.Three)
-                    {
-                        c.MirostatTempSamplerSettings = new MirostatTempSamplerSettings()
-                        {
-                            Target = _characterConfiguration.MiroStatEntropy,
-                            LearningRate = _characterConfiguration.LearningRate,
-                            InitialTemperature = _characterConfiguration.Temperature,
-                            Tfs = _characterConfiguration.Tfs,
-                            MaxTemp = _characterConfiguration.MaxTemp
-                        };
-                    }
-                    else
-                    {
-                        c.MirostatSamplerSettings = new MirostatSamplerSettings()
-                        {
-                            Tau = _characterConfiguration.MiroStatEntropy,
-                            Temperature = _characterConfiguration.Temperature,
-                            MirostatType = _characterConfiguration.MiroStat
-                        };
-                    }
-                }
-                else
-                {
-                    c.TemperatureSamplerSettings = new TemperatureSamplerSettings()
-                    {
-                        Temperature = _characterConfiguration.Temperature,
-                        TopP = _characterConfiguration.TopP,
-                    };
-                }
-
-                c.RepetitionSamplerSettings = new RepetitionSamplerSettings()
-                {
-                    RepeatPenalty = _characterConfiguration.RepeatPenalty,
-                    RepeatTokenPenaltyWindow = _characterConfiguration.RepeatPenaltyWindow
-                };
-
-                c.ComplexPresencePenaltySettings = new ComplexPresencePenaltySettings()
-                {
-                    LengthScale = 1.8f,
-                    GroupScale = 1.575f,
-                    //MAybe shorten this and affect group scale?
-                    MinGroupLength = 5,
-                    RepeatTokenPenaltyWindow = -1
-                };
-
-                return c;
+                return _characterConfiguration.SamplerSettings;
             });
 
             _ = builder.Services.AddSingleton((s) =>

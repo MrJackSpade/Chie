@@ -25,6 +25,16 @@
         public float MinTarget { get; set; } = 0f;
 
         /// <summary>
+        /// Minimum value that will allow a return for the EOS token
+        /// </summary>
+        public Dictionary<int, float>? MinPs { get; set; }
+
+        /// <summary>
+        /// Min probability across all tokens
+        /// </summary>
+        public float MinP { get; set; } = 0.03f;
+
+        /// <summary>
         /// Default 40
         /// </summary>
         public float Penalty { get; set; } = -2f;

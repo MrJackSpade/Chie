@@ -80,7 +80,7 @@ namespace Llama.Data.Collections
 
         public override string ToString() => string.Join("", this._tokens.Select(t => t.Value));
 
-        public virtual LlamaTokenCollection Trim(int id = 0)
+        public virtual LlamaTokenCollection Trim(int id = -1)
         {
             LlamaTokenCollection llamaTokens = new();
 

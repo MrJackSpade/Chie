@@ -17,14 +17,52 @@ namespace ChieApi.TokenTransformers
 
         private readonly SpecialTokens _specialTokens;
 
-        public NewlineTransformer(SpecialTokens specialTokens)
+        public NewlineTransformer(SpecialTokens specialTokens, LlamaTokenCache tokenCache)
         {
-            this._specialTokens = specialTokens;
+            _specialTokens = specialTokens;
+            _tokenCache = tokenCache;
         }
 
-        public bool IsListItem(string lastLine) => Regex.IsMatch(lastLine, LIST_REGEX);
+        public bool IsListItem(string lastLine)
+        {
+            return Regex.IsMatch(lastLine, LIST_REGEX);
+        }
 
-        public bool IsValidEnd(string lastLine) => VALID_ENDS.Contains(lastLine[^1]);
+        public bool IsValidEnd(string lastLine)
+        {
+            return VALID_ENDS.Contains(lastLine[^1]);
+        }
+
+        private async IAsyncEnumerable<LlamaToken?> Split(IAsyncEnumerable<LlamaToken> source)
+        {
+            await foreach (LlamaToken token in source)
+            {
+                if (token.Value?.Contains('\n') ?? false)
+                {
+                    string[] parts = token.Value.Split('\n');
+
+                    foreach (string p in parts)
+                    {
+                        if (!string.IsNullOrEmpty(p))
+                        {
+                            foreach (LlamaToken t in await _tokenCache.Get(p))
+                            {
+                                yield return t;
+                            }
+                        }
+
+                        foreach (LlamaToken t in await _tokenCache.Get("\n"))
+                        {
+                            yield return t;
+                        }
+                    }
+                }
+                else
+                {
+                    yield return token;
+                }
+            }
+        }
 
         public async IAsyncEnumerable<LlamaToken?> TransformToken(InferenceEnumerator enumerator, IAsyncEnumerable<LlamaToken> selectedTokens)
         {
@@ -48,9 +86,9 @@ namespace ChieApi.TokenTransformers
             bool isValidEnd = this.IsValidEnd(lastLine);
             bool isListItem = this.IsListItem(lastLine);
 
-            await foreach (LlamaToken tVal in selectedTokens)
+            await foreach (LlamaToken tVal in this.Split(selectedTokens))
             {
-                if (tVal.Id == this._specialTokens.NewLine)
+                if (tVal.Id == _specialTokens.NewLine)
                 {
                     if (isValidEnd || isListItem)
                     {
@@ -58,7 +96,7 @@ namespace ChieApi.TokenTransformers
                     }
                     else
                     {
-                        yield return new LlamaToken(this._specialTokens.EOS, null);
+                        yield return new LlamaToken(_specialTokens.EOS, null);
                     }
                 }
                 else

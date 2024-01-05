@@ -80,6 +80,8 @@ namespace DiscordGpt.Models
 
             ActiveMessage newActiveMessage = new(message, chieMessageId, true);
 
+            await newActiveMessage.SetContent(message.Content);
+
             this.Value = newActiveMessage;
 
             await newActiveMessage.SetUp(startVisible);
