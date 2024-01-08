@@ -10,24 +10,14 @@
         public bool FactorPreservedWords { get; set; } = false;
 
         /// <summary>
-        /// Default 0.1
+        /// Exclude specific tokens from greedy sampling
         /// </summary>
-        public float LearningRate { get; set; } = 0.25f;
+        public int[] GreedyExclude { get; set; } = Array.Empty<int>();
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public float MaxTarget { get; set; } = 1f;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public float MinTarget { get; set; } = 0f;
-
-        /// <summary>
-        /// Minimum value that will allow a return for the EOS token
-        /// </summary>
-        public Dictionary<int, float>? MinPs { get; set; }
 
         /// <summary>
         /// Min probability across all tokens
@@ -35,9 +25,14 @@
         public float MinP { get; set; } = 0.03f;
 
         /// <summary>
-        /// Default 40
+        /// Minimum value that will allow a return for the EOS token
         /// </summary>
-        public float Penalty { get; set; } = -2f;
+        public Dictionary<int, float> MinPs { get; set; } = new Dictionary<int, float>();
+
+        /// <summary>
+        ///
+        /// </summary>
+        public float MinTarget { get; set; } = 0f;
 
         /// <summary>
         /// If true, Mirostat will only use TOPK sampling for new words
@@ -48,6 +43,11 @@
         /// If true, Mirostat will only use TOPK sampling for new words
         /// </summary>
         public float Scale { get; set; } = 1f;
+
+        /// <summary>
+        /// Default .4
+        /// </summary>
+        public float Target { get; set; } = 0.4f;
 
         /// <summary>
         /// Default 40

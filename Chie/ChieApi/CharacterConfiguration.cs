@@ -14,8 +14,14 @@ namespace ChieApi
 
         public bool ReloadPrompt { get; set; }
 
+        public float ResponseLengthAdjust { get; set; } = 0.1f;
+
+        public float ResponseLengthBias { get; set; }
+
         public bool StartVisible { get; set; }
 
         public float Tfs { get; set; }
+
+        public string? UserPrompt { get; set; }
     }
 }

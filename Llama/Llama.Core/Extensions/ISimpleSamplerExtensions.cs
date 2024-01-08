@@ -7,14 +7,21 @@ namespace Llama.Core.Extensions
     public static class ISimpleSamplerExtensions
     {
         [SuppressMessage("Style", "IDE0060:Remove unused parameter")]
-        public static LastTokens GetLastTokens(this ISimpleSampler sampler, IReadOnlyLlamaTokenCollection collection, int tryTake) => new(collection, tryTake);
+        public static LastTokens GetLastTokens(this ISimpleSampler sampler, IReadOnlyLlamaTokenCollection collection, int tryTake, HashSet<int>? exclude = null) => new(collection, tryTake, exclude);
     }
 
     public class LastTokens
     {
-        public LastTokens(IReadOnlyLlamaTokenCollection collection, int tryTake)
+        public LastTokens(IReadOnlyLlamaTokenCollection collection, int tryTake, HashSet<int>? exclude = null)
         {
-            int[] available = collection.Trim().Ids.ToArray();
+            IEnumerable<int> availableEnumerable = collection.Trim().Ids;
+
+            if(exclude!=null)
+            {
+                availableEnumerable = availableEnumerable.Where(t => !exclude.Contains(t));
+            }
+
+            int[] available = availableEnumerable.ToArray();
 
             if (tryTake == -1)
             {

@@ -58,6 +58,9 @@ namespace ChieApi.TokenTransformers
             int not = this.GetNotNextAsterisk(writtenTrimmed);
 
             int asteriskCount = writtenTrimmed.Count(c => c == '*');
+
+            bool inAction = asteriskCount % 2 == 1;
+
             bool endsWith = writtenTrimmed.EndsWith("*");
 
             //If we have zero asterisks, set the start value and block the end
@@ -68,13 +71,13 @@ namespace ChieApi.TokenTransformers
                 enumerator.SetBias(_endAsterisk, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
             }
             //If we have too many asterisks, or we've just placed one, block all asterisks
-            else if ((asteriskCount >= 4 && asteriskCount % 2 == 0) || endsWith)
+            else if ((asteriskCount >= 4 && !inAction) || endsWith)
             {
                 enumerator.SetBias(_startAsterisk, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
                 enumerator.SetBias(_endAsterisk, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
             }
             //If we're on odd, try and stretch it out for at least a few words
-            else if (asteriskCount % 2 == 1)
+            else if (inAction)
             {
                 int a = writtenTrimmed.LastIndexOf('*');
                 string chunk = writtenTrimmed[a..];
@@ -112,7 +115,7 @@ namespace ChieApi.TokenTransformers
 
                 LlamaToken firstToken = lTokens[0];
 
-                if (!string.IsNullOrWhiteSpace(firstToken.Value) && firstToken.Value[0] != ' ')
+                if (!inAsterisks && !string.IsNullOrWhiteSpace(firstToken.Value) && firstToken.Value[0] != ' ')
                 {
                     yield break;
                 }

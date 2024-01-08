@@ -8,7 +8,7 @@ namespace ChieApi.Pipelines
 {
     public partial class UserDataPipeline : IRequestPipeline
     {
-        private readonly string? _characterName;
+        private readonly CharacterConfiguration _characterConfiguration;
 
         private readonly HashSet<string> _returnedData = new();
 
@@ -17,14 +17,14 @@ namespace ChieApi.Pipelines
         public UserDataPipeline(UserDataRepository userDataService, CharacterConfiguration characterConfiguration)
         {
             this._userDataService = userDataService;
-            this._characterName = characterConfiguration.CharacterName;
+            this._characterConfiguration = characterConfiguration;
         }
 
         public async IAsyncEnumerable<ChatEntry> Process(ChatEntry chatEntry)
         {
             this.SwapId(chatEntry);
 
-            if (chatEntry.DisplayName != this._characterName &&
+            if (chatEntry.DisplayName != this._characterConfiguration.CharacterName &&
                 !string.IsNullOrWhiteSpace(chatEntry.UserId) &&
                 //Gotta check to make sure we haven't already returned this request
                 this._returnedData.Add(chatEntry.UserId))
@@ -98,9 +98,11 @@ namespace ChieApi.Pipelines
 
         private TextResult GetText(UserData userData)
         {
-            if (!string.IsNullOrWhiteSpace(userData.UserPrompt))
+            string? prompt = this._characterConfiguration?.UserPrompt ?? userData?.UserPrompt;
+
+            if (!string.IsNullOrWhiteSpace(prompt))
             {
-                return new TextResult(userData.UserPrompt, LlamaTokenType.Temporary);
+                return new TextResult(prompt, LlamaTokenType.Temporary);
             }
 
             if (!string.IsNullOrWhiteSpace(userData.UserSummary) && userData.LastEncountered.HasValue)

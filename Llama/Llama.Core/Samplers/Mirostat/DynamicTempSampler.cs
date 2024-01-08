@@ -10,11 +10,7 @@ namespace Llama.Core.Samplers.Mirostat
 {
     public class DynamicTempSampler : BaseDynamicSampler, ITokenSelector
     {
-        private readonly float _initialTarget = 0.4f;
-
         private readonly DynamicTempSamplerSettings _settings;
-
-        private float _target = 0.4f;
 
         private readonly Dictionary<char, float> _temperatureAdjustments = new()
         {
@@ -24,9 +20,45 @@ namespace Llama.Core.Samplers.Mirostat
             ['*'] = 6f
         };
 
+        private float _target = 0.4f;
+
         public DynamicTempSampler(DynamicTempSamplerSettings settings)
         {
             _settings = settings;
+
+            foreach (int id in this._settings.GreedyExclude)
+            {
+                _isWords.Add(id, true);
+            }
+        }
+
+        public void ApplyOriginalMinP(SampleContext context)
+        {
+            Dictionary<int, int> mapping = new();
+
+            Span<LlamaTokenData> newData = context.Candidates.Data.Span;
+
+            for (int i = 0; i < context.Candidates.Data.Length; i++)
+            {
+                LlamaTokenData newToken = newData[i];
+                mapping.Add(newToken.id, i);
+            }
+
+            foreach (LlamaTokenData token in context.OriginalCandidates)
+            {
+                float minp = this._settings.MinP;
+
+                if (_settings.MinPs.TryGetValue(token.id, out float cminp))
+                {
+                    minp = Math.Max(minp, cminp);
+                }
+
+                if (token.p < minp)
+                {
+                    int newIndex = mapping[token.id];
+                    context.Candidates.SetLogitAtIndex(newIndex, float.NegativeInfinity);
+                }
+            }
         }
 
         public float CalculateNextTarget()
@@ -40,46 +72,16 @@ namespace Llama.Core.Samplers.Mirostat
             float sumExcludingFirst = SelectionHistory.Skip(1).Sum(l => l.p);
 
             // Calculate the next value needed to achieve the target average
-            float nextValue = (_initialTarget * QUEUE_SIZE) - sumExcludingFirst;
+            float nextValue = (this._settings.Target * QUEUE_SIZE) - sumExcludingFirst;
 
             return nextValue;
         }
 
-        public void ApplyOriginalMinP(SampleContext context)
-        {
-            Dictionary<int, int> mapping = new();
-
-            Span<LlamaTokenData> newData = context.Candidates.Data.Span;
-
-            for(int i = 0; i < context.Candidates.Data.Length; i++)
-            {
-                LlamaTokenData newToken = newData[i];
-                mapping.Add(newToken.id, i);
-            }
-
-            foreach (LlamaTokenData token in context.OriginalCandidates)
-            {
-                if (token.p < this._settings.MinP)
-                {
-                    int newIndex = mapping[token.id];
-                    context.Candidates.SetLogitAtIndex(newIndex, float.NegativeInfinity);
-                }
-            }
-        }
-
         public int SampleNext(SampleContext sampleContext)
         {
-            this.ApplyOriginalMinP(sampleContext);
-
             //Softmax for backup
             SamplingApi.SoftMax(sampleContext.Candidates);
-            SamplingApi.MinP(sampleContext.Candidates, this._settings.MinP);
-
-            foreach (KeyValuePair<int, float> minProb in _settings.MinPs)
-            {
-                SamplingApi.MinP(sampleContext.Candidates, minProb.Key, minProb.Value);
-            }
-
+            this.ApplyOriginalMinP(sampleContext);
             SamplingApi.SoftMax(sampleContext.Candidates);
 
             Span<LlamaTokenData> candidateSpan = sampleContext.Candidates.Data.Span;

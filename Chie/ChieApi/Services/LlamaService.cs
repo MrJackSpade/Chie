@@ -29,8 +29,6 @@ namespace ChieApi.Services
 
         public const int MIN_RESPONSE = 150;
 
-        public const float RESPONSE_LENGTH_ADJ = 0.1f;
-
         public const int SUMMARY_TARGET = 0;
 
         public const float TRIM_FROM = 0.95f;
@@ -88,6 +86,7 @@ namespace ChieApi.Services
             _tokenCache = llamaTokenCache;
             _characterConfiguration = characterConfiguration;
             _specialTokens = characterConfiguration.SpecialTokens;
+            _responseLengthBias = characterConfiguration.ResponseLengthBias;
 
             logger.LogInformation("Constructing Llama Service");
 
@@ -107,7 +106,8 @@ namespace ChieApi.Services
                 new NewlineTransformer(_specialTokens, _tokenCache),
                 _responseLengthManager,
                 new RepetitionBlockingTransformer(3),
-                new InvalidCharacterBlockingTransformer()
+                new InvalidCharacterBlockingTransformer(),
+                new RoleplayEnforcingTransformer(0, 0 ,0, _tokenCache)
             };
 
             _inputCleaner = new List<ITextCleaner>()
@@ -348,14 +348,16 @@ namespace ChieApi.Services
             if (responseStr.Length < MIN_RESPONSE)
             {
                 //Lower bias adj to increase length
-                _responseLengthBias -= RESPONSE_LENGTH_ADJ;
+                _responseLengthBias -= _characterConfiguration.ResponseLengthAdjust;
             }
             else if (_responseLengthBias < 0)
             {
                 //If we fall within the expected range, we should be training
                 //the model so we gradually back off
-                _responseLengthBias += RESPONSE_LENGTH_ADJ;
+                _responseLengthBias += _characterConfiguration.ResponseLengthAdjust;
             }
+
+            Debug.WriteLine($"Response Length Bias: {_responseLengthBias}");
 
             //Not currently accounting for values over zero (would cause truncation)
             _responseLengthBias = Math.Min(_responseLengthBias, 0f);

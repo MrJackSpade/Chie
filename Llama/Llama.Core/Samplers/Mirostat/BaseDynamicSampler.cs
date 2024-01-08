@@ -7,7 +7,7 @@ namespace Llama.Core.Samplers.Mirostat
 {
     public abstract class BaseDynamicSampler
     {
-        private readonly Dictionary<int, bool> _isWords = new();
+        protected readonly Dictionary<int, bool> _isWords = new();
 
         protected readonly Queue<LlamaTokenData> SelectionHistory = new();
 

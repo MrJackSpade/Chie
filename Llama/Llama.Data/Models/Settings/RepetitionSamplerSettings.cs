@@ -21,5 +21,10 @@
         /// Default 64
         /// </summary>
         public int RepeatPenaltyWindow { get; set; } = 64;
+
+        /// <summary>
+        /// Exclude from penalty
+        /// </summary>
+        public int[] Exclude { get; set; } = Array.Empty<int>();
     }
 }

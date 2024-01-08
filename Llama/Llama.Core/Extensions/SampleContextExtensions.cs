@@ -52,6 +52,8 @@ namespace Llama.Core.Extensions
                 },
                 _ => throw new NotImplementedException(),
             };
+
+            tokens.Sorted = false;
         }
 
         public static void SetLogit(this LlamaTokenDataArray tokens, int tokenId, float logit)
@@ -66,6 +68,8 @@ namespace Llama.Core.Extensions
                 logit = logit,
                 p = logit
             };
+
+            tokens.Sorted = false;
         }
 
         public static void SetLogitAtIndex(this LlamaTokenDataArray tokens, int index, float logit)
@@ -78,6 +82,8 @@ namespace Llama.Core.Extensions
                 logit = logit,
                 p = logit
             };
+
+            tokens.Sorted = false;
         }
 
         public static void SetPenalty(this LlamaTokenDataArray tokens, int tokenId, float probability)
@@ -100,6 +106,8 @@ namespace Llama.Core.Extensions
                 logit = newValue,
                 p = newValue
             };
+
+            tokens.Sorted = false;
         }
 
         public static void SetProbability(this LlamaTokenDataArray tokens, int tokenId, float probability)
@@ -114,6 +122,8 @@ namespace Llama.Core.Extensions
                 logit = probability,
                 p = probability
             };
+
+            tokens.Sorted = false;
         }
 
         public static void Update(this LlamaTokenDataArray tokens, IEnumerable<KeyValuePair<LlamaToken, float>> list)
