@@ -34,7 +34,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\Penguin\Repositories\Loxifi\Loxifi.TypeFactory\Loxifi.TypeFactory.csproj" />
     <ProjectReference Include="..\..\Blip\Blip.Shared\Blip.Shared.csproj" />
     <ProjectReference Include="..\..\Blip\BlipApiClient\BlipApiClient.csproj" />
     <ProjectReference Include="..\..\Llama\LlamaApiClient\LlamaApiClient.csproj" />

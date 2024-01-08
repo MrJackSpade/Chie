@@ -468,6 +468,7 @@ namespace LlamaApi.Shared.Serializers
             return new LlamaContextSettings()
             {
                 BatchSize = DeserializeUint(reader),
+                OffloadKQV = DeserializeBool(reader),
                 ContextSize = DeserializeUint(reader),
                 EvalThreadCount = DeserializeUint(reader),
                 GenerateEmbedding = DeserializeBool(reader),
@@ -1298,6 +1299,7 @@ namespace LlamaApi.Shared.Serializers
         public static void Serialize(LlamaContextSettings request, BinaryWriter writer)
         {
             Serialize(request.BatchSize, writer);
+            Serialize(request.OffloadKQV, writer);
             Serialize(request.ContextSize, writer);
             Serialize(request.EvalThreadCount, writer);
             Serialize(request.GenerateEmbedding, writer);

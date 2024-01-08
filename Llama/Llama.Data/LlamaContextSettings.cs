@@ -15,6 +15,8 @@ namespace Llama.Data
         /// </summary>
         public uint BatchSize { get; set; } = 512;
 
+        public bool OffloadKQV { get; set; } = true;
+
         /// <summary>
         /// Default 4096
         /// </summary>

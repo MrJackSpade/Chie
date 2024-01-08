@@ -311,7 +311,7 @@ namespace Llama.Native
             lparams.YarnBetaFast = contextSettings.YarnBetaFast;
             lparams.YarnAttnFactor = contextSettings.YarnAttnFactor;
             lparams.YarnExtFactor = contextSettings.YarnExtFactor;
-            lparams.OffloadKQV = true;
+            lparams.OffloadKQV = contextSettings.OffloadKQV;
 
             if (contextSettings.YarnOrigCtx == 0)
             {
