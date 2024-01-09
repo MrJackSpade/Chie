@@ -271,7 +271,10 @@ namespace DiscordGpt
                 return;
             }
 
-            if (arg.Channel is SocketDMChannel && !this._settings.AllowDms && !string.Equals(arg.Author.Username, this._settings.AdminUser, StringComparison.OrdinalIgnoreCase))
+            bool isAdmin = string.Equals(arg.Author.Username, this._settings.AdminUser, StringComparison.OrdinalIgnoreCase);
+            bool allowDms = this._settings.AllowDms || (isAdmin && this._settings.AllowAdminDms);
+
+            if (arg.Channel is SocketDMChannel && !allowDms)
             {
                 this._logger.LogInformation("Channel is DM but DM's are disabled");
                 await this._chieMessageService.MarkUnseen(arg);

@@ -8,8 +8,6 @@ namespace ChieApi
 
         public string CharacterName { get; set; }
 
-        public float MaxTemp { get; set; }
-
         public DateTime MemoryStart { get; set; }
 
         public bool ReloadPrompt { get; set; }
@@ -19,8 +17,6 @@ namespace ChieApi
         public float ResponseLengthBias { get; set; }
 
         public bool StartVisible { get; set; }
-
-        public float Tfs { get; set; }
 
         public string? UserPrompt { get; set; }
     }

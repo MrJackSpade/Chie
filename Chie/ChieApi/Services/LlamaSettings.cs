@@ -38,7 +38,7 @@ namespace ChieApi.Services
 
         public Dictionary<int, string> LogitBias { get; set; } = new Dictionary<int, string>();
 
-        public float MaxTarget { get; set; } = 1f;
+        public bool OffloadKQV { get; set; } = true;
 
         public string ModelPath { get; set; }
 

@@ -10,7 +10,10 @@ namespace DiscordGpt
 		[JsonPropertyName("allowDms")]
 		public bool AllowDms { get; set; }
 
-		[JsonPropertyName("publicChannels")]
+        [JsonPropertyName("allowAdminDms")]
+        public bool AllowAdminDms { get; set; }
+
+        [JsonPropertyName("publicChannels")]
 		public List<ulong> PublicChannels { get; set; } = new List<ulong>();
 
 		[JsonPropertyName("useServerEmots")]

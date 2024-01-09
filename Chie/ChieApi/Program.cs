@@ -110,6 +110,7 @@ namespace ChieApi
                     UseMemoryMap = !_characterConfiguration.NoMemoryMap,
                     UseMemoryLock = true,
                     SpecialTokens = _characterConfiguration.SpecialTokens,
+                    
                 };
             });
 
@@ -139,6 +140,7 @@ namespace ChieApi
                     YarnBetaSlow = _characterConfiguration.YarnBetaSlow,
                     YarnExtFactor = _characterConfiguration.YarnExtFactor,
                     YarnOrigCtx = _characterConfiguration.YarnOrigCtx,
+                    OffloadKQV = _characterConfiguration.OffloadKQV
                 };
             });
 
