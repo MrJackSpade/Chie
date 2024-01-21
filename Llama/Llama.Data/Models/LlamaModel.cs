@@ -2,13 +2,21 @@
 
 namespace Llama.Data.Models
 {
-    public class LlamaModel
+    public class LlamaModel : IDisposable
     {
-        public LlamaModel(SafeLlamaModelHandle handle)
+        public LlamaModel(SafeLlamaModelHandle handle, int vocab)
         {
-            this.Handle = handle;
+            Vocab = vocab;
+            Handle = handle;
         }
 
         public SafeLlamaModelHandle Handle { get; private set; }
+
+        public int Vocab { get; private set; }
+
+        public void Dispose()
+        {
+            ((IDisposable)Handle).Dispose();
+        }
     }
 }

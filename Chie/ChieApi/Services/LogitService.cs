@@ -15,12 +15,12 @@ namespace ChieApi.Services
 
         public LogitService(IHasConnectionString connectionString)
         {
-            this._connectionString = connectionString.ConnectionString;
+            _connectionString = connectionString.ConnectionString;
         }
 
         public IEnumerable<Logit> GetLogits(bool includeZeros = false)
         {
-            using SqlConnection connection = new(this._connectionString);
+            using SqlConnection connection = new(_connectionString);
 
             string query = "select * from logit ";
 
@@ -36,9 +36,9 @@ namespace ChieApi.Services
         {
             bool exists = false;
 
-            this._semaphore.Wait();
+            _semaphore.Wait();
 
-            if (this._cache.Length == 0)
+            if (_cache.Length == 0)
             {
                 List<Logit> existing = this.GetLogits(true).ToList();
 
@@ -46,34 +46,34 @@ namespace ChieApi.Services
                 {
                     long maxId = existing.Max(l => l.Id);
 
-                    this._cache = new double?[maxId + 1];
+                    _cache = new double?[maxId + 1];
 
                     foreach (Logit logit in existing)
                     {
-                        this._cache[logit.Id] = logit.Bias;
+                        _cache[logit.Id] = logit.Bias;
                     }
                 }
             }
 
-            if (this._cache.Length <= id)
+            if (_cache.Length <= id)
             {
                 double?[] tempcache = new double?[id + 1];
 
-                for (int i = 0; i < this._cache.Length; i++)
+                for (int i = 0; i < _cache.Length; i++)
                 {
-                    tempcache[i] = this._cache[i];
+                    tempcache[i] = _cache[i];
                 }
 
                 _cache = tempcache;
             }
             else
             {
-                exists = this._cache[id].HasValue;
+                exists = _cache[id].HasValue;
             }
 
             if (!exists)
             {
-                this._cache[id] = 0;
+                _cache[id] = 0;
 
                 this.Save(new Logit()
                 {
@@ -85,18 +85,25 @@ namespace ChieApi.Services
             }
             else
             {
-                using SqlConnection connection = new(this._connectionString);
+                using SqlConnection connection = new(_connectionString);
                 connection.Execute($"update logit set LastEncountered = GetDate(), Encountered = Encountered + 1 where id = {id}");
             }
 
-            this._semaphore.Release();
+            _semaphore.Release();
         }
 
         public void Save(Logit chatEntry)
         {
-            using SqlConnection connection = new(this._connectionString);
+            try
+            {
+                using SqlConnection connection = new(_connectionString);
 
-            connection.Insert(chatEntry);
+                connection.Insert(chatEntry);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Failed to save Logit {chatEntry.Id}: {e.Message}");
+            }
         }
     }
 }

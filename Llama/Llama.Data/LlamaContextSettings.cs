@@ -33,14 +33,14 @@ namespace Llama.Data
         public bool Perplexity { get; set; }
 
         /// <summary>
-        /// Default 10_000
+        /// Default 10_000 (Model Set)
         /// </summary>
-        public float RopeFrequencyBase { get; set; } = 10_000;
+        public float RopeFrequencyBase { get; set; } = 0;
 
         /// <summary>
-        /// Default 1.o
+        /// Default 1.0
         /// </summary>
-        public float RopeFrequencyScaling { get; set; } = 1.0f;
+        public float RopeFrequencyScaling { get; set; } = 0;
 
         public uint Seed { get; set; } = (uint)new Random().Next();
 

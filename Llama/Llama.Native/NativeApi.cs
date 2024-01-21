@@ -9,7 +9,7 @@ using System.Text;
 
 namespace Llama.Native
 {
-    public static class NativeApi
+    public static unsafe class NativeApi
     {
         static NativeApi()
         {
@@ -365,7 +365,11 @@ namespace Llama.Native
                 throw new LlamaCppRuntimeError($"Failed to load model {modelSettings.Model}.");
             }
 
-            return new(new(model_ptr, (p) => LlamaCppApi.FreeModel(p)));
+            SafeLlamaModelHandle handle = new(model_ptr, (p) => LlamaCppApi.FreeModel(p));
+
+            int vocab = LlamaCppApi.NVocab(handle);
+
+            return new(handle, vocab);
         }
 
         public static int NVocab(SafeLlamaModelHandle handle)

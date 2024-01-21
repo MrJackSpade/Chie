@@ -277,7 +277,6 @@ namespace DiscordGpt
             if (arg.Channel is SocketDMChannel && !allowDms)
             {
                 this._logger.LogInformation("Channel is DM but DM's are disabled");
-                await this._chieMessageService.MarkUnseen(arg);
                 return;
             }
 
