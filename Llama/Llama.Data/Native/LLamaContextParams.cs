@@ -3,12 +3,16 @@ using System.Runtime.InteropServices;
 
 namespace Llama.Data.Native
 {
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate bool GgmlBackendSchedEvalCallback(IntPtr tensor, bool ask, IntPtr userData);
+
     /// <summary>
     /// Represents the parameters for a llama context.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public struct LlamaContextParams
     {
+
         /// <summary>
         /// RNG seed, -1 for random.
         /// </summary>
@@ -37,7 +41,7 @@ namespace Llama.Data.Native
         /// <summary>
         /// RoPE scaling type, from `LlamaRopeScalingType`.
         /// </summary>
-        public sbyte RopeScalingType;
+        public int RopeScalingType;
 
         /// <summary>
         /// RoPE base frequency, 0 = from model.
@@ -75,12 +79,22 @@ namespace Llama.Data.Native
         public uint YarnOrigCtx;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
-        public GgmlType TypeK; 
-        
+        public GgmlBackendSchedEvalCallback CbEval;
+
         /// <summary>
-        /// 
+        ///
+        /// </summary>
+        public IntPtr CbEvalUserData;
+
+        /// <summary>
+        ///
+        /// </summary>
+        public GgmlType TypeK;
+
+        /// <summary>
+        ///
         /// </summary>
         public GgmlType TypeV;
 

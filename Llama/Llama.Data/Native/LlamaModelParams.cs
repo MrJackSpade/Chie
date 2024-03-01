@@ -2,7 +2,8 @@
 
 namespace Llama.Data.Native
 {
-    public delegate void LlamaProgressCallback(float progress, IntPtr ctx);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate bool LlamaProgressCallback(float progress, IntPtr ctx);
 
     /// <summary>
     /// Represents the model parameters for llama.
@@ -14,6 +15,11 @@ namespace Llama.Data.Native
         /// Number of layers to store in VRAM.
         /// </summary>
         public int NGpuLayers;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public LlamaSplitMode SplitMode;
 
         /// <summary>
         /// The GPU that is used for scratch and small tensors.
@@ -38,7 +44,7 @@ namespace Llama.Data.Native
         /// <summary>
         /// override key-value pairs of the model meta data
         /// </summary>
-        public LlamaModelKvOverride KvOverrides;
+        public IntPtr KvOverrides;
 
         /// <summary>
         /// Only load the vocabulary, no weights.
