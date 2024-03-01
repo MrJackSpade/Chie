@@ -2,6 +2,7 @@
 using Llama.Core.Samplers.FrequencyAndPresence;
 using Llama.Core.Samplers.Mirostat;
 using Llama.Core.Samplers.Repetition;
+using Llama.Core.Samplers.Temperature;
 using Llama.Data.Interfaces;
 using LlamaApi.Shared.Models.Request;
 using System.Reflection;
@@ -36,9 +37,14 @@ namespace LlamaApi.Extensions
 
         public static ITokenSelector InstantiateSelector(this SamplerSetting samplerSetting)
         {
-            if (samplerSetting.IsType<DynamicTempSampler>())
+            if (samplerSetting.IsType<TargetedTempSampler>())
             {
-                return Construct<DynamicTempSampler>(samplerSetting);
+                return Construct<TargetedTempSampler>(samplerSetting);
+            }
+
+            if (samplerSetting.IsType<TemperatureSampler>())
+            {
+                return Construct<TemperatureSampler>(samplerSetting);
             }
 
             throw new NotImplementedException();
@@ -59,6 +65,16 @@ namespace LlamaApi.Extensions
             if (samplerSetting.IsType<ComplexPresenceSampler>())
             {
                 return Construct<ComplexPresenceSampler>(samplerSetting);
+            }
+
+            if (samplerSetting.IsType<MinPSampler>())
+            {
+                return Construct<MinPSampler>(samplerSetting);
+            }
+
+            if (samplerSetting.IsType<TfsSampler>())
+            {
+                return Construct<TfsSampler>(samplerSetting);
             }
 
             throw new NotImplementedException();

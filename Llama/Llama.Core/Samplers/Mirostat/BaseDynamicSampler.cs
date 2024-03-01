@@ -1,6 +1,7 @@
 ﻿using Llama.Data.Models;
 using Llama.Data.Native;
 using Llama.Native;
+using System.Collections;
 using System.Text;
 
 namespace Llama.Core.Samplers.Mirostat
@@ -11,7 +12,12 @@ namespace Llama.Core.Samplers.Mirostat
 
         protected readonly Queue<LlamaTokenData> SelectionHistory = new();
 
-        protected readonly int QUEUE_SIZE = 3;
+        protected int QueueSize { get; private set; }
+
+        public BaseDynamicSampler(int queueSize)
+        {
+            QueueSize = queueSize;
+        }
 
         public string GetDisplayString(SampleContext ctx, int tokenId)
         {
@@ -74,11 +80,26 @@ namespace Llama.Core.Samplers.Mirostat
             throw new ArgumentOutOfRangeException(nameof(tokenId));
         }
 
+        protected LlamaTokenData GetData(SampleContext sampleContext, int tokenId)
+        {
+            LlamaTokenData[] candidates = sampleContext.Candidates.Data.Span.ToArray();
+
+            for (int i = 0; i < candidates.Length; i++)
+            {
+                if (candidates[i].id == tokenId)
+                {
+                    return candidates[i];
+                }
+            }
+
+            throw new ArgumentOutOfRangeException(nameof(tokenId));
+        }
+
         protected void Push(LlamaTokenData token)
         {
             SelectionHistory.Enqueue(token);
 
-            if (SelectionHistory.Count > QUEUE_SIZE)
+            if (SelectionHistory.Count > QueueSize)
             {
                 SelectionHistory.Dequeue();
             }
@@ -115,7 +136,7 @@ namespace Llama.Core.Samplers.Mirostat
         protected bool TryGetQueueAverage(out float avg)
         {
             avg = 0f;
-            if (SelectionHistory.Count < QUEUE_SIZE)
+            if (SelectionHistory.Count < QueueSize)
             {
                 return false;
             }

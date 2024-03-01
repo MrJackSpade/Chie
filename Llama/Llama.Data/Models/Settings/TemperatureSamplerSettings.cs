@@ -2,14 +2,11 @@
 {
     public class TemperatureSamplerSettings
     {
-        public float Temperature { get; set; } = 0.80f;
+        /// <summary>
+        /// If true, Mirostat will only use TOPK sampling for new words
+        /// </summary>
+        public bool PreserveWords { get; set; } = true;
 
-        public float TfsZ { get; set; } = 1.00f;
-
-        public int TopK { get; set; } = 40;
-
-        public float TopP { get; set; } = 0.95f;
-
-        public float TypicalP { get; set; } = 1.00f;
+        public float Temperature { get; set; } = 1.0f;
     }
 }

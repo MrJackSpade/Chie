@@ -29,11 +29,7 @@ namespace Llama.Core.Samplers.Mirostat
 
         private readonly float TARGET = 0.4f;
 
-        private readonly int QUEUE_SIZE = 3;
-
-        private readonly Queue<LlamaTokenData> _selectionHistory = new();
-
-        public MirostatTempSampler(MirostatTempSamplerSettings settings)
+        public MirostatTempSampler(MirostatTempSamplerSettings settings) : base(3)
         {
             _settings = settings;
             _temp = settings.InitialTemperature;
