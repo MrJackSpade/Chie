@@ -48,8 +48,6 @@ namespace ChieApi.Services
 
         public string? PrimaryReversePrompt { get; set; }
 
-        public bool ReturnOnNewLine { get; set; }
-
         public float RopeBase { get; set; } = 10_000;
 
         public float RopeScale { get; set; } = 1.0f;

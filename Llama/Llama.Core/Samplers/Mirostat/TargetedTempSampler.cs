@@ -1,6 +1,7 @@
 ﻿using Llama.Core.Extensions;
 using Llama.Data.Interfaces;
 using Llama.Data.Models;
+using Llama.Data.Models.Settings;
 using Llama.Data.Native;
 using Llama.Native;
 using System.Diagnostics;
@@ -12,17 +13,9 @@ namespace Llama.Core.Samplers.Mirostat
     {
         private readonly TargetedTempSamplerSettings _settings;
 
-        private readonly Dictionary<char, float> _temperatureAdjustments = new()
-        {
-            [':'] = 6f,
-            ['.'] = 4f,
-            ['?'] = 4f,
-            ['*'] = 6f
-        };
+        private float _target = 1f;
 
-        private float _target = 0.4f;
-
-        public TargetedTempSampler(TargetedTempSamplerSettings settings) : base(settings.QueueSize)
+        public TargetedTempSampler(TargetedTempSamplerSettings settings) : base(settings.QueueSize, settings)
         {
             _settings = settings;
 
@@ -34,7 +27,9 @@ namespace Llama.Core.Samplers.Mirostat
 
         public void ApplyOriginalMinP(SampleContext context)
         {
-            Dictionary<int, int> mapping = new();
+			SamplingApi.SoftMax(context.Candidates);
+
+			Dictionary<int, int> mapping = new();
 
             Span<LlamaTokenData> newData = context.Candidates.Data.Span;
 
@@ -56,7 +51,12 @@ namespace Llama.Core.Samplers.Mirostat
                 if (token.p < minp)
                 {
                     int newIndex = mapping[token.id];
-                    context.Candidates.SetLogitAtIndex(newIndex, float.NegativeInfinity);
+
+                    //Don't apply it to the most likely new token.
+                    if (newIndex > 0)
+                    {
+                        context.Candidates.SetLogitAtIndex(newIndex, float.NegativeInfinity);
+                    }
                 }
             }
         }
@@ -79,7 +79,6 @@ namespace Llama.Core.Samplers.Mirostat
 
         public int SampleNext(SampleContext sampleContext)
         {
-
             int ts = 0;
 
             for (int i = 0; i < sampleContext.Candidates.Data.Length; i++)
@@ -93,7 +92,6 @@ namespace Llama.Core.Samplers.Mirostat
             }
 
             //Softmax for backup
-            SamplingApi.SoftMax(sampleContext.Candidates);
             this.ApplyOriginalMinP(sampleContext);
             SamplingApi.SoftMax(sampleContext.Candidates);
 
@@ -106,11 +104,6 @@ namespace Llama.Core.Samplers.Mirostat
                 LlamaToken token = sampleContext.ContextTokens.Trim().Last();
 
                 string value = NativeApi.TokenToPiece(sampleContext.ModelHandle, token.Id);
-
-                if (!string.IsNullOrEmpty(value) && _temperatureAdjustments.TryGetValue(value[^1], out float f))
-                {
-                    sampleTemp = f;
-                }
             }
 
             if (this.TryGetQueueAverage(out float average))
@@ -121,7 +114,7 @@ namespace Llama.Core.Samplers.Mirostat
                 float c_min = float.MaxValue;
                 float c_max = float.MinValue;
 
-                //Find the real target range. This is important because if we're 
+                //Find the real target range. This is important because if we're
                 //lower than the lowest token, we actually scale back to normal distribution
                 //likewise with max
                 for (int i = 0; i < candidateSpan.Length; i++)
@@ -133,14 +126,14 @@ namespace Llama.Core.Samplers.Mirostat
                         c_min = Math.Min(token.p, c_min);
                     }
 
-                    c_max = Math.Max(token.p, c_max);                
+                    c_max = Math.Max(token.p, c_max);
                 }
 
                 //clamp the target to the real range
                 c_target = Math.Max(c_target, c_min);
                 c_target = Math.Min(c_target, c_max);
 
-                //Find the difference total difference between the real target and 
+                //Find the difference total difference between the real target and
                 //each token
                 for (int i = 0; i < candidateSpan.Length; i++)
                 {
@@ -169,7 +162,7 @@ namespace Llama.Core.Samplers.Mirostat
 
             SamplingApi.TailFree(sampleContext.Candidates, _settings.Tfs, 1);
 
-            int selectedToken = this.SelectToken(sampleContext, _settings.PreserveWords, out bool topOnly);
+            int selectedToken = this.SelectToken(sampleContext, _settings.PreserveWordMinP, _settings.PreserveWordMaxP, out bool topOnly);
 
             // Compute error as the difference between observed surprise and target surprise value
 
@@ -185,17 +178,17 @@ namespace Llama.Core.Samplers.Mirostat
                     _target = Math.Clamp(_target, _settings.MinTarget, _settings.MaxTarget);
                 }
 
-                this.Push(this.GetOriginalData(sampleContext, selectedToken));
+                this.Push(sampleContext.GetOriginalData(selectedToken));
             }
 
             Debug.WriteLine($"[{sampleContext.ContextTokens.Trim().Count:00000}] [{ts}] ({selectedToken}) T: {_target:0.00}; Avg: {average:0.00}; {candidateBuilder}");
 
-            LlamaTokenData originalP = this.GetOriginalData(sampleContext, selectedToken);
-            LlamaTokenData current = this.GetData(sampleContext, selectedToken);
+            LlamaTokenData originalP = sampleContext.GetOriginalData(selectedToken);
+            LlamaTokenData current = sampleContext.GetData(selectedToken);
 
             if (originalP.p < this._settings.MinP)
             {
-                Debugger.Break();
+                Debug.WriteLine("Token below min-p selected");
             }
 
             return selectedToken;

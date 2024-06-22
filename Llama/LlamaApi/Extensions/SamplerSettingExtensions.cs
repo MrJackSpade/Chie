@@ -77,7 +77,12 @@ namespace LlamaApi.Extensions
                 return Construct<TfsSampler>(samplerSetting);
             }
 
-            throw new NotImplementedException();
+			if (samplerSetting.IsType<RepetitionBlockingSampler>())
+			{
+				return Construct<RepetitionBlockingSampler>(samplerSetting);
+			}
+
+			throw new NotImplementedException();
         }
 
         public static bool IsType<T>(this SamplerSetting samplerSetting)

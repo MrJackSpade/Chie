@@ -6,18 +6,22 @@ namespace ChieApi.CleanupPipeline
     {
         private const string END_CHARS = ".!?";
 
-        public string Clean(string content)
+        public IEnumerable<string> Clean(IEnumerable<string> contents)
         {
-            content = content.Replace("”", "\"");
-
-            int q_count = content.Count(c => c == '\"');
-
-            if (q_count % 2 == 1 && this.HasValidEnd(content))
+            foreach (string rcontent in contents)
             {
-                return content.Trim('\"');
-            }
+                string content = rcontent.Replace("”", "\"");
 
-            return content;
+                int q_count = content.Count(c => c == '\"');
+
+                if (q_count % 2 == 1 && this.HasValidEnd(content))
+                {
+                    yield return content.Trim('\"');
+                    continue;
+                }
+
+                yield return content;
+            }
         }
 
         private bool HasValidEnd(string content)

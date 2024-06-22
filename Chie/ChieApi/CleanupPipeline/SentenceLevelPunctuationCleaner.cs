@@ -56,50 +56,53 @@ namespace ChieApi.CleanupPipeline
         {
         }
 
-        public static string CorrectPunctuation(string text)
+        public static IEnumerable<string> CorrectPunctuation(IEnumerable<string> texts)
         {
-            // Splitting the text based on common punctuation
-            string[] sentences = Regex.Split(text, @"(?<=[.!?…])\s+");
-
-            // Iterate through the sentences and correct the punctuation
-            for (int i = 0; i < sentences.Length; i++)
+            foreach (string text in texts)
             {
-                string sentence = sentences[i].Trim();
+                // Splitting the text based on common punctuation
+                string[] sentences = Regex.Split(text, @"(?<=[.!?…])\s+");
 
-                string checkSentence = sentence;
-
-                if (sentence.ContainsAny('*', ','))
+                // Iterate through the sentences and correct the punctuation
+                for (int i = 0; i < sentences.Length; i++)
                 {
-                    int li = sentence.LastIndexOfAny('*', ',');
+                    string sentence = sentences[i].Trim();
 
-                    if (li != sentence.Length - 1)
+                    string checkSentence = sentence;
+
+                    if (sentence.ContainsAny('*', ','))
                     {
-                        checkSentence = checkSentence[(li + 1)..].Trim();
+                        int li = sentence.LastIndexOfAny('*', ',');
+
+                        if (li != sentence.Length - 1)
+                        {
+                            checkSentence = checkSentence[(li + 1)..].Trim();
+                        }
+                    }
+
+                    string firstWord = checkSentence.Split(' ')[0];
+
+                    // Check if the sentence is a question based on the first word
+                    if (Array.Exists(questionIdentifiers, word => word.Replace("'", "").Equals(firstWord.Replace("'", ""), StringComparison.OrdinalIgnoreCase)))
+                    {
+                        // Replace the last character with a question mark if it's not already one
+                        if (sentence[^1] != '?')
+                        {
+                            if (EndsWithPunctuation(sentences[i]))
+                            {
+                                sentences[i] = sentence[..^1] + "?";
+                            }
+                            else
+                            {
+                                sentences[i] = sentence + "?";
+                            }
+                        }
                     }
                 }
 
-                string firstWord = checkSentence.Split(' ')[0];
-
-                // Check if the sentence is a question based on the first word
-                if (Array.Exists(questionIdentifiers, word => word.Replace("'", "").Equals(firstWord.Replace("'", ""), StringComparison.OrdinalIgnoreCase)))
-                {
-                    // Replace the last character with a question mark if it's not already one
-                    if (sentence[^1] != '?')
-                    {
-                        if (EndsWithPunctuation(sentences[i]))
-                        {
-                            sentences[i] = sentence[..^1] + "?";
-                        }
-                        else
-                        {
-                            sentences[i] = sentence + "?";
-                        }
-                    }
-                }
+                // Join the corrected sentences back together
+                yield return string.Join(" ", sentences);
             }
-
-            // Join the corrected sentences back together
-            return string.Join(" ", sentences);
         }
 
         public static bool EndsWithPunctuation(string sentence)
@@ -116,11 +119,9 @@ namespace ChieApi.CleanupPipeline
             return punctuation.Contains(c);
         }
 
-        public string Clean(string content)
+        public IEnumerable<string> Clean(IEnumerable<string> content)
         {
-            string outstr = CorrectPunctuation(content);
-
-            return outstr;
+            return CorrectPunctuation(content);
         }
     }
 }

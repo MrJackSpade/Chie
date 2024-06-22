@@ -18,11 +18,9 @@ namespace ChieApi.CleanupPipeline
             _dictionaryService = dictionaryService;
         }
 
-        public string Clean(string sentence)
+        public IEnumerable<string> Clean(IEnumerable<string> sentence)
         {
-            string result = this.MergeWords(sentence);
-
-            return result;
+            return this.MergeWords(sentence);
         }
 
         /// <summary>
@@ -207,6 +205,11 @@ namespace ChieApi.CleanupPipeline
 
         public bool IsProbablyValidWord(string test)
         {
+            if (test == "-")
+            {
+                return true;
+            }
+
             foreach (string variation in this.GetWordVariations(test))
             {
                 if (this._dictionaryService.IsWord(variation))
@@ -243,68 +246,75 @@ namespace ChieApi.CleanupPipeline
             return false;
         }
 
-        public string MergeWords(string sentence)
+        public IEnumerable<string> MergeWords(IEnumerable<string> sentences)
         {
-            if (string.IsNullOrWhiteSpace(sentence))
+            foreach (string sentence in sentences)
             {
-                return sentence;
-            }
-
-            List<FoundWord> foundWords = this.FindWords(sentence).ToList();
-            List<FoundWord> healedWords = new();
-            //TODO: RemoveMe
-            List<string> words = this.GetWords(sentence, foundWords).ToList();
-
-            Dictionary<string, string> replacements = new();
-
-            for (int f = 0; f < foundWords.Count; f++)
-            {
-                FoundWord foundWord = foundWords[f];
-
-                //Skip if its probably already a word
-                if (this.IsProbablyValidWord(sentence, foundWord))
+                if (string.IsNullOrWhiteSpace(sentence))
                 {
+                    yield return sentence;
                     continue;
                 }
 
-                //skip if we've identified it as part of another word
-                if (healedWords.Contains(foundWord))
-                {
-                    continue;
-                }
-
-                List<List<FoundWord>> mergeCandidates = this.GetMergeCandidates(foundWords, f, this._distance);
-
-                mergeCandidates = mergeCandidates.Where(m => !m.Any(w => healedWords.Contains(w))).ToList();
-
-                List<FoundWord> bestMatch = this.FindFunctionalGroupings(sentence, mergeCandidates);
-
-                if (bestMatch != null)
-                {
-                    List<string> matchedWords = this.GetWords(sentence, bestMatch).ToList();
-
-                    string wordGroup = this.GetRange(sentence, bestMatch);
-
-                    string replacement = string.Join("", matchedWords);
-
-                    replacements.Add(wordGroup, replacement);
-
-                    healedWords.AddRange(bestMatch);
-                }
-
+                List<FoundWord> foundWords = this.FindWords(sentence).ToList();
+                List<FoundWord> healedWords = new();
                 //TODO: RemoveMe
-                List<List<string>> wordCandidates = this.GetWords(sentence, mergeCandidates).ToList();
+                List<string> words = this.GetWords(sentence, foundWords).ToList();
+
+                Dictionary<string, string> replacements = new();
+
+                for (int f = 0; f < foundWords.Count; f++)
+                {
+                    FoundWord foundWord = foundWords[f];
+
+                    //Skip if its probably already a word
+                    if (this.IsProbablyValidWord(sentence, foundWord))
+                    {
+                        continue;
+                    }
+
+                    //skip if we've identified it as part of another word
+                    if (healedWords.Contains(foundWord))
+                    {
+                        continue;
+                    }
+
+                    List<List<FoundWord>> mergeCandidates = this.GetMergeCandidates(foundWords, f, this._distance);
+
+                    mergeCandidates = mergeCandidates.Where(m => !m.Any(w => healedWords.Contains(w))).ToList();
+
+                    List<FoundWord> bestMatch = this.FindFunctionalGroupings(sentence, mergeCandidates);
+
+                    if (bestMatch != null)
+                    {
+                        List<string> matchedWords = this.GetWords(sentence, bestMatch).ToList();
+
+                        string wordGroup = this.GetRange(sentence, bestMatch);
+
+                        string replacement = string.Join("", matchedWords);
+
+                        if (!replacements.ContainsKey(wordGroup))
+                        {
+                            replacements.Add(wordGroup, replacement);
+                        }
+
+                        healedWords.AddRange(bestMatch);
+                    }
+
+                    //TODO: RemoveMe
+                    List<List<string>> wordCandidates = this.GetWords(sentence, mergeCandidates).ToList();
+                }
+
+                string toReturn = sentence;
+
+                //Replace longest to shortest so that subsequences don't break sequence replacement
+                foreach (KeyValuePair<string, string> pair in replacements.OrderByDescending(k => k.Value.Length))
+                {
+                    toReturn = toReturn.Replace(pair.Key, pair.Value);
+                }
+
+                yield return toReturn;
             }
-
-            string toReturn = sentence;
-
-            //Replace longest to shortest so that subsequences don't break sequence replacement
-            foreach (KeyValuePair<string, string> pair in replacements.OrderByDescending(k => k.Value.Length))
-            {
-                toReturn = toReturn.Replace(pair.Key, pair.Value);
-            }
-
-            return toReturn;
         }
 
         private List<FoundWord>? FindFunctionalGroupings(string sentence, List<List<FoundWord>> mergeCandidates)

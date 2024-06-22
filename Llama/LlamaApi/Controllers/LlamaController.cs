@@ -1,9 +1,5 @@
 using Llama.Core;
 using Llama.Core.Interfaces;
-using Llama.Core.Samplers.FrequencyAndPresence;
-using Llama.Core.Samplers.Mirostat;
-using Llama.Core.Samplers.Repetition;
-using Llama.Core.Samplers.Temperature;
 using Llama.Data.Collections;
 using Llama.Data.Interfaces;
 using Llama.Data.Models;
@@ -432,7 +428,7 @@ namespace LlamaApi.Controllers
 
         private IEnumerable<ISimpleSampler> GetSimpleSamplers(ContextRequest contextRequest)
         {
-            for(int i = 0; i < contextRequest.SamplerSettings.Length - 1; i++)
+            for (int i = 0; i < contextRequest.SamplerSettings.Length - 1; i++)
             {
                 SamplerSetting settings = contextRequest.SamplerSettings[i];
 

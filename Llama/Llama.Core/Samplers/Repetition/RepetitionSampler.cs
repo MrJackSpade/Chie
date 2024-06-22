@@ -9,17 +9,23 @@ namespace Llama.Core.Samplers.Repetition
 {
     public class RepetitionSampler : ISimpleSampler
     {
-        private readonly RepetitionSamplerSettings _settings;
-
         private readonly HashSet<int> _exclude = new();
+        private readonly HashSet<int> _include = new();
+
+        private readonly RepetitionSamplerSettings _settings;
 
         public RepetitionSampler(RepetitionSamplerSettings settings)
         {
             this._settings = settings;
 
-            foreach(int i in settings.Exclude)
+            foreach (int i in settings.Exclude)
             {
                 _exclude.Add(i);
+            }
+
+            foreach(int i in settings.Include)
+            {
+                _include.Add(i);
             }
         }
 
@@ -27,7 +33,7 @@ namespace Llama.Core.Samplers.Repetition
         {
             LlamaTokenCollection sampleTokens = sampleContext.ContextTokens.Trim();
 
-            LastTokens lastTokens = this.GetLastTokens(sampleTokens, this._settings.RepeatPenaltyWindow, _exclude);
+            LastTokens lastTokens = this.GetLastTokens(sampleTokens, this._settings.RepeatPenaltyWindow, _include, _exclude);
 
             SamplingApi.RepetitionPenalties(sampleContext.Candidates, lastTokens.Ids, this._settings.RepeatPenalty, _settings.FrequencyPenalty, _settings.PresencePenalty);
         }

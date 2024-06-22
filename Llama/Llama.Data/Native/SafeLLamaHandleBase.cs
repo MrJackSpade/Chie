@@ -26,6 +26,8 @@ namespace Llama.Data.Native
             this.SetHandle(handle);
         }
 
+        public IntPtr Handle => this.handle;
+
         public override bool IsInvalid => this.handle == IntPtr.Zero;
 
         public override string ToString() => $"0x{this.handle:x16}";

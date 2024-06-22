@@ -13,14 +13,17 @@ namespace ChieApi.TokenTransformers
 
         private const string VALID_ENDS = ":,";
 
+        private readonly int[] _returnChars = Array.Empty<int>();
+
+        private readonly int _eosTokenId = 0;
+
         private readonly LlamaTokenCache _tokenCache;
 
-        private readonly SpecialTokens _specialTokens;
-
-        public NewlineTransformer(SpecialTokens specialTokens, LlamaTokenCache tokenCache)
+        public NewlineTransformer(LlamaTokenCache tokenCache, int[] returnChars, int eosTokenId)
         {
-            _specialTokens = specialTokens;
             _tokenCache = tokenCache;
+            _returnChars = returnChars;
+            _eosTokenId = eosTokenId;
         }
 
         public bool IsListItem(string lastLine)
@@ -31,6 +34,47 @@ namespace ChieApi.TokenTransformers
         public bool IsValidEnd(string lastLine)
         {
             return VALID_ENDS.Contains(lastLine[^1]);
+        }
+
+        public async IAsyncEnumerable<LlamaToken?> TransformToken(InferenceEnumerator enumerator, IAsyncEnumerable<LlamaToken> selectedTokens)
+        {
+            string writtenTrimmed = enumerator.Enumerated.ToString()?.Trim();
+
+            if (string.IsNullOrWhiteSpace(writtenTrimmed))
+            {
+                await foreach (LlamaToken token in selectedTokens)
+                {
+                    yield return token;
+                }
+
+                yield break;
+            }
+
+            string[] lines = writtenTrimmed.CleanSplit().ToArray();
+
+            string lastLine = lines.Last();
+
+            bool isValidEnd = this.IsValidEnd(lastLine);
+            bool isListItem = this.IsListItem(lastLine);
+
+            await foreach (LlamaToken tVal in this.Split(selectedTokens))
+            {
+                if (_returnChars.Contains(tVal.Id))
+                {
+                    if (isValidEnd || isListItem)
+                    {
+                        yield return tVal;
+                    }
+                    else
+                    {
+                        yield return new LlamaToken(_eosTokenId, null);
+                    }
+                }
+                else
+                {
+                    yield return tVal;
+                }
+            }
         }
 
         private async IAsyncEnumerable<LlamaToken?> Split(IAsyncEnumerable<LlamaToken> source)
@@ -60,48 +104,6 @@ namespace ChieApi.TokenTransformers
                 else
                 {
                     yield return token;
-                }
-            }
-        }
-
-        public async IAsyncEnumerable<LlamaToken?> TransformToken(InferenceEnumerator enumerator, IAsyncEnumerable<LlamaToken> selectedTokens)
-        {
-
-            string writtenTrimmed = enumerator.Enumerated.ToString()?.Trim();
-
-            if (string.IsNullOrWhiteSpace(writtenTrimmed))
-            {
-                await foreach (LlamaToken token in selectedTokens)
-                {
-                    yield return token;
-                }
-
-                yield break;
-            }
-
-            string[] lines = writtenTrimmed.CleanSplit().ToArray();
-
-            string lastLine = lines.Last();
-
-            bool isValidEnd = this.IsValidEnd(lastLine);
-            bool isListItem = this.IsListItem(lastLine);
-
-            await foreach (LlamaToken tVal in this.Split(selectedTokens))
-            {
-                if (tVal.Id == _specialTokens.NewLine)
-                {
-                    if (isValidEnd || isListItem)
-                    {
-                        yield return tVal;
-                    }
-                    else
-                    {
-                        yield return new LlamaToken(_specialTokens.EOS, null);
-                    }
-                }
-                else
-                {
-                    yield return tVal;
                 }
             }
         }

@@ -9,16 +9,19 @@ namespace ChieApi.CleanupPipeline
             ["don;t"] = "don't"
         };
 
-        public string Clean(string content)
+        public IEnumerable<string> Clean(IEnumerable<string> contents)
         {
-            string toReturn = content;
-
-            foreach (KeyValuePair<string, string> pair in this._contractions)
+            foreach (string content in contents)
             {
-                toReturn = toReturn.Replace(pair.Key, pair.Value, StringComparison.OrdinalIgnoreCase);
-            }
+                string toReturn = content;
 
-            return toReturn;
+                foreach (KeyValuePair<string, string> pair in this._contractions)
+                {
+                    toReturn = toReturn.Replace(pair.Key, pair.Value, StringComparison.OrdinalIgnoreCase);
+                }
+
+                yield return toReturn;
+            }
         }
     }
 }

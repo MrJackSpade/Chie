@@ -11,6 +11,7 @@ using Llama.Data.Native;
 using Llama.Data.Scheduler;
 using Llama.Extensions;
 using Llama.Native;
+using System.Diagnostics;
 
 namespace Llama.Core
 {
@@ -28,9 +29,8 @@ namespace Llama.Core
 
         private readonly IList<ISimpleSampler> _simpleSamplers;
 
-        private readonly ITokenSelector _tokenSelector;
-
         private readonly PointerArraySynchronizer<LlamaToken> _synchronizer;
+        private readonly ITokenSelector _tokenSelector;
 
         public LlamaContextWrapper(IExecutionScheduler executionScheduler, SafeLlamaContextHandle handle, SafeLlamaModelHandle modelHandle, LlamaContextSettings settings, IEnumerable<ISimpleSampler> simpleSamplers, ITokenSelector tokenSelector)
         {
@@ -129,11 +129,19 @@ namespace Llama.Core
             logits.Add(logitRules.OfType<LogitBias>());
 
             LlamaTokenDataArray candidates = new(logits);
+			LlamaTokenDataArray originalCandidates = new(logits);
 
-            SamplingApi.SurpressNonEnglish(this.ModelHandle, candidates);
+			SamplingApi.SuppressNonEnglish(this.ModelHandle, candidates);
+
             SamplingApi.SoftMax(candidates);
+            SamplingApi.SoftMax(originalCandidates);
 
-            Dictionary<LlamaToken, float> no_penalize = logits.Extract(this.NoPenalize());
+            if (candidates.Data.Span[0].logit == 0)
+            {
+                Debugger.Break();   
+            }
+
+			Dictionary<LlamaToken, float> no_penalize = logits.Extract(this.NoPenalize());
 
             SampleContext sampleContext = new()
             {
@@ -141,12 +149,8 @@ namespace Llama.Core
                 ContextHandle = Handle,
                 ContextTokens = Evaluated,
                 ModelHandle = ModelHandle,
-                OriginalCandidates = new LlamaTokenData[candidates.Size]
-            };
-
-            SamplingApi.SoftMax(sampleContext.Candidates);
-            Span<LlamaTokenData> target = new(sampleContext.OriginalCandidates, 0, sampleContext.OriginalCandidates.Length);
-            sampleContext.Candidates.Data.Span.CopyTo(target);
+                OriginalCandidates = originalCandidates
+			};
 
             logitRules.StartClamp(sampleContext.Candidates);
 

@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Discord.Net" Version="3.10.0" />
+    <PackageReference Include="Discord.Net" Version="3.13.1" />
     <PackageReference Include="Loxifi.DictionaryFile" Version="0.1.0" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="7.0.1" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="7.0.0" />

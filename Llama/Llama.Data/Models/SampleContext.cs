@@ -13,6 +13,6 @@ namespace Llama.Data.Models
 
         public SafeLlamaModelHandle ModelHandle { get; set; }
 
-        public LlamaTokenData[] OriginalCandidates { get; set; }
+		public LlamaTokenDataArray OriginalCandidates { get; set; }
     }
 }

@@ -397,7 +397,7 @@ namespace DiscordGpt
 
                     if (typingResponse.IsTyping && !string.IsNullOrWhiteSpace(typingResponse.Content))
                     {
-                        if (_startVisible)
+                        if (true)
                         {
                             this._activeMessageContainer.Value?.SetContent(typingResponse.Content);
                         }

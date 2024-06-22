@@ -1,5 +1,4 @@
 ﻿using Llama.Core.Interfaces;
-using Llama.Data.Interfaces;
 using Llama.Data.Models;
 using Llama.Data.Models.Settings;
 using Llama.Native;

@@ -105,17 +105,17 @@ namespace ChieApi.TokenTransformers
 
         public async IAsyncEnumerable<LlamaToken> TransformToken(InferenceEnumerator enumerator, IAsyncEnumerable<LlamaToken> selectedTokens)
         {
-            string writtenTrimmed = enumerator.Enumerated.ToString()?.Trim() ?? string.Empty;
+            string written = enumerator.Enumerated.ToString() ?? string.Empty;
 
-            if (!string.IsNullOrWhiteSpace(writtenTrimmed) && writtenTrimmed[^1] == '*')
+            if (!string.IsNullOrWhiteSpace(written) && written[^1] == '*')
             {
-                bool inAsterisks = writtenTrimmed.Count(c => c == '*') % 2 == 1;
+                bool inAsterisks = written.Count(c => c == '*') % 2 == 1;
 
                 List<LlamaToken> lTokens = await selectedTokens.ToList();
 
                 LlamaToken firstToken = lTokens[0];
 
-                if (!inAsterisks && !string.IsNullOrWhiteSpace(firstToken.Value) && firstToken.Value[0] != ' ')
+                if (!inAsterisks && !string.IsNullOrWhiteSpace(firstToken.Value) && firstToken.Value[0] != ' ' && char.IsLetter(firstToken.Value[0]))
                 {
                     yield break;
                 }

@@ -34,27 +34,32 @@ namespace ChieApi.CleanupPipeline
             return print.ToString();
         }
 
-        public static string SplitAndRemoveDuplicates(string text)
+        public static IEnumerable<string> SplitAndRemoveDuplicates(IEnumerable<string> texts)
         {
-            // Splitting the text on any punctuation mark contained within ".?!"
-            string[] sentences = Regex.Split(text, @"(?<=[\.!\?])\s+");
-
-            // Removing any duplicate sentences (case-insensitive)
-            HashSet<string> uniqueSentences = new(StringComparer.OrdinalIgnoreCase);
-            List<string> result = new();
-            foreach (string sentence in sentences)
+            foreach (string rtext in texts)
             {
-                string fingerprint = GetFingerprint(sentence);
+                string text = rtext;
 
-                if (uniqueSentences.Add(fingerprint))
+                // Splitting the text on any punctuation mark contained within ".?!"
+                string[] sentences = Regex.Split(text, @"(?<=[\.!\?])\s+");
+
+                // Removing any duplicate sentences (case-insensitive)
+                HashSet<string> uniqueSentences = new(StringComparer.OrdinalIgnoreCase);
+
+                foreach (string sentence in sentences)
                 {
-                    result.Add(sentence.Trim());
-                }
-            }
+                    string fingerprint = GetFingerprint(sentence);
 
-            return string.Join(" ", result);
+                    if (!uniqueSentences.Add(fingerprint))
+                    {
+                        text = text.Replace(sentence, "");
+                    }
+                }
+
+                yield return text;
+            }
         }
 
-        public string Clean(string content) => SplitAndRemoveDuplicates(content);
+        public IEnumerable<string> Clean(IEnumerable<string> content) => SplitAndRemoveDuplicates(content);
     }
 }

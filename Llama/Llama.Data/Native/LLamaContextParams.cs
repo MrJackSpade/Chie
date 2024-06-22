@@ -3,123 +3,155 @@ using System.Runtime.InteropServices;
 
 namespace Llama.Data.Native
 {
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    public delegate bool GgmlBackendSchedEvalCallback(IntPtr tensor, bool ask, IntPtr userData);
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate bool GgmlAbortCallback(IntPtr userData);
 
-    /// <summary>
-    /// Represents the parameters for a llama context.
-    /// </summary>
-    [StructLayout(LayoutKind.Sequential)]
-    public struct LlamaContextParams
-    {
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate bool GgmlBackendSchedEvalCallback(IntPtr tensor, bool ask, IntPtr userData);
 
-        /// <summary>
-        /// RNG seed, -1 for random.
-        /// </summary>
-        public uint Seed;
+	/// <summary>
+	/// Represents the parameters for a llama context.
+	/// </summary>
+	[StructLayout(LayoutKind.Sequential)]
+	public struct LlamaContextParams
+	{
+		/// <summary>
+		/// RNG seed, -1 for random.
+		/// </summary>
+		public uint Seed;
 
-        /// <summary>
-        /// Text context, 0 = from model.
-        /// </summary>
-        public uint NCtx;
+		/// <summary>
+		/// Text context, 0 = from model.
+		/// </summary>
+		public uint NCtx;
 
-        /// <summary>
-        /// Prompt processing maximum batch size.
-        /// </summary>
-        public uint NBatch;
+		/// <summary>
+		/// Logical maximum batch size that can be submitted to llama_decode.
+		/// </summary>
+		public uint NBatch;
 
-        /// <summary>
-        /// Number of threads to use for generation.
-        /// </summary>
-        public uint NThreads;
+		/// <summary>
+		/// Physical maximum batch size.
+		/// </summary>
+		public uint NUBatch;
 
-        /// <summary>
-        /// Number of threads to use for batch processing.
-        /// </summary>
-        public uint NThreadsBatch;
+		/// <summary>
+		/// Max number of sequences (i.e. distinct states for recurrent models).
+		/// </summary>
+		public uint NSeqMax;
 
-        /// <summary>
-        /// RoPE scaling type, from `LlamaRopeScalingType`.
-        /// </summary>
-        public int RopeScalingType;
+		/// <summary>
+		/// Number of threads to use for generation.
+		/// </summary>
+		public uint NThreads;
 
-        /// <summary>
-        /// RoPE base frequency, 0 = from model.
-        /// </summary>
-        public float RopeFreqBase;
+		/// <summary>
+		/// Number of threads to use for batch processing.
+		/// </summary>
+		public uint NThreadsBatch;
 
-        /// <summary>
-        /// RoPE frequency scaling factor, 0 = from model.
-        /// </summary>
-        public float RopeFreqScale;
+		/// <summary>
+		/// RoPE scaling type, from `LlamaRopeScalingType`.
+		/// </summary>
+		public LlamaRopeScalingType RopeScalingType;
 
-        /// <summary>
-        /// YaRN extrapolation mix factor, NaN = from model.
-        /// </summary>
-        public float YarnExtFactor;
+		/// <summary>
+		/// Whether to pool (sum) embedding results by sequence id (ignored if no pooling layer).
+		/// </summary>
+		public LlamaPoolingType PoolingType;
 
-        /// <summary>
-        /// YaRN magnitude scaling factor.
-        /// </summary>
-        public float YarnAttnFactor;
+		/// <summary>
+		/// RoPE base frequency, 0 = from model.
+		/// </summary>
+		public float RopeFreqBase;
 
-        /// <summary>
-        /// YaRN low correction dim.
-        /// </summary>
-        public float YarnBetaFast;
+		/// <summary>
+		/// RoPE frequency scaling factor, 0 = from model.
+		/// </summary>
+		public float RopeFreqScale;
 
-        /// <summary>
-        /// YaRN high correction dim.
-        /// </summary>
-        public float YarnBetaSlow;
+		/// <summary>
+		/// YaRN extrapolation mix factor, negative = from model.
+		/// </summary>
+		public float YarnExtFactor;
 
-        /// <summary>
-        /// YaRN original context size.
-        /// </summary>
-        public uint YarnOrigCtx;
+		/// <summary>
+		/// YaRN magnitude scaling factor.
+		/// </summary>
+		public float YarnAttnFactor;
 
-        /// <summary>
-        ///
-        /// </summary>
-        public GgmlBackendSchedEvalCallback CbEval;
+		/// <summary>
+		/// YaRN low correction dim.
+		/// </summary>
+		public float YarnBetaFast;
 
-        /// <summary>
-        ///
-        /// </summary>
-        public IntPtr CbEvalUserData;
+		/// <summary>
+		/// YaRN high correction dim.
+		/// </summary>
+		public float YarnBetaSlow;
 
-        /// <summary>
-        ///
-        /// </summary>
-        public GgmlType TypeK;
+		/// <summary>
+		/// YaRN original context size.
+		/// </summary>
+		public uint YarnOrigCtx;
 
-        /// <summary>
-        ///
-        /// </summary>
-        public GgmlType TypeV;
+		/// <summary>
+		/// Defragment the KV cache if holes/size > thold, < 0 disabled (default).
+		/// </summary>
+		public float DefragThold;
 
-        /// <summary>
-        /// If true, use experimental mul_mat_q kernels (DEPRECATED - always true).
-        /// </summary>
-        [MarshalAs(UnmanagedType.I1)]
-        public bool MulMatQ;
+		/// <summary>
+		/// Callback for evaluation scheduling.
+		/// </summary>
+		public GgmlBackendSchedEvalCallback CbEval;
 
-        /// <summary>
-        /// The llama_eval() call computes all logits, not just the last one.
-        /// </summary>
-        [MarshalAs(UnmanagedType.I1)]
-        public bool LogitsAll;
+		/// <summary>
+		/// User data for the evaluation scheduling callback.
+		/// </summary>
+		public IntPtr CbEvalUserData;
 
-        /// <summary>
-        /// Embedding mode only.
-        /// </summary>
-        [MarshalAs(UnmanagedType.I1)]
-        public bool Embedding;
+		/// <summary>
+		/// Data type for K cache.
+		/// </summary>
+		public GgmlType TypeK;
 
-        /// <summary>
-        /// Embedding mode only.
-        /// </summary>
-        [MarshalAs(UnmanagedType.I1)]
-        public bool OffloadKQV;
-    }
+		/// <summary>
+		/// Data type for V cache.
+		/// </summary>
+		public GgmlType TypeV;
+
+		/// <summary>
+		/// The llama_decode() call computes all logits, not just the last one (DEPRECATED - set llama_batch.logits instead).
+		/// </summary>
+		[MarshalAs(UnmanagedType.I1)]
+		public bool LogitsAll;
+
+		/// <summary>
+		/// If true, extract embeddings (together with logits).
+		/// </summary>
+		[MarshalAs(UnmanagedType.I1)]
+		public bool Embeddings;
+
+		/// <summary>
+		/// Whether to offload the KQV ops (including the KV cache) to GPU.
+		/// </summary>
+		[MarshalAs(UnmanagedType.I1)]
+		public bool OffloadKQV;
+
+		/// <summary>
+		/// Whether to use flash attention.
+		/// </summary>
+		[MarshalAs(UnmanagedType.I1)]
+		public bool FlashAttn;
+
+		/// <summary>
+		/// Abort callback. If it returns true, execution of llama_decode() will be aborted. Currently works only with CPU execution.
+		/// </summary>
+		public GgmlAbortCallback AbortCallback;
+
+		/// <summary>
+		/// User data for the abort callback.
+		/// </summary>
+		public IntPtr AbortCallbackData;
+	}
 }

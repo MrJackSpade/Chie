@@ -33,7 +33,7 @@ namespace ChieApi.Models
 
             foreach (LlamaMessage lm in this.Messages.OfType<LlamaMessage>())
             {
-                string n_string = (await lm.UserName.Tokens).ToString();
+                string n_string = (await lm.Header.Tokens).ToString();
 
                 users.Add(n_string);
             }

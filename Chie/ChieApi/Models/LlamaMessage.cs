@@ -6,165 +6,167 @@ using Llama.Data.Models;
 
 namespace ChieApi.Models
 {
-    public class LlamaMessage : ITokenCollection
-    {
-        private readonly LlamaTokenCache _cache;
+	public class LlamaMessage : ITokenCollection
+	{
+		private readonly LlamaTokenCache _cache;
 
-        private LlamaTokenCollection? _tokens;
+		private LlamaTokenCollection? _tokens;
 
-        public LlamaMessage(string? userName, string? content, LlamaTokenType type, LlamaTokenCache cache)
-        {
-            if (string.IsNullOrEmpty(userName))
-            {
-                throw new ArgumentException($"'{nameof(userName)}' cannot be null or empty.", nameof(userName));
-            }
+		public LlamaMessage(string? header, string? content, string endOfText, LlamaTokenType type, LlamaTokenCache cache)
+		{
+			if (string.IsNullOrEmpty(header))
+			{
+				throw new ArgumentException($"'{nameof(header)}' cannot be null or empty.", nameof(header));
+			}
 
-            if (string.IsNullOrEmpty(content))
-            {
-                throw new ArgumentException($"'{nameof(content)}' cannot be null or empty.", nameof(content));
-            }
+			if (string.IsNullOrEmpty(content))
+			{
+				throw new ArgumentException($"'{nameof(content)}' cannot be null or empty.", nameof(content));
+			}
 
-            if (cache is null)
-            {
-                throw new ArgumentNullException(nameof(cache));
-            }
+			if (cache is null)
+			{
+				throw new ArgumentNullException(nameof(cache));
+			}
 
-            this.UserName = new(userName, cache, true);
-            this.Content = new(" " + content.Trim(), cache, false);
-            this.Type = type;
-            this._cache = cache;
-        }
+			this.EndOfText = new(endOfText, cache, true);
+			this.Header = new(header, cache, true);
+			this.Content = new(" " + content.Trim(), cache, false);
+			this.Type = type;
+			this._cache = cache;
+		}
 
-        public LlamaMessage(string? userName, IReadOnlyLlamaTokenCollection content, LlamaTokenType type, LlamaTokenCache cache)
-        {
-            if (string.IsNullOrEmpty(userName))
-            {
-                throw new ArgumentException($"'{nameof(userName)}' cannot be null or empty.", nameof(userName));
-            }
+		public LlamaMessage(string? userName, IReadOnlyLlamaTokenCollection content, string endOfText, LlamaTokenType type, LlamaTokenCache cache)
+		{
+			if (string.IsNullOrEmpty(userName))
+			{
+				throw new ArgumentException($"'{nameof(userName)}' cannot be null or empty.", nameof(userName));
+			}
 
-            if (content is null)
-            {
-                throw new ArgumentNullException(nameof(content));
-            }
+			if (content is null)
+			{
+				throw new ArgumentNullException(nameof(content));
+			}
 
-            if (cache is null)
-            {
-                throw new ArgumentNullException(nameof(cache));
-            }
+			if (cache is null)
+			{
+				throw new ArgumentNullException(nameof(cache));
+			}
 
-            if (!content.ToString().StartsWith(" "))
-            {
-                throw new ArgumentException($"{nameof(LlamaMessage)} content must start with space to properly tokenize");
-            }
+			this.EndOfText = new(endOfText, cache, true);
+			this.Header = new(userName, cache, true);
+			this.Content = new(content);
+			this.Type = type;
+			this._cache = cache;
+		}
 
-            this.UserName = new(userName, cache, true);
-            this.Content = new(content);
-            this.Type = type;
-            this._cache = cache;
-        }
+		public LlamaMessage(IReadOnlyLlamaTokenCollection header, IReadOnlyLlamaTokenCollection content, IReadOnlyLlamaTokenCollection? endOfText, LlamaTokenType type, LlamaTokenCache cache)
+		{
+			if (header is null)
+			{
+				throw new ArgumentNullException(nameof(header));
+			}
 
-        public LlamaMessage(IReadOnlyLlamaTokenCollection userName, IReadOnlyLlamaTokenCollection content, LlamaTokenType type, LlamaTokenCache cache)
-        {
-            if (userName is null)
-            {
-                throw new ArgumentNullException(nameof(userName));
-            }
+			if (content is null)
+			{
+				throw new ArgumentNullException(nameof(content));
+			}
 
-            if (content is null)
-            {
-                throw new ArgumentNullException(nameof(content));
-            }
+			if (endOfText is not null)
+			{
+				this.EndOfText = new(endOfText);
+			}
 
-            this.UserName = new(userName);
-            this.Content = new(content);
-            this.Type = type;
-            this._cache = cache;
-        }
+			this.Header = new(header);
+			this.Content = new(content);
+			this.Type = type;
+			this._cache = cache;
+		}
 
-        public LlamaMessage(CachedTokenCollection userName, IReadOnlyLlamaTokenCollection content, LlamaTokenType type, LlamaTokenCache cache)
-        {
-            if (userName is null)
-            {
-                throw new ArgumentNullException(nameof(userName));
-            }
+		public LlamaMessage(CachedTokenCollection header, IReadOnlyLlamaTokenCollection content, CachedTokenCollection endOfText, LlamaTokenType type, LlamaTokenCache cache)
+		{
+			if (header is null)
+			{
+				throw new ArgumentNullException(nameof(header));
+			}
 
-            if (content is null)
-            {
-                throw new ArgumentNullException(nameof(content));
-            }
+			if (content is null)
+			{
+				throw new ArgumentNullException(nameof(content));
+			}
 
-            this.UserName = userName;
-            this.Content = new(content);
-            this.Type = type;
-            this._cache = cache;
-        }
+			this.EndOfText = endOfText;
+			this.Header = header;
+			this.Content = new(content);
+			this.Type = type;
+			this._cache = cache;
+		}
 
-        public LlamaMessage(CachedTokenCollection userName, CachedTokenCollection content, LlamaTokenType type, LlamaTokenCache cache)
-        {
-            if (userName is null)
-            {
-                throw new ArgumentNullException(nameof(userName));
-            }
+		public LlamaMessage(CachedTokenCollection userName, CachedTokenCollection content, LlamaTokenType type, LlamaTokenCache cache)
+		{
+			if (userName is null)
+			{
+				throw new ArgumentNullException(nameof(userName));
+			}
 
-            if (content is null)
-            {
-                throw new ArgumentNullException(nameof(content));
-            }
+			if (content is null)
+			{
+				throw new ArgumentNullException(nameof(content));
+			}
 
-            this.UserName = userName;
-            this.Content = content;
-            this.Type = type;
-            this._cache = cache;
-        }
+			this.Header = userName;
+			this.Content = content;
+			this.Type = type;
+			this._cache = cache;
+		}
 
-        public LlamaMessage(IReadOnlyLlamaTokenCollection userName, CachedTokenCollection content, LlamaTokenType type, LlamaTokenCache cache)
-        {
-            if (userName is null)
-            {
-                throw new ArgumentNullException(nameof(userName));
-            }
+		public LlamaMessage(IReadOnlyLlamaTokenCollection userName, CachedTokenCollection content, LlamaTokenType type, LlamaTokenCache cache)
+		{
+			if (userName is null)
+			{
+				throw new ArgumentNullException(nameof(userName));
+			}
 
-            if (content is null)
-            {
-                throw new ArgumentNullException(nameof(content));
-            }
+			if (content is null)
+			{
+				throw new ArgumentNullException(nameof(content));
+			}
 
-            this.UserName = new(userName);
-            this.Content = content;
-            this.Type = type;
-            this._cache = cache;
-        }
+			this.Header = new(userName);
+			this.Content = content;
+			this.Type = type;
+			this._cache = cache;
+		}
 
-        public CachedTokenCollection Content { get; }
+		public CachedTokenCollection Content { get; }
 
-        public long Id { get; set; }
+		public long Id { get; set; }
 
-        public LlamaTokenType Type { get; }
+		public LlamaTokenType Type { get; }
 
-        public CachedTokenCollection UserName { get; }
+		public CachedTokenCollection Header { get; }
 
-        public async IAsyncEnumerator<LlamaToken> GetAsyncEnumerator(CancellationToken cancellationToken = default)
-        {
-            await this.EnsureTokens();
+		public CachedTokenCollection EndOfText { get; }
+		public async IAsyncEnumerator<LlamaToken> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+		{
+			await this.EnsureTokens();
 
-            foreach (LlamaToken token in this._tokens!)
-            {
-                yield return token;
-            }
-        }
+			foreach (LlamaToken token in this._tokens!)
+			{
+				yield return token;
+			}
+		}
 
-        private async Task EnsureTokens()
-        {
-            if (this._tokens == null)
-            {
-                LlamaTokenCollection tokens = new();
-                await tokens.Append(_cache.Get("|", true));
-                await tokens.Append(this.UserName);
-                await tokens.Append(_cache.Get(":", true));
-                await tokens.Append(this.Content);
-
-                this._tokens = tokens;
-            }
-        }
-    }
+		private async Task EnsureTokens()
+		{
+			if (this._tokens == null)
+			{
+				LlamaTokenCollection tokens = new();
+				await tokens.Append(this.Header);
+				await tokens.Append(this.Content);
+				await tokens.Append(this.EndOfText);
+				this._tokens = tokens;
+			}
+		}
+	}
 }

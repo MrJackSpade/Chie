@@ -1,14 +1,20 @@
-﻿namespace Llama.Data.Models.Settings
+﻿
+namespace Llama.Data.Models.Settings
 {
     public class RepetitionSamplerSettings
     {
         /// <summary>
-        /// Default 0
+        /// Exclude from penalty
+        /// </summary>
+        public int[] Exclude { get; set; } = Array.Empty<int>();
+
+        /// <summary>
+        /// A cumulative penalty applied for each instance of a token. Default 0
         /// </summary>
         public float FrequencyPenalty { get; set; } = 0.00f;
 
         /// <summary>
-        /// Default 0
+        /// A static value applied if a token is found any number of times within the range.
         /// </summary>
         public float PresencePenalty { get; set; } = 0.00f;
 
@@ -23,8 +29,8 @@
         public int RepeatPenaltyWindow { get; set; } = 64;
 
         /// <summary>
-        /// Exclude from penalty
+        /// If provided, sampler only includes contained tokens
         /// </summary>
-        public int[] Exclude { get; set; } = Array.Empty<int>();
+        public int[] Include { get; set; } = Array.Empty<int>();
     }
 }

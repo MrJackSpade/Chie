@@ -51,9 +51,10 @@ namespace ChieApi.Models
 
                 if (collection is LlamaMessage lm)
                 {
-                    blockState.UserName = await lm.UserName.ToStateList();
+                    blockState.Header = await lm.Header.ToStateList();
                     blockState.Content = await lm.Content.ToStateList();
-                    blockState.TokenBlockType = TokenBlockType.Message;
+					blockState.MessageSuffix = await lm.EndOfText.ToStateList();
+					blockState.TokenBlockType = TokenBlockType.Message;
                 }
                 else if (collection is LlamaTokenBlock bl)
                 {
@@ -116,8 +117,9 @@ namespace ChieApi.Models
                 {
                     case TokenBlockType.Message:
                         toReturn.Messages.Add(new LlamaMessage(
-                            message.UserName.ToCollection(),
+                            message.Header.ToCollection(),
                             message.Content.ToCollection(),
+                            message.MessageSuffix.ToCollection(),
                             message.Type,
                             cache)
                         { Id = message.Id });
@@ -152,12 +154,16 @@ namespace ChieApi.Models
     {
         public List<LlamaTokenState> Content { get; set; } = new();
 
-        public long Id { get; set; }
+		public List<LlamaTokenState> MessagePrefix { get; set; } = new();
+
+		public List<LlamaTokenState> MessageSuffix { get; set; } = new();
+
+		public long Id { get; set; }
 
         public TokenBlockType TokenBlockType { get; set; }
 
         public LlamaTokenType Type { get; set; }
 
-        public List<LlamaTokenState> UserName { get; set; } = new();
+        public List<LlamaTokenState> Header { get; set; } = new();
     }
 }

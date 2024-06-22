@@ -4,9 +4,16 @@ using System.Text.RegularExpressions;
 
 namespace ChieApi.CleanupPipeline
 {
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0022:Use expression body for method", Justification = "<Pending>")]
     public class PunctuationCleaner : ITextCleaner
     {
+        private static readonly Dictionary<char, char[]> punctuationOrdering = new()
+        {
+            ['.'] = new char[] { '.' },
+            ['!'] = new char[] { '!' },
+            ['?'] = new char[] { '?', '!' },
+            [','] = Array.Empty<char>()
+        };
+
         public static string IncreaseAndSpacePeriod(string input)
         {
             return Regex.Replace(input, @"([a-zA-Z]{2})\.{2,3} ?([a-zA-Z]|$)", "$1... $2");
@@ -43,6 +50,11 @@ namespace ChieApi.CleanupPipeline
                 s = s.Replace("* *", "*");
             }
 
+            while (s.Contains("\n\n\n"))
+            {
+                s = s.Replace("\n\n\n", "\n\n");
+            }
+
             s = RemoveTrailingAsterisk(s);
 
             s = s.TrimStart('?');
@@ -50,6 +62,32 @@ namespace ChieApi.CleanupPipeline
             s = s.TrimStart('.');
 
             return s;
+        }
+
+        public static string OrderedPunctuation(string input)
+        {
+            StringBuilder output = new();
+
+            char lastChar = '\0';
+
+            foreach (char c in input)
+            {
+                if (lastChar != '\0')
+                {
+                    if (punctuationOrdering.TryGetValue(lastChar, out char[]? valueFollows) && punctuationOrdering.TryGetValue(c, out _))
+                    {
+                        if (!valueFollows.Contains(c))
+                        {
+                            continue;
+                        }
+                    }
+                }
+
+                lastChar = c;
+                output.Append(c);
+            }
+
+            return output.ToString();
         }
 
         public static string PadCommas(string input)
@@ -77,54 +115,23 @@ namespace ChieApi.CleanupPipeline
             return input;
         }
 
-        public static string OrderedPunctuation(string input)
+        public IEnumerable<string> Clean(IEnumerable<string> contents)
         {
-            StringBuilder output = new();
-
-            char lastChar = '\0';
-
-            foreach (char c in input)
+            foreach (string content in contents)
             {
-                if(lastChar != '\0')
-                {
-                    if(punctuationOrdering.TryGetValue(lastChar, out char[]? valueFollows) && punctuationOrdering.TryGetValue(c, out _))
-                    {
-                        if(!valueFollows.Contains(c))
-                        {
-                            continue;
-                        }
-                    }
-                }
+                string s = content;
 
-                lastChar = c;
-                output.Append(c);
+                s = PadCommas(s);
+                s = IncreaseAndSpacePeriod(s);
+                s = ReduceApostrophe(s);
+                s = ReduceAndSpace(s, '?');
+                s = ReduceAndSpace(s, '!');
+                s = ReduceAndSpace(s, ',');
+                s = Misc(s);
+                s = s.Trim();
+
+                yield return s;
             }
-
-            return output.ToString();
-        }
-
-        static readonly Dictionary<char, char[]> punctuationOrdering = new()
-        {
-            ['.'] = new char[] { '.' },
-            ['!'] = new char[] { '!' },
-            ['?'] = new char[] { '?', '!' },
-            [','] = Array.Empty<char>()
-        };
-
-        public string Clean(string content)
-        {
-            string s = content;
-
-            s = PadCommas(s);
-            s = IncreaseAndSpacePeriod(s);
-            s = ReduceApostrophe(s);
-            s = ReduceAndSpace(s, '?');
-            s = ReduceAndSpace(s, '!');
-            s = ReduceAndSpace(s, ',');
-            s = Misc(s);
-            s = s.Trim();
-
-            return s;
         }
     }
 }

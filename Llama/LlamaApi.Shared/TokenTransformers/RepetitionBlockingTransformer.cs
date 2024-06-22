@@ -58,7 +58,7 @@ namespace ChieApi.TokenTransformers
             {
                 string? newTokenString = tVal?.ToString();
 
-                if (String.IsNullOrEmpty(newTokenString))
+                if (string.IsNullOrEmpty(newTokenString))
                 {
                     yield return tVal;
                     continue;

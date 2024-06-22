@@ -1,23 +1,34 @@
-﻿using System.Runtime.InteropServices;
+﻿using Llama.Data.Enums;
+using System.Runtime.InteropServices;
 
 namespace Llama.Data.Native
 {
-    [StructLayout(LayoutKind.Sequential)]
-    public struct LlamaKvCache
-    {
-        public bool has_shift;
+	[StructLayout(LayoutKind.Sequential)]
+	public struct LlamaKvCache
+	{
+		[MarshalAs(UnmanagedType.I1)]
+		public bool HasShift;
 
-        public uint head;
+		[MarshalAs(UnmanagedType.I1)]
+		public bool DoDefrag;
 
-        public uint size;
+		[MarshalAs(UnmanagedType.I1)]
+		public bool DoCopy;
 
-        public uint used;
+		[MarshalAs(UnmanagedType.I1)]
+		public bool Recurrent;
 
-        public uint n;
+		[MarshalAs(UnmanagedType.I1)]
+		public bool VTrans;  // The value tensor is transposed
 
-        // This is where it gets tricky. We'll use a pointer for direct memory access:
-        public IntPtr cellsPointer; // Points to the std::vector data in memory.
+		public uint Head;
+		public uint Size;
+		public uint Used;
+		public uint N;
+		public GgmlType TypeK;
+		public GgmlType TypeV;
 
-        // Ignoring other fields since you mentioned not needing them.
-    }
+		// This is where it gets tricky. We'll use a pointer for direct memory access:
+		public IntPtr CellsPointer; // Points to the std::vector data in memory.
+	}
 }

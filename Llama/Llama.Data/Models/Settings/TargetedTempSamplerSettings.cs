@@ -1,6 +1,6 @@
-﻿namespace Llama.Core.Samplers.Mirostat
+﻿namespace Llama.Data.Models.Settings
 {
-    public class TargetedTempSamplerSettings
+    public class TargetedTempSamplerSettings : BaseDynamicSamplerSettings
     {
         /// <summary>
         /// If true, Mirostat will use preserved words to adjust the temperature.
@@ -10,11 +10,6 @@
         public bool FactorPreservedWords { get; set; } = false;
 
         /// <summary>
-        /// Exclude specific tokens from greedy sampling
-        /// </summary>
-        public int[] GreedyExclude { get; set; } = Array.Empty<int>();
-
-        /// <summary>
         ///
         /// </summary>
         public float MaxTarget { get; set; } = 1f;
@@ -22,24 +17,27 @@
         /// <summary>
         /// Min probability across all tokens
         /// </summary>
-        public float MinP { get; set; } = 0.03f;
+        public float MinP { get; set; } = 0.05f;
 
-        /// <summary>
-        /// Minimum value that will allow a return for the EOS token
-        /// </summary>
-        public Dictionary<int, float> MinPs { get; set; } = new Dictionary<int, float>();
+		/// <summary>
+		///
+		/// </summary>
+		public float MinTarget { get; set; } = 0f;
 
-        /// <summary>
-        ///
-        /// </summary>
-        public float MinTarget { get; set; } = 0f;
+		/// <summary>
+		/// The min probability for any word continuation
+		/// </summary>
+		public float PreserveWordMinP { get; set; } = .2f;
 
-        /// <summary>
-        /// If true, Mirostat will only use TOPK sampling for new words
-        /// </summary>
-        public bool PreserveWords { get; set; } = true;
+		/// <summary>
+		/// The certainty at which word continuations are greedy sampled
+		/// </summary>
+		public float PreserveWordMaxP { get; set; } = .8f;
 
-        public int QueueSize { get; set; } = 3;
+		/// <summary>
+		/// Size of the token queue for dynamic adjustment
+		/// </summary>
+		public int QueueSize { get; set; } = 10;
 
         /// <summary>
         /// If true, Mirostat will only use TOPK sampling for new words

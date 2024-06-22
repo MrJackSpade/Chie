@@ -18,21 +18,15 @@ namespace LlamaApiClient
 {
     public class LlamaClient
     {
-        private readonly SamplerSetting[] _samplerSettings;
-
         private readonly LlamaContextSettings _contextSettings;
-
         private readonly LogitRuleCollection _logitRules = new();
-
         private readonly Guid _modelGuid = Guid.Empty;
-
         private readonly LlamaModelSettings _modelSettings;
-
+        private readonly List<object> _queuedRequests;
+        private readonly SamplerSetting[] _samplerSettings;
         private readonly JsonSerializerOptions _serializerOptions;
 
         private readonly LlamaClientSettings _settings;
-
-        private readonly List<object> _queuedRequests;
 
         public LlamaClient(LlamaClientSettings settings, LlamaContextSettings contextSettings, LlamaModelSettings modelSettings, SamplerSetting[] samplerSettings)
         {

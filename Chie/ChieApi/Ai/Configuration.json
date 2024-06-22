@@ -8,5 +8,6 @@
   "MemoryMode": "Float16",
   "UseSessionData": false,
   "Threads": 20,
-  "StartVisible": true
+  "StartVisible": true,
+  "ResponseLengthAdjust": 0
 }

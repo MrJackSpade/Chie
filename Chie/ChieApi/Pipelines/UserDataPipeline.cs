@@ -113,7 +113,7 @@ namespace ChieApi.Pipelines
 
                 if (minutes > 60)
                 {
-                    return new TextResult($"[{displayName} returns]", LlamaTokenType.Input);
+                    return new TextResult($"[{displayName} logs in]", LlamaTokenType.Input);
                 }
             }
 

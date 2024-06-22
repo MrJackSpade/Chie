@@ -1,9 +1,13 @@
 ﻿using Llama.Data.Native;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace Llama.Native
 {
     public unsafe class SamplingApi
     {
+        private static readonly ConcurrentDictionary<IntPtr, ConcurrentDictionary<int, string>> _tokenToPieceCache = new();
+
         public static bool ContainsNonEnglishCharacters(string input)
         {
             // Iterate through each character in the string
@@ -74,6 +78,7 @@ namespace Llama.Native
 
             // Create a frequency map
             Dictionary<int, FoundTokenData> tokenCount = new();
+
             for (int i = 0; i < lastTokens.Length; i++)
             {
                 if (!tokenCount.TryGetValue(lastTokens[i], out FoundTokenData ftd))
@@ -109,7 +114,9 @@ namespace Llama.Native
                     }
                 }
 
-                candidates.Data.Span[i].logit -= ftd.Count * penaltyFreq + (ftd.Count > 0 ? 1f : 0f) * penaltyPresent;
+                float penalty = ftd.Count * penaltyFreq + (ftd.Count > 0 ? 1f : 0f) * penaltyPresent;
+
+                candidates.Data.Span[i].logit -= penalty;
             }
 
             candidates.Sorted = false;
@@ -188,34 +195,40 @@ namespace Llama.Native
 
         public static void SurpressNewline(SafeLlamaModelHandle handle, LlamaTokenDataArray candidates)
         {
-            for (int i = 0; i < candidates.Data.Length; i++)
-            {
-                LlamaTokenData token = candidates.Data.Span[i];
-
-                string value = NativeApi.TokenToPiece(handle, token.id);
-
-                if (value.Contains('\n') && value != "\n")
+            Parallel.For(
+                0,
+                candidates.Data.Length,
+                i =>
                 {
-                    candidates.Data.Span[i].logit = float.NegativeInfinity;
-                }
-            }
+                    LlamaTokenData token = candidates.Data.Span[i];
+
+                    bool isValid = TryTokenToPiece(handle, token.id, out string result) && (!result.Contains('\n') || result == "\n");
+
+                    if (!isValid)
+                    {
+                        candidates.Data.Span[i].logit = float.NegativeInfinity;
+                    }
+                });
 
             candidates.Sorted = false;
         }
 
-        public static void SurpressNonEnglish(SafeLlamaModelHandle handle, LlamaTokenDataArray candidates)
+        public static void SuppressNonEnglish(SafeLlamaModelHandle handle, LlamaTokenDataArray candidates)
         {
-            for (int i = 0; i < candidates.Data.Length; i++)
+            Parallel.For(
+                0,
+                candidates.Data.Length,
+                i =>
             {
                 LlamaTokenData token = candidates.Data.Span[i];
 
-                string value = NativeApi.TokenToPiece(handle, token.id);
+                bool isValid = TryTokenToPiece(handle, token.id, out string result) && !ContainsNonEnglishCharacters(result);
 
-                if (ContainsNonEnglishCharacters(value))
+                if (!isValid)
                 {
                     candidates.Data.Span[i].logit = float.NegativeInfinity;
                 }
-            }
+            });
 
             candidates.Sorted = false;
         }
@@ -488,6 +501,33 @@ namespace Llama.Native
                     secondDerivatives[i] = equalValue;
                 }
             }
+        }
+
+        private static bool TryTokenToPiece(SafeLlamaModelHandle handle, int tokenId, out string result)
+        {
+            bool toReturn = false;
+
+            if (!_tokenToPieceCache.TryGetValue(handle.Handle, out ConcurrentDictionary<int, string> modelTokens))
+            {
+                modelTokens = new ConcurrentDictionary<int, string>();
+                _tokenToPieceCache[handle.Handle] = modelTokens;
+            }
+
+            if (!modelTokens.TryGetValue(tokenId, out result))
+            {
+                try
+                {
+                    result = NativeApi.TokenToPiece(handle, tokenId);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex.Message);
+                }
+
+                modelTokens.TryAdd(tokenId, result);
+            }
+
+            return result != null;
         }
 
         private class FoundTokenData

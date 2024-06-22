@@ -25,26 +25,35 @@ namespace ChieApi.CleanupPipeline
             }
         }
 
-        public string Clean(string content)
+        public IEnumerable<string> Clean(IEnumerable<string> contents)
         {
-            string cleanedContent = content;
-
-            foreach (string word in this._dictionaryService.BreakWords(content))
+            foreach (string rcontent in contents)
             {
-                if (!this._dictionaryService.IsWord(word))
+                string content = rcontent;
+                string cleanedContent = content;
+
+                foreach (string word in this._dictionaryService.BreakWords(content))
                 {
-                    List<string> subsequences = this.FindSubsequences(word);
-
-                    if (subsequences.Count > 1)
+                    if (!string.IsNullOrWhiteSpace(word) && char.IsUpper(word[0]))
                     {
-                        string replacement = string.Join(" ", subsequences);
+                        continue;
+                    }
 
-                        cleanedContent = cleanedContent.Replace(word, replacement);
+                    if (!this._dictionaryService.IsWord(word))
+                    {
+                        List<string> subsequences = this.FindSubsequences(word);
+
+                        if (subsequences.Count > 1)
+                        {
+                            string replacement = string.Join(" ", subsequences);
+
+                            cleanedContent = cleanedContent.Replace(word, replacement);
+                        }
                     }
                 }
-            }
 
-            return cleanedContent;
+                yield return cleanedContent;
+            }
         }
 
         public List<string> FindSubsequences(string sequence)

@@ -16,9 +16,8 @@ namespace LlamaApiClient
 
         private readonly Func<LogitRuleCollection, Task<ResponseLlamaToken>> _moveNext;
 
-        private int _moveBack = 0;
-
         private readonly SpecialTokens _specialTokens;
+        private int _moveBack = 0;
 
         public InferenceEnumerator(SpecialTokens specialTokens, Func<LogitRuleCollection, Task<ResponseLlamaToken>> moveNext, Func<RequestLlamaToken, Task> accept, LogitRuleCollection ruleCollection)
         {

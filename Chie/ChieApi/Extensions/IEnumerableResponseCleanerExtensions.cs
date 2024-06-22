@@ -4,16 +4,19 @@ namespace ChieApi.Extensions
 {
     public static class IEnumerableResponseCleanerExtensions
     {
-        public static string Clean(this IEnumerable<ITextCleaner> responseCleaners, string toClean)
+        public static IEnumerable<string> Clean(this IEnumerable<ITextCleaner> responseCleaners, string toClean)
         {
-            string input = toClean;
+            IEnumerable<string> output = new List<string>()
+            {
+                toClean
+            };
 
             foreach (ITextCleaner responseCleaner in responseCleaners)
             {
-                input = responseCleaner.Clean(input);
+                output = responseCleaner.Clean(output);
             }
 
-            return input;
+            return output.ToList();
         }
     }
 }

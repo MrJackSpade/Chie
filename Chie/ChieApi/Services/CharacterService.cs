@@ -1,4 +1,6 @@
 ﻿using ChieApi.Extensions;
+using Loxifi;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -79,7 +81,24 @@ namespace ChieApi.Services
             {
                 string thisConfigPath = configPaths.Pop();
 
-                string configContent = File.ReadAllText(thisConfigPath);
+                StringBuilder uncommented = new();
+
+                foreach(string line in File.ReadAllLines(thisConfigPath))
+                {
+                    string pline = line;
+
+                    if(!line.Trim().StartsWith("//"))
+                    {
+                        if(line.Contains("//"))
+                        {
+                            pline = pline.To("//")!;
+                        }
+
+                        uncommented.AppendLine(pline);
+                    }
+                }
+
+                string configContent = uncommented.ToString();
 
                 JsonObject cObject = (JsonObject)JsonNode.Parse(configContent);
 

@@ -2,6 +2,6 @@
 {
     public interface ITextCleaner
     {
-        string Clean(string content);
+        IEnumerable<string> Clean(IEnumerable<string> content);
     }
 }

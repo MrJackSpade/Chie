@@ -8,6 +8,7 @@ using ChieApi.Samplers;
 using ChieApi.Shared.Entities;
 using ChieApi.Shared.Services;
 using ChieApi.TokenTransformers;
+using ChieApi.Utils;
 using Llama.Data.Collections;
 using Llama.Data.Extensions;
 using Llama.Data.Interfaces;
@@ -35,7 +36,11 @@ namespace ChieApi.Services
 
         public const float TRIM_TO = 0.85f;
 
+        private readonly CappedQueue<LlamaToken> _lookbackBlock;
+
         private readonly AutoResetEvent _acceptingInput = new(false);
+
+        private readonly List<IBiasAdjustor> _biasAdjustors;
 
         private readonly CharacterConfiguration _characterConfiguration;
 
@@ -53,13 +58,13 @@ namespace ChieApi.Services
 
         private readonly List<IPostAccept> _postAccept;
 
-        private readonly SpecialTokens _specialTokens;
-
         private readonly AutoResetEventWithData<ProcessInputData> _processingInput = new(false);
 
         private readonly List<ITextCleaner> _responseCleaners;
 
-        private readonly List<IBiasAdjustor> _biasAdjustors;
+        private readonly ResponseLengthManager _responseLengthManager;
+
+        private readonly SpecialTokens _specialTokens;
 
         private readonly LlamaTokenCache _tokenCache;
 
@@ -73,12 +78,11 @@ namespace ChieApi.Services
 
         private float _responseLengthBias = 0f;
 
-        private readonly ResponseLengthManager _responseLengthManager;
-
         public LlamaService(UserDataRepository userDataService, DictionaryRepository dictionaryService, CharacterConfiguration characterConfiguration, LlamaClient client, LlamaContextModel contextModel, LlamaTokenCache llamaTokenCache, ILogger logger, ChatRepository chatService, LogitService logitService)
         {
             _userDataService = userDataService;
             _client = client;
+            _lookbackBlock = new CappedQueue<LlamaToken>(characterConfiguration.LookbackBlock);
             _logitService = logitService;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _chatService = chatService ?? throw new ArgumentNullException(nameof(chatService));
@@ -94,20 +98,16 @@ namespace ChieApi.Services
 
             _biasAdjustors = new List<IBiasAdjustor>()
             {
-                new NewlineEnsureSampler(llamaTokenCache, _specialTokens),
-                new RepetitionBlockingSampler(3)
             };
 
-            _responseLengthManager = new(1000, MAX_RESPONSE, MIN_RESPONSE, 0, ".!?…*", dictionaryService, _specialTokens);
+            if (characterConfiguration.ManageResponseLength)
+            {
+                _responseLengthManager = new(1000, MAX_RESPONSE, MIN_RESPONSE, 0, ".!?…*", dictionaryService, _specialTokens);
+            }
 
             _transformers = new List<ITokenTransformer>()
             {
-                new SpaceStartTransformer(),
-                new NewlineTransformer(_specialTokens, _tokenCache),
-                _responseLengthManager,
-                new RepetitionBlockingTransformer(3),
-                new InvalidCharacterBlockingTransformer(),
-                new RoleplayEnforcingTransformer(0, 0 ,0, _tokenCache)
+                new InvalidCharacterBlockingTransformer()
             };
 
             _inputCleaner = new List<ITextCleaner>()
@@ -118,23 +118,63 @@ namespace ChieApi.Services
             _responseCleaners = new List<ITextCleaner>()
             {
                 new InvalidContractionsCleaner(),
-                new SpellingCleaner(dictionaryService),
                 new DanglingQuoteCleaner(),
                 new PunctuationCleaner(),
-                new UnbrokenWordsCleaner(dictionaryService, 2),
-                new BrokenWordsCleaner(dictionaryService, 3),
-                new SentenceLevelPunctuationCleaner(),
                 new DuplicateSentenceRemover(),
-                new AsteriskSpacingCleaner(),
-                _responseLengthManager
+                new AsteriskSpacingCleaner()
             };
 
             _postAccept = new List<IPostAccept>()
             {
                 new AsteriskAlignmentTransformer(_characterConfiguration.AsteriskCap, _tokenCache),
-                new CumulativeInferrenceRepetitionBias(1.5f, 3),
                 new TabNewlineOnly()
             };
+
+            if (characterConfiguration.SpellingCorrect)
+            {
+                _responseCleaners.Add(new SpellingCleaner(dictionaryService));
+            }
+
+            if (characterConfiguration.SplitWords)
+            {
+                _responseCleaners.Add(new UnbrokenWordsCleaner(dictionaryService, 2));
+            }
+
+            if (characterConfiguration.MergeWords)
+            {
+                _responseCleaners.Add(new BrokenWordsCleaner(dictionaryService, 3));
+            }
+
+            if (characterConfiguration.BreakOnNewline)
+            {
+                _transformers.Add(new NewlineTransformer(_tokenCache, characterConfiguration.ReturnCharacters, _specialTokens.EOS));
+            } else
+            {
+                _responseCleaners.Add(new ResponseSplitCleaner(characterConfiguration));
+            }
+
+            if (characterConfiguration.RoleplayAsterisks)
+            {
+                _transformers.Add(new RoleplayEnforcingTransformer(0, 0, 0, _tokenCache));
+            }
+
+            //Only if we auto-return on newlines
+            if (characterConfiguration.ReturnCharacters.Contains(characterConfiguration.SpecialTokens.NewLine))
+            {
+                _biasAdjustors.Add(new NewlineEnsureSampler(llamaTokenCache, _specialTokens));
+            }
+
+            if (characterConfiguration.ClientRepetitionPenalty)
+            {
+                //Merge?
+                _postAccept.Add(new CumulativeInferrenceRepetitionBias(1.5f, 3));
+            }
+
+            if (_responseLengthManager is not null)
+            {
+                _transformers.Add(_responseLengthManager);
+                _responseCleaners.Add(_responseLengthManager);
+            }
 
             Initialization = Task.Run(this.Init);
         }
@@ -182,49 +222,6 @@ namespace ChieApi.Services
             }
 
             return responseState;
-        }
-
-        public IEnumerable<string> GetMessagesReversed(long before)
-        {
-            do
-            {
-                ChatEntry ce = _chatService.GetBefore(before);
-
-                if (ce.DateCreated < _characterConfiguration.MemoryStart)
-                {
-                    yield break;
-                }
-
-                if (ce is null)
-                {
-                    yield break;
-                }
-
-                if (ce.Type == LlamaTokenType.Temporary)
-                {
-                    continue;
-                }
-
-                string c = StripNonASCII(ce.Content);
-
-                if (string.IsNullOrWhiteSpace(ce.UserId))
-                {
-                    yield return $"[{c}]";
-                }
-                else
-                {
-                    string n = ce.DisplayName;
-
-                    if (string.IsNullOrWhiteSpace(n))
-                    {
-                        n = ce.UserId;
-                    }
-
-                    yield return $"{n}: {c}";
-                }
-
-                before = ce.Id;
-            } while (true);
         }
 
         public ChatEntry[] GetResponses(string channelId, long after)
@@ -285,7 +282,9 @@ namespace ChieApi.Services
 
                 foreach (ChatEntry chat in chatEntries)
                 {
-                    chat.Content = _inputCleaner.Clean(chat.Content).Trim();
+                    //If we ever have multiple input messages returned we need 
+                    //to actually account for that
+                    chat.Content = _inputCleaner.Clean(chat.Content).Single().Trim();
                 }
 
                 LlamaSafeString[] cleanedMessages = chatEntries.Select(LlamaSafeString.Parse)
@@ -379,16 +378,20 @@ namespace ChieApi.Services
                 return;
             }
 
-            string cleanedContent = " " + _responseCleaners.Clean(content).Trim();
+            List<string> cleanedResponse = _responseCleaners.Clean(content).ToList();
 
-            if (cleanedContent != content)
-            {
-                IReadOnlyLlamaTokenCollection newContent = await _client.Tokenize(cleanedContent);
-
-                LlamaMessage newMessage = new(r.Message.UserName, newContent, r.Message.Type, _tokenCache);
-
+            if (cleanedResponse.Count > 1 || cleanedResponse[0] != content)
+            {   
                 _contextModel.Messages.Pop();
-                _contextModel.Messages.Push(newMessage);
+
+                foreach (string cleanedContent in cleanedResponse)
+                {
+                    IReadOnlyLlamaTokenCollection newContent = await _client.Tokenize(cleanedContent);
+
+                    LlamaMessage newMessage = new(r.Message.Header, newContent, r.Message.EndOfText, r.Message.Type, _tokenCache);
+
+                    _contextModel.Messages.Push(newMessage);
+                }
             }
         }
 
@@ -413,25 +416,7 @@ namespace ChieApi.Services
         {
             InferenceEnumerator enumerator = _client.Infer();
 
-            bool setBias = true;
-
-            LlamaToken lastToken = null;
-
-            for (int i = _contextModel.Messages.Count - 1; i >= 0; i--)
-            {
-                ITokenCollection message = _contextModel.Messages[i];
-
-                if (message is LlamaMessage lm && (await lm.UserName.Value) == _characterConfiguration.CharacterName)
-                {
-                    lastToken = (await lm.Content.Tokens).First();
-                    break;
-                }
-            }
-
-            if (lastToken != null)
-            {
-                enumerator.SetBias(lastToken.Id, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
-            }
+            bool firstToken = true;
 
             enumerator.SetBias(_specialTokens.EOS, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
             enumerator.SetBias(_specialTokens.NewLine, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
@@ -443,32 +428,50 @@ namespace ChieApi.Services
 
                 LlamaToken selected = new(enumerator.Current.Id, enumerator.Current.Value);
 
-                Console.WriteLine($"Predict: {enumerator.Current.Id} ({enumerator.Current.Value})");
-                Debug.Write($"{enumerator.Current.Value}");
+				Console.WriteLine($"Predict: {enumerator.Current.Id} ({enumerator.Current.Value})");
 
-                await foreach (LlamaToken llamaToken in _transformers.Transform(enumerator, selected))
+                if (firstToken)
                 {
+                    //Honor the rules about starting with previous tokens, based on content and not ID
+                    if (_lookbackBlock.Any(t => string.Equals(t.Value, selected.Value, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        Console.WriteLine($"-- Blocking found token");
+                        enumerator.MoveBack();
+                        enumerator.SetBias(selected.Id, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
+                        continue;
+                    }
+
+                    //Do not accept a token that doesn't start with a space
+                    if ((selected.Value is null || !selected.Value.StartsWith(" ")) && 
+                        //Only require if the header doesn't end with whitespace
+                        _characterConfiguration.GetHeaderForBot() == _characterConfiguration.GetHeaderForBot().TrimEnd())
+                    {
+                        Console.WriteLine($"-- Blocking non-padded first token");
+                        enumerator.MoveBack();
+                        enumerator.SetBias(selected.Id, float.NegativeInfinity, LogitRuleLifetime.Token, LogitBiasType.Additive);
+                        continue;
+                    }
+                }
+
+				await foreach (LlamaToken llamaToken in _transformers.Transform(enumerator, selected))
+                {
+
                     //Neither of these need to be accepted because the local
                     //context manages both
-                    if (llamaToken.Id == _specialTokens.EOS)
+                    if (llamaToken.Id == _specialTokens.EOS || _characterConfiguration.ReturnCharacters.Contains(llamaToken.Id))
                     {
                         this.AdjustResponseBias(enumerator.Enumerated);
                         return enumerator.Enumerated;
                     }
 
-                    if (llamaToken.Value != null)
-                    {
-                        Console.Write(llamaToken.Value);
-                    }
-
                     await enumerator.Accept(llamaToken);
 
-                    if (setBias)
+                    if (firstToken)
                     {
                         //After we've gotten the first token we set the lengthening bias for the inferrence session
                         enumerator.SetBias(_specialTokens.EOS, _responseLengthBias, LogitRuleLifetime.Inferrence, LogitBiasType.Additive);
                         enumerator.SetBias(_specialTokens.NewLine, _responseLengthBias, LogitRuleLifetime.Inferrence, LogitBiasType.Additive);
-                        setBias = false;
+                        firstToken = false;
                     }
 
                     foreach (IPostAccept postAccept in _postAccept)
@@ -522,11 +525,13 @@ namespace ChieApi.Services
 
                 foreach (string s in FileService.GetStringOrContent(_characterConfiguration.Start).CleanSplit())
                 {
-                    string? displayName = s.From("|")?.To(":");
-                    string? content = s.From(":")?.Trim();
+                    throw new NotImplementedException("Start has not been modified to account for user/bot prefixes and suffixes");
 
-                    LlamaMessage message = new(displayName, content, LlamaTokenType.Input, _tokenCache);
-                    _contextModel.Messages.Add(message);
+                    //string? displayName = s.From("|")?.To(":");
+                    //string? content = s.From(":")?.Trim();
+
+                    //LlamaMessage message = new(displayName, content, LlamaTokenType.Input, _tokenCache);
+                    //_contextModel.Messages.Add(message);
                 }
             }
             else
@@ -592,7 +597,7 @@ namespace ChieApi.Services
 
             if (!continuation)
             {
-                contextState.Append(await _tokenCache.Get($"\n|{CharacterName}:"));
+                contextState.Append(await _tokenCache.Get($"\n{_characterConfiguration.GetHeaderForBot()}"));
             }
 
             _context = contextState;
@@ -616,6 +621,10 @@ namespace ChieApi.Services
                 _contextModel.Messages.Remove(shouldAppend.Message);
                 existingId = shouldAppend.Message.Id;
                 this.CurrentResponse = thisInference!.ToString();
+            } else
+            {
+                //Append first token to block to prevent repeats
+                _lookbackBlock.Enqueue(thisInference.First());
             }
 
             await this.ReceiveResponse(thisInference, existingId);
@@ -655,7 +664,7 @@ namespace ChieApi.Services
                 Id = existingId
             };
 
-            LlamaMessage message = new(CharacterName, collection, LlamaTokenType.Response, _tokenCache);
+            LlamaMessage message = new(_characterConfiguration.GetHeaderForBot(), collection, _characterConfiguration.EndOfTextToken, LlamaTokenType.Response, _tokenCache);
 
             if (chatEntry.Content != null)
             {
@@ -688,7 +697,7 @@ namespace ChieApi.Services
 
             if (!string.IsNullOrWhiteSpace(chatEntry.DisplayName))
             {
-                _contextModel.Messages.Enqueue(new LlamaMessage(chatEntry.DisplayName, chatEntry.Content, chatEntry.Type, _tokenCache) { Id = thisMessageId });
+                _contextModel.Messages.Enqueue(new LlamaMessage(_characterConfiguration.GetHeaderForUser(chatEntry.DisplayName), chatEntry.Content, _characterConfiguration.EndOfTextToken, chatEntry.Type, _tokenCache) { Id = thisMessageId });
             }
             else
             {
@@ -717,7 +726,9 @@ namespace ChieApi.Services
         {
             TryGetLastBotMessage toReturn = new();
 
-            if (!_contextModel.Messages.Any() || _contextModel.Messages.Peek() is not LlamaMessage lastMessage || await lastMessage.UserName.Value != _characterConfiguration.CharacterName)
+            if (!_contextModel.Messages.Any() || 
+                _contextModel.Messages.Peek() is not LlamaMessage lastMessage || 
+                await lastMessage.Header.Value != _characterConfiguration.GetHeaderForBot())
             {
                 toReturn.Success = false;
             }
@@ -780,27 +791,30 @@ namespace ChieApi.Services
 
         private async Task ValidateUserSummaries()
         {
-            List<string> activeUsers = await _contextModel.GetActiveUsers();
-
-            List<string> existingSummaries = _contextModel.UserSummaries.Keys.ToList();
-
-            foreach (string user in existingSummaries)
+            if (_characterConfiguration.UserMemory)
             {
-                if (!activeUsers.Contains(user))
+                List<string> activeUsers = await _contextModel.GetActiveUsers();
+
+                List<string> existingSummaries = _contextModel.UserSummaries.Keys.ToList();
+
+                foreach (string user in existingSummaries)
                 {
-                    _contextModel.UserSummaries.Remove(user);
+                    if (!activeUsers.Contains(user))
+                    {
+                        _contextModel.UserSummaries.Remove(user);
+                    }
+
+                    activeUsers.Remove(user);
                 }
 
-                activeUsers.Remove(user);
-            }
-
-            foreach (string user in activeUsers)
-            {
-                UserData ud = _userDataService.GetByDisplayName(user);
-
-                if (ud != null)
+                foreach (string user in activeUsers)
                 {
-                    _contextModel.UserSummaries.Add(user, new LlamaUserSummary(user, ud.UserSummary, _tokenCache));
+                    UserData ud = _userDataService.GetByDisplayName(user);
+
+                    if (ud != null)
+                    {
+                        _contextModel.UserSummaries.Add(user, new LlamaUserSummary(user, ud.UserSummary, _tokenCache));
+                    }
                 }
             }
         }

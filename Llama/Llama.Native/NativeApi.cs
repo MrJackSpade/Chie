@@ -247,7 +247,7 @@ namespace Llama.Native
         {
             LlamaKvCache cache = GetKvCache(context);
 
-            uint count = cache.size;
+            uint count = cache.Size;
 
             LlamaKvCell[] cells = new LlamaKvCell[count];
 
@@ -255,7 +255,7 @@ namespace Llama.Native
 
             for (int i = 0; i < count; i++)
             {
-                cells[i] = Marshal.PtrToStructure<LlamaKvCell>(IntPtr.Add(cache.cellsPointer, i * cellSize));
+                cells[i] = Marshal.PtrToStructure<LlamaKvCell>(IntPtr.Add(cache.CellsPointer, i * cellSize));
             }
 
             return cells;
@@ -267,13 +267,13 @@ namespace Llama.Native
             return new Span<float>(logits, length);
         }
 
-        public static List<int> LlamaTokenize(SafeLlamaModelHandle ctx, string text, bool add_bos, bool useLegacy = true)
+        public static List<int> LlamaTokenize(SafeLlamaModelHandle ctx, string text, bool add_bos, bool useLegacy = true, bool parseSpecial = true)
         {
             int cnt = System.Text.Encoding.Unicode.GetByteCount(text + 1);
 
             int[] res = new int[cnt + (add_bos ? 1 : 0)];
 
-            int n = LlamaCppApi.Tokenize(ctx, text, res, res.Length, add_bos);
+            int n = LlamaCppApi.Tokenize(ctx, text, res, res.Length, add_bos, parseSpecial);
 
             if (n < 0)
             {
@@ -300,18 +300,18 @@ namespace Llama.Native
             lparams.TypeV = GgmlType.GGML_TYPE_F16;
             lparams.TypeK = contextSettings.TypeK;
             lparams.LogitsAll = contextSettings.Perplexity;
-            lparams.Embedding = contextSettings.GenerateEmbedding;
+            lparams.Embeddings = contextSettings.GenerateEmbedding;
             lparams.RopeFreqBase = contextSettings.RopeFrequencyBase;
             lparams.RopeFreqScale = contextSettings.RopeFrequencyScaling;
-            lparams.MulMatQ = true;
             lparams.NThreadsBatch = contextSettings.ThreadCount;
             lparams.NThreads = contextSettings.ThreadCount;
-            lparams.RopeScalingType = (sbyte)contextSettings.RopeScalingType;
+            lparams.RopeScalingType = contextSettings.RopeScalingType;
             lparams.YarnBetaSlow = contextSettings.YarnBetaSlow;
             lparams.YarnBetaFast = contextSettings.YarnBetaFast;
             lparams.YarnAttnFactor = contextSettings.YarnAttnFactor;
             lparams.YarnExtFactor = contextSettings.YarnExtFactor;
             lparams.OffloadKQV = contextSettings.OffloadKQV;
+            lparams.FlashAttn = true;
 
             if (contextSettings.YarnOrigCtx == 0)
             {
@@ -395,7 +395,6 @@ namespace Llama.Native
         public static void Test()
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            LlamaCppApi.EmptyCall();
         }
 
         public static string TokenToPiece(this SafeLlamaModelHandle ctx, int token)
@@ -403,7 +402,16 @@ namespace Llama.Native
             // Assuming a buffer size of 256, adjust as needed.
             char[] buffer = new char[256];
 
-            int result = LlamaCppApi.TokenToPiece(ctx, token, buffer, buffer.Length);
+            int result = 0;
+
+            try
+            {
+                result = LlamaCppApi.TokenToPiece(ctx, token, buffer, buffer.Length);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"An exception has occured converting the token '{token}' to a string", e);
+            }
 
             // Assuming a successful result is indicated by a non-negative value.
             // Adjust the condition based on the actual behavior of the C++ function.

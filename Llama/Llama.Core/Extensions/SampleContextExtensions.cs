@@ -1,10 +1,70 @@
 ﻿using Llama.Data.Models;
 using Llama.Data.Native;
+using Llama.Native;
 
 namespace Llama.Core.Extensions
 {
     public static class SampleContextExtensions
     {
+        public static LlamaTokenData GetData(this SampleContext sampleContext, int tokenId)
+        {
+            LlamaTokenData[] candidates = sampleContext.Candidates.Data.Span.ToArray();
+
+            for (int i = 0; i < candidates.Length; i++)
+            {
+                if (candidates[i].id == tokenId)
+                {
+                    return candidates[i];
+                }
+            }
+
+            throw new ArgumentOutOfRangeException(nameof(tokenId));
+        }
+
+        public static string GetDisplayString(this SampleContext ctx, int tokenId)
+        {
+            LlamaTokenData tokenData = new();
+
+            for (ulong i = 0; i < ctx.OriginalCandidates.Size; i++)
+            {
+                if (ctx.OriginalCandidates[i].id == tokenId)
+                {
+                    tokenData = ctx.OriginalCandidates[i];
+                    break;
+                }
+            }
+
+            LlamaTokenData newTokenData = new();
+
+            for (int i = 0; i < ctx.Candidates.Data.Length; i++)
+            {
+                if (ctx.Candidates.Data.Span[i].id == tokenId)
+                {
+                    newTokenData = ctx.Candidates.Data.Span[i];
+                    break;
+                }
+            }
+
+            LlamaToken token = ctx.GetToken(tokenData.id);
+
+            return $"{token.GetEscapedValue()} ({tokenData.p:0.00} => {newTokenData.p:0.00})";
+        }
+
+        public static LlamaTokenData GetOriginalData(this SampleContext sampleContext, int tokenId)
+        {
+            LlamaTokenDataArray candidates = sampleContext.OriginalCandidates;
+
+            for (ulong i = 0; i < candidates.Size; i++)
+            {
+                if (candidates[i].id == tokenId)
+                {
+                    return candidates[i];
+                }
+            }
+
+            throw new ArgumentOutOfRangeException(nameof(tokenId));
+        }
+
         public static float GetOriginalProbability(this SampleContext context, int tokenId)
         {
             foreach (LlamaTokenData ltd in context.OriginalCandidates)
@@ -24,6 +84,11 @@ namespace Llama.Core.Extensions
             int index = GetTokenIndex(tokens, tokenId);
             LlamaTokenData existing = span[index];
             return existing.logit;
+        }
+
+        public static LlamaToken GetToken(this SampleContext ctx, int id)
+        {
+            return new(id, NativeApi.TokenToPiece(ctx.ModelHandle, id));
         }
 
         public static void SetBias(this LlamaTokenDataArray tokens, int tokenId, float probability, LogitBiasType logitBiasType)

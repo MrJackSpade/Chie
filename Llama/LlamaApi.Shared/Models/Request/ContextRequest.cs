@@ -8,11 +8,11 @@ namespace LlamaApi.Models.Request
     {
         public Guid ContextId { get; set; }
 
-        public SamplerSetting[] SamplerSettings { get; set; } = Array.Empty<SamplerSetting>();
-
         public Guid ModelId { get; set; }
 
         public ExecutionPriority Priority { get; set; }
+
+        public SamplerSetting[] SamplerSettings { get; set; } = Array.Empty<SamplerSetting>();
 
         public LlamaContextSettings Settings { get; set; } = new LlamaContextSettings();
     }

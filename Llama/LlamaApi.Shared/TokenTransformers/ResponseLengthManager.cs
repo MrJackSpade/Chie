@@ -29,7 +29,7 @@ namespace ChieApi.TokenTransformers
         /// </summary>
         /// <param name="hardmax">The point at which text will be cut regardless of punctuation</param>
         /// <param name="max">The point at which text will be cut at the next punctuation</param>
-        /// <param name="min">The point at which random rolls will begin occuring to truncate the text, also the target for lengthening</param>
+        /// <param name="min">The point at which random rolls will begin occurring to truncate the text, also the target for lengthening</param>
         /// <param name="b">The point used as the base for determining the truncation percentage</param>
         /// <param name="endChars">Characters that are safe to truncate after</param>
         /// <param name="dictionaryService"></param>
@@ -44,29 +44,34 @@ namespace ChieApi.TokenTransformers
             _specialTokens = specialTokens;
         }
 
-        public string Clean(string content)
+        public IEnumerable<string> Clean(IEnumerable<string> contents)
         {
-            if (content.Length <= _max)
+            foreach (string content in contents)
             {
-                return content;
-            }
-
-            int lastGoodEnd = 0;
-
-            for (int i = 0; i < content.Length; i++)
-            {
-                if (this.GoodEndPos(i, content))
+                if (content.Length <= _max)
                 {
-                    lastGoodEnd = i;
+                    yield return content;
+                    continue;
                 }
-            }
 
-            if (lastGoodEnd <= _min)
-            {
-                return content;
-            }
+                int lastGoodEnd = 0;
 
-            return content[..(lastGoodEnd + 1)];
+                for (int i = 0; i < content.Length; i++)
+                {
+                    if (this.GoodEndPos(i, content))
+                    {
+                        lastGoodEnd = i;
+                    }
+                }
+
+                if (lastGoodEnd <= _min)
+                {
+                    yield return content;
+                    continue;
+                }
+
+                yield return content[..(lastGoodEnd + 1)];
+            }
         }
 
         public async IAsyncEnumerable<LlamaToken> TransformToken(InferenceEnumerator enumerator, IAsyncEnumerable<LlamaToken> selectedTokens)

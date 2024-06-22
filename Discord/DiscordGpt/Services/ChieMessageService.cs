@@ -11,6 +11,7 @@ using Logging.Shared.Extensions;
 using Loxifi.AsyncExtensions;
 using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace DiscordGpt.Services
 {
@@ -48,7 +49,13 @@ namespace DiscordGpt.Services
 			//Remove custom emotes
 			toReturn = Regex.Replace(toReturn, @"\<a?\:[a-zA-Z0-9\-]+\:\d+\>", "");
 
-			return toReturn.Trim();
+			//Remove newlines
+			toReturn = toReturn.Replace("\r", "").Replace("\n", "");
+
+            //remove non-ascii
+            toReturn = Regex.Replace(toReturn, @"[^\x00-\x7F]+", string.Empty);
+
+            return toReturn.Trim();
 		}
 
 		public async Task DeferredMessageProcessing(IncomingDiscordMessage arg)

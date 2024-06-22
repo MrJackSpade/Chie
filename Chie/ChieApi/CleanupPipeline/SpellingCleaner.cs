@@ -13,39 +13,44 @@ namespace ChieApi.CleanupPipeline
             this._dictionaryService = dictionaryService;
         }
 
-        public string Clean(string content)
+        public IEnumerable<string> Clean(IEnumerable<string> contents)
         {
-            foreach (string word in this._dictionaryService.BreakWords(content))
+            foreach (string rcontent in contents)
             {
-                if (!this._dictionaryService.IsWord(word))
+                string content = rcontent;
+
+                foreach (string word in this._dictionaryService.BreakWords(content))
                 {
-                    string fingerprint = this._dictionaryService.GetFingerprint(word);
-
-                    List<DictionaryEntry> possibleCorrections = this._dictionaryService.GetByFingerprint(fingerprint).Where(c => c.Word.Length < word.Length).ToList();
-
-                    if (!possibleCorrections.Any())
+                    if (!this._dictionaryService.IsWord(word))
                     {
-                        continue;
-                    }
+                        string fingerprint = this._dictionaryService.GetFingerprint(word);
 
-                    if (possibleCorrections.Count > 1)
-                    {
-                        List<WordDrift> drifts = possibleCorrections.Select(b => this._dictionaryService.GetDrift(word, b.Word)).ToList();
+                        List<DictionaryEntry> possibleCorrections = this._dictionaryService.GetByFingerprint(fingerprint).Where(c => c.Word.Length < word.Length).ToList();
 
-                        WordDrift bestMatch = drifts.OrderBy(d => d.Drift).First();
+                        if (!possibleCorrections.Any())
+                        {
+                            continue;
+                        }
 
-                        content = this._dictionaryService.Replace(content, word, bestMatch.WordB);
-                    }
-                    else
-                    {
-                        DictionaryEntry correction = possibleCorrections.Single();
+                        if (possibleCorrections.Count > 1)
+                        {
+                            List<WordDrift> drifts = possibleCorrections.Select(b => this._dictionaryService.GetDrift(word, b.Word)).ToList();
 
-                        content = this._dictionaryService.Replace(content, word, correction.Word);
+                            WordDrift bestMatch = drifts.OrderBy(d => d.Drift).First();
+
+                            content = this._dictionaryService.Replace(content, word, bestMatch.WordB);
+                        }
+                        else
+                        {
+                            DictionaryEntry correction = possibleCorrections.Single();
+
+                            content = this._dictionaryService.Replace(content, word, correction.Word);
+                        }
                     }
                 }
-            }
 
-            return content;
+                yield return content;
+            }
         }
     }
 }
